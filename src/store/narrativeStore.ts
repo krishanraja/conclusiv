@@ -41,6 +41,12 @@ interface NarrativeState {
   loadingMessage: string;
   setLoadingMessage: (message: string) => void;
   
+  // Loading stages
+  loadingStage: number;
+  setLoadingStage: (stage: number) => void;
+  loadingProgress: number;
+  setLoadingProgress: (progress: number) => void;
+  
   // Present mode
   currentSectionIndex: number;
   setCurrentSectionIndex: (index: number) => void;
@@ -66,6 +72,8 @@ const initialState = {
   currentStep: "input" as const,
   isLoading: false,
   loadingMessage: "",
+  loadingStage: 0,
+  loadingProgress: 0,
   currentSectionIndex: 0,
   viewMode: "present" as const,
 };
@@ -136,6 +144,10 @@ export const useNarrativeStore = create<NarrativeState>((set, get) => ({
   setIsLoading: (loading) => set({ isLoading: loading }),
   
   setLoadingMessage: (message) => set({ loadingMessage: message }),
+  
+  setLoadingStage: (stage) => set({ loadingStage: stage }),
+  
+  setLoadingProgress: (progress) => set({ loadingProgress: progress }),
   
   setCurrentSectionIndex: (index) => set({ currentSectionIndex: index }),
   

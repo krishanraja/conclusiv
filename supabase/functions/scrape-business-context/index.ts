@@ -5,7 +5,24 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Structured logging
+const log = {
+  info: (context: string, message: string, data?: Record<string, unknown>) => 
+    console.log(`[INFO][${context}] ${message}`, data ? JSON.stringify(data) : ''),
+  warn: (context: string, message: string, data?: Record<string, unknown>) => 
+    console.warn(`[WARN][${context}] ${message}`, data ? JSON.stringify(data) : ''),
+  error: (context: string, message: string, error?: unknown) => 
+    console.error(`[ERROR][${context}] ${message}`, error),
+  timing: (context: string, operation: string, startTime: number) => 
+    console.log(`[TIMING][${context}] ${operation}: ${Date.now() - startTime}ms`),
+};
+
 serve(async (req) => {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  const requestStart = Date.now();
+  
+  log.info(requestId, 'Request received', { method: req.method });
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -13,7 +30,10 @@ serve(async (req) => {
   try {
     const { url } = await req.json();
     
+    log.info(requestId, 'Scrape request', { url });
+
     if (!url || typeof url !== 'string') {
+      log.warn(requestId, 'Invalid input: URL required');
       return new Response(
         JSON.stringify({ error: 'URL is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -22,6 +42,7 @@ serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
+      log.error(requestId, 'LOVABLE_API_KEY not configured');
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
@@ -31,19 +52,31 @@ serve(async (req) => {
       normalizedUrl = 'https://' + normalizedUrl;
     }
 
-    console.log('Scraping business context from:', normalizedUrl);
+    log.info(requestId, 'URL normalized', { original: url, normalized: normalizedUrl });
 
     // Fetch the website content
     let websiteContent = '';
+    const fetchStart = Date.now();
+    
     try {
+      log.info(requestId, 'Fetching website content');
+      
       const websiteResponse = await fetch(normalizedUrl, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (compatible; NarrativeBot/1.0)',
         },
       });
       
+      log.timing(requestId, 'Website fetch', fetchStart);
+      log.info(requestId, 'Website response', { 
+        status: websiteResponse.status, 
+        ok: websiteResponse.ok 
+      });
+      
       if (websiteResponse.ok) {
         const html = await websiteResponse.text();
+        log.info(requestId, 'HTML received', { htmlLength: html.length });
+        
         // Extract text content (simple extraction)
         websiteContent = html
           .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
@@ -52,9 +85,13 @@ serve(async (req) => {
           .replace(/\s+/g, ' ')
           .trim()
           .slice(0, 10000); // Limit to 10k chars
+          
+        log.info(requestId, 'Content extracted', { extractedLength: websiteContent.length });
+      } else {
+        log.warn(requestId, 'Website fetch failed', { status: websiteResponse.status });
       }
     } catch (fetchError) {
-      console.error('Failed to fetch website:', fetchError);
+      log.error(requestId, 'Website fetch error', fetchError);
       // Continue with AI extraction from URL alone
     }
 
@@ -77,6 +114,12 @@ Keep arrays to 3-5 items max.`;
       ? `Website URL: ${normalizedUrl}\n\nWebsite Content:\n${websiteContent}`
       : `Website URL: ${normalizedUrl}\n\nNo content could be fetched. Please infer what you can from the domain name.`;
 
+    log.info(requestId, 'Calling AI for context extraction', { 
+      hasContent: !!websiteContent,
+      contentLength: websiteContent.length
+    });
+
+    const aiStart = Date.now();
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -92,19 +135,21 @@ Keep arrays to 3-5 items max.`;
       }),
     });
 
+    log.timing(requestId, 'AI context extraction', aiStart);
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AI gateway error:', response.status, errorText);
+      log.error(requestId, 'AI gateway error', { status: response.status, error: errorText });
       
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded' }),
+          JSON.stringify({ error: 'Rate limit exceeded', code: 'RATE_LIMIT' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: 'Usage limit reached' }),
+          JSON.stringify({ error: 'Usage limit reached', code: 'PAYMENT_REQUIRED' }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -116,8 +161,11 @@ Keep arrays to 3-5 items max.`;
     const content = data.choices?.[0]?.message?.content;
     
     if (!content) {
+      log.error(requestId, 'No content in AI response');
       throw new Error('No content in AI response');
     }
+
+    log.info(requestId, 'AI response received', { contentLength: content.length });
 
     // Parse JSON
     let context;
@@ -128,8 +176,10 @@ Keep arrays to 3-5 items max.`;
         jsonStr = jsonMatch[1].trim();
       }
       context = JSON.parse(jsonStr);
+      log.info(requestId, 'Context parsed', { companyName: context.companyName });
     } catch (parseError) {
-      console.error('Failed to parse AI response:', content);
+      log.warn(requestId, 'JSON parse failed, using fallback', { error: String(parseError) });
+      
       // Return a basic context from URL
       const domain = new URL(normalizedUrl).hostname.replace('www.', '');
       const name = domain.split('.')[0];
@@ -140,9 +190,14 @@ Keep arrays to 3-5 items max.`;
         valuePropositions: [],
         brandVoice: 'Professional',
       };
+      log.info(requestId, 'Using fallback context', { companyName: context.companyName });
     }
 
-    console.log('Successfully extracted business context for:', context.companyName);
+    log.timing(requestId, 'Total request', requestStart);
+    log.info(requestId, 'Request complete', { 
+      companyName: context.companyName,
+      totalTimeMs: Date.now() - requestStart
+    });
 
     return new Response(
       JSON.stringify({ context }),
@@ -150,9 +205,14 @@ Keep arrays to 3-5 items max.`;
     );
 
   } catch (error) {
-    console.error('Error in scrape-business-context function:', error);
+    log.error(requestId, 'Request failed', error);
+    log.timing(requestId, 'Failed request duration', requestStart);
+    
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        code: 'UNKNOWN'
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
