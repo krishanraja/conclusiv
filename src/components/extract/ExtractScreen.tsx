@@ -4,11 +4,13 @@ import { FileText, Sparkles, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useNarrativeStore } from "@/store/narrativeStore";
-import { extractThemes } from "@/lib/mockAI";
+import { extractThemesFromAI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 export const ExtractScreen = () => {
   const { rawText, setRawText, setThemes, setCurrentStep, isLoading, setIsLoading } = useNarrativeStore();
   const [charCount, setCharCount] = useState(0);
+  const { toast } = useToast();
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setRawText(e.target.value);
@@ -20,13 +22,46 @@ export const ExtractScreen = () => {
     
     setIsLoading(true);
     
-    // Simulate AI extraction (replace with real API call)
-    setTimeout(() => {
-      const themes = extractThemes(rawText);
-      setThemes(themes);
+    try {
+      const result = await extractThemesFromAI(rawText);
+      
+      if (result.error) {
+        toast({
+          title: "Extraction Failed",
+          description: result.error,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      if (result.themes.length === 0) {
+        toast({
+          title: "No Themes Found",
+          description: "The AI couldn't extract meaningful themes from the text. Try adding more structured content.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      setThemes(result.themes);
       setIsLoading(false);
       setCurrentStep("review");
-    }, 2000);
+      
+      toast({
+        title: "Themes Extracted",
+        description: `Successfully extracted ${result.themes.length} themes from your research.`,
+      });
+    } catch (error) {
+      console.error('Extraction error:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
   };
 
   return (
