@@ -4,7 +4,7 @@
 
 **Transform raw research into compelling narratives in seconds.**
 
-We eliminate the hours spent structuring and formatting presentations, letting professionals focus on what matters: their insights and message.
+conclusiv eliminates the hours spent structuring and formatting presentations, letting professionals focus on what matters: their insights and message.
 
 ## Vision
 
@@ -35,7 +35,7 @@ A world where anyone can communicate complex ideas clearly and beautifully, rega
 | **Accessibility** | Voice-first input means no keyboard required |
 | **Simplicity** | 3-step flow: Input → Preview → Present |
 
-## What We Don't Do
+## What conclusiv Doesn't Do
 
 - **Not a slide deck tool** - We generate narratives, not static slides
 - **Not a design tool** - AI handles styling automatically

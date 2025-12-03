@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Search, Sparkles, Layout, FileText, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,11 +14,10 @@ const stages = [
   { icon: Sparkles, label: "Extracting themes", description: "Identifying key insights" },
   { icon: Layout, label: "Building structure", description: "Creating narrative flow" },
   { icon: FileText, label: "Generating content", description: "Writing section content" },
-  { icon: Check, label: "Finalizing", description: "Polishing the presentation" },
+  { icon: Check, label: "Finalizing", description: "Polishing your story" },
 ];
 
 export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStagesProps) => {
-  // Estimate time based on input length
   const estimatedSeconds = Math.max(10, Math.ceil(inputLength / 2000) * 5);
   const currentStage = stages[Math.min(stage, stages.length - 1)];
   const StageIcon = currentStage.icon;
@@ -118,11 +118,11 @@ export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStage
 };
 
 const tips = [
-  "Tip: Add your company website for personalized output",
-  "Tip: Voice input works best with continuous speech",
-  "Tip: Longer documents get chunked automatically",
-  "Tip: Use the preview to tweak themes and templates",
-  "Tip: Press Escape to exit presentation mode",
+  "Add your company website for personalized narratives",
+  "Voice input works best with continuous speech",
+  "Longer documents are chunked automatically",
+  "Use preview to tweak themes and templates",
+  "Press Escape to exit presentation mode",
 ];
 
 const TipCarousel = () => {
@@ -146,5 +146,3 @@ const TipCarousel = () => {
     </motion.p>
   );
 };
-
-import { useState, useEffect } from "react";

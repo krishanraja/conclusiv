@@ -1,5 +1,6 @@
-import { Layers, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
+import conclusivIcon from "@/assets/conclusiv-icon.png";
+import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 export const Header = () => {
   return (
@@ -10,25 +11,25 @@ export const Header = () => {
     >
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <Layers className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-accent flex items-center justify-center">
-              <Sparkles className="w-2.5 h-2.5 text-accent-foreground" />
-            </div>
-          </div>
-          <div>
-            <h1 className="font-display text-lg font-semibold text-foreground">
-              Narrative Builder
-            </h1>
-            <p className="text-xs text-muted-foreground">AI Story Engine</p>
-          </div>
+          {/* C. Icon */}
+          <img 
+            src={conclusivIcon} 
+            alt="conclusiv" 
+            className="h-8 w-auto"
+            style={{ aspectRatio: 'auto' }}
+          />
+          {/* Text Logo */}
+          <img 
+            src={conclusivLogo} 
+            alt="conclusiv" 
+            className="h-5 w-auto hidden sm:block"
+            style={{ aspectRatio: 'auto' }}
+          />
         </div>
         
         <nav className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground px-3 py-1.5 rounded-full bg-secondary">
-            Prezi-style Narratives
+            Research → Story → Impact
           </span>
         </nav>
       </div>

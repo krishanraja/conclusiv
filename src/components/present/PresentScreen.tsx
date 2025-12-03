@@ -6,6 +6,7 @@ import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
 import { getIcon } from "@/lib/icons";
 import { TransitionType } from "@/lib/types";
+import conclusivIcon from "@/assets/conclusiv-icon.png";
 
 const getTransitionVariants = (type: TransitionType): Variants => {
   const variantsMap: Record<TransitionType, Variants> = {
@@ -246,6 +247,16 @@ export const PresentScreen = () => {
         >
           <ChevronRight className="w-5 h-5" />
         </Button>
+      </div>
+
+      {/* Watermark */}
+      <div className="absolute bottom-4 right-4 opacity-20 hover:opacity-40 transition-opacity">
+        <img 
+          src={conclusivIcon} 
+          alt="conclusiv" 
+          className="h-6 w-auto"
+          style={{ aspectRatio: 'auto' }}
+        />
       </div>
     </div>
   );

@@ -1,8 +1,15 @@
-# Design System
+# conclusiv Design System
 
 ## Overview
 
-Narrative Builder uses a dark, cinematic aesthetic with shimmer accents. The design prioritizes clarity, focus, and professional presentation.
+conclusiv uses a dark, cinematic aesthetic with shimmer accents. The design prioritizes clarity, focus, and professional presentation.
+
+## Brand Guidelines
+
+- **Name**: Always "conclusiv" (lowercase 's', never "Conclusiv" or "CONCLUSIV")
+- **C. Icon**: Used as favicon, app icon, watermark in presentations
+- **Text Logo**: Used in header alongside the C. icon
+- **Aspect Ratios**: Never distort logo assets - always preserve proportions
 
 ## Colors
 
