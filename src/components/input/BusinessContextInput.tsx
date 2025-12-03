@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Globe, Loader2, Check, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { BusinessContext } from "@/lib/types";
+import type { BusinessContext } from "@/lib/types";
 
 interface BusinessContextInputProps {
   value: string;

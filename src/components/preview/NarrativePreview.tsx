@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
-import { iconMap } from "@/lib/icons";
+import { iconMap } from "@/lib/icons.js";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export const NarrativePreview = () => {
