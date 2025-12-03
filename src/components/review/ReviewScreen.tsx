@@ -1,20 +1,14 @@
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, X, Star, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, X, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
 import { Priority } from "@/lib/types";
 
-const priorityColors: Record<Priority, string> = {
-  high: "bg-primary/20 border-primary text-primary",
-  medium: "bg-accent/20 border-accent text-accent",
-  low: "bg-muted border-muted-foreground/30 text-muted-foreground",
-};
-
-const priorityIcons: Record<Priority, React.ReactNode> = {
-  high: <Star className="w-3.5 h-3.5 fill-current" />,
-  medium: <Star className="w-3.5 h-3.5" />,
-  low: null,
+const priorityStyles: Record<Priority, string> = {
+  high: "bg-primary/20 border-primary/50 text-primary",
+  medium: "bg-accent/20 border-accent/50 text-accent-foreground",
+  low: "bg-secondary border-border text-muted-foreground",
 };
 
 export const ReviewScreen = () => {
@@ -28,7 +22,7 @@ export const ReviewScreen = () => {
   const keptThemes = themes.filter(t => t.keep);
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-6">
+    <div className="min-h-screen pt-20 pb-12 px-6">
       <div className="max-w-5xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -39,25 +33,15 @@ export const ReviewScreen = () => {
             variant="ghost"
             size="sm"
             onClick={() => setCurrentStep("extract")}
-            className="mb-4"
+            className="mb-6"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Input
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Back
           </Button>
 
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <div>
-              <h2 className="font-display text-3xl font-bold text-foreground">
-                Review Extracted Themes
-              </h2>
-              <p className="text-muted-foreground">
-                Toggle themes to include, and set priorities for your narrative
-              </p>
-            </div>
-          </div>
+          <h2 className="text-3xl font-semibold text-foreground tracking-tight">
+            Themes
+          </h2>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -66,10 +50,10 @@ export const ReviewScreen = () => {
               key={theme.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
               className={cn(
-                "glass rounded-xl p-5 transition-all duration-300",
-                !theme.keep && "opacity-50"
+                "rounded-xl border border-border/40 bg-card/50 p-5 transition-all duration-200",
+                !theme.keep && "opacity-40"
               )}
             >
               <div className="flex items-start justify-between mb-4">
@@ -77,7 +61,7 @@ export const ReviewScreen = () => {
                   <button
                     onClick={() => toggleThemeKeep(theme.id)}
                     className={cn(
-                      "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+                      "w-7 h-7 rounded-md flex items-center justify-center transition-all",
                       theme.keep 
                         ? "bg-primary text-primary-foreground" 
                         : "bg-secondary text-muted-foreground"
@@ -86,10 +70,10 @@ export const ReviewScreen = () => {
                     {theme.keep ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                   </button>
                   <div>
-                    <h3 className="font-display font-semibold text-foreground">
+                    <h3 className="font-medium text-foreground">
                       {theme.name}
                     </h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       {theme.items.length} items
                     </p>
                   </div>
@@ -101,46 +85,36 @@ export const ReviewScreen = () => {
                       key={p}
                       onClick={() => setThemePriority(theme.id, p)}
                       className={cn(
-                        "px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 transition-all border",
+                        "w-7 h-7 rounded-md flex items-center justify-center transition-all border",
                         theme.priority === p 
-                          ? priorityColors[p]
-                          : "bg-transparent border-border text-muted-foreground hover:border-muted-foreground"
+                          ? priorityStyles[p]
+                          : "bg-transparent border-border/50 text-muted-foreground hover:border-border"
                       )}
+                      title={p}
                     >
-                      {priorityIcons[p]}
-                      {p}
+                      {p === "high" && <Star className="w-3.5 h-3.5 fill-current" />}
+                      {p === "medium" && <Star className="w-3.5 h-3.5" />}
+                      {p === "low" && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="space-y-2">
-                {theme.items.slice(0, 3).map((item) => (
+                {theme.items.slice(0, 2).map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-start gap-2 p-2 rounded-lg bg-background/50"
+                    className="flex items-start gap-2 p-2 rounded-md bg-background/50"
                   >
-                    <span className={cn(
-                      "px-1.5 py-0.5 rounded text-xs font-medium",
-                      item.type === "insight" && "bg-primary/20 text-primary",
-                      item.type === "risk" && "bg-destructive/20 text-destructive",
-                      item.type === "opportunity" && "bg-accent/20 text-accent",
-                      item.type === "driver" && "bg-primary/20 text-primary",
-                      item.type === "metric" && "bg-secondary text-secondary-foreground",
-                    )}>
-                      {item.type}
-                    </span>
-                    <p className="text-sm text-foreground flex-1 line-clamp-2">
+                    <span className="w-1 h-1 rounded-full bg-muted-foreground mt-2 flex-shrink-0" />
+                    <p className="text-sm text-muted-foreground line-clamp-1">
                       {item.text}
                     </p>
-                    <span className="text-xs text-muted-foreground">
-                      {Math.round(item.score * 100)}%
-                    </span>
                   </div>
                 ))}
-                {theme.items.length > 3 && (
-                  <p className="text-xs text-muted-foreground pl-2">
-                    +{theme.items.length - 3} more items
+                {theme.items.length > 2 && (
+                  <p className="text-xs text-muted-foreground pl-3">
+                    +{theme.items.length - 2} more
                   </p>
                 )}
               </div>
@@ -151,24 +125,21 @@ export const ReviewScreen = () => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="flex items-center justify-between glass rounded-xl p-4"
+          transition={{ delay: 0.3 }}
+          className="flex items-center justify-between rounded-xl border border-border/40 bg-card/50 p-4"
         >
-          <div className="text-sm text-muted-foreground">
-            <span className="text-foreground font-semibold">{keptThemes.length}</span> themes selected • 
-            <span className="text-foreground font-semibold ml-1">
-              {keptThemes.reduce((acc, t) => acc + t.items.length, 0)}
-            </span> total items
-          </div>
+          <span className="text-sm text-muted-foreground">
+            <span className="text-foreground font-medium">{keptThemes.length}</span> selected
+          </span>
 
           <Button
-            variant="hero"
+            variant="shimmer"
             size="lg"
             onClick={() => setCurrentStep("template")}
             disabled={keptThemes.length === 0}
           >
-            Choose Template
-            <ArrowRight className="w-5 h-5" />
+            Continue
+            <ArrowRight className="w-4 h-4" />
           </Button>
         </motion.div>
       </div>

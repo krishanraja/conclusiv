@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import { getIcon } from "@/lib/icons";
 import { TransitionType } from "@/lib/types";
 
-// Animation variants for different transition types
 const getTransitionVariants = (type: TransitionType): Variants => {
   const variantsMap: Record<TransitionType, Variants> = {
     zoom_in: {
@@ -115,21 +114,20 @@ export const PresentScreen = () => {
   return (
     <div className="fixed inset-0 bg-background z-50 flex flex-col">
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 h-16 flex items-center justify-between px-6 z-10">
+      <div className="absolute top-0 left-0 right-0 h-14 flex items-center justify-between px-6 z-10">
         <Button
-          variant="glass"
+          variant="ghost"
           size="sm"
           onClick={() => setCurrentStep("editor")}
+          className="text-muted-foreground"
         >
-          <X className="w-4 h-4 mr-2" />
+          <X className="w-4 h-4 mr-1" />
           Exit
         </Button>
 
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">
-            {currentSectionIndex + 1} / {narrative.sections.length}
-          </span>
-        </div>
+        <span className="text-sm text-muted-foreground tabular-nums">
+          {currentSectionIndex + 1} / {narrative.sections.length}
+        </span>
       </div>
 
       {/* Main content */}
@@ -145,17 +143,17 @@ export const PresentScreen = () => {
               duration: 0.6, 
               ease: [0.22, 1, 0.36, 1] 
             }}
-            className="max-w-4xl w-full"
+            className="max-w-3xl w-full"
           >
-            <div className="glass rounded-3xl p-12 text-center">
+            <div className="rounded-2xl border border-border/40 bg-card/50 p-10 text-center">
               {/* Icon */}
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, type: "spring" }}
-                className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center mx-auto mb-8"
+                className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/30 flex items-center justify-center mx-auto mb-6"
               >
-                <Icon className="w-12 h-12 text-primary-foreground" />
+                <Icon className="w-8 h-8 text-primary" />
               </motion.div>
 
               {/* Title */}
@@ -163,7 +161,7 @@ export const PresentScreen = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="font-display text-5xl font-bold gradient-text mb-6"
+                className="text-4xl font-semibold text-foreground mb-4 tracking-tight"
               >
                 {currentSection.title}
               </motion.h1>
@@ -174,7 +172,7 @@ export const PresentScreen = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8"
+                  className="text-lg text-muted-foreground max-w-xl mx-auto mb-6"
                 >
                   {currentSection.content}
                 </motion.p>
@@ -186,19 +184,19 @@ export const PresentScreen = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.5 }}
-                  className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 text-left"
+                  className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6 text-left"
                 >
                   {currentSection.items.map((item, i) => (
                     <motion.div
                       key={i}
-                      initial={{ opacity: 0, x: -20 }}
+                      initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.5 + i * 0.1 }}
-                      className="p-4 rounded-xl bg-background/50 border border-border"
+                      className="p-3 rounded-lg bg-background/50 border border-border/30"
                     >
-                      <div className="flex items-start gap-3">
-                        <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
-                        <p className="text-foreground">{item}</p>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
+                        <p className="text-sm text-foreground">{item}</p>
                       </div>
                     </motion.div>
                   ))}
@@ -210,49 +208,44 @@ export const PresentScreen = () => {
       </div>
 
       {/* Navigation dots */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2">
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
         {narrative.sections.map((_, i) => (
           <button
             key={i}
             onClick={() => setCurrentSectionIndex(i)}
             className={cn(
-              "w-2 h-2 rounded-full transition-all",
+              "h-1.5 rounded-full transition-all",
               i === currentSectionIndex 
-                ? "w-8 bg-primary" 
-                : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                ? "w-6 bg-primary shimmer-glow" 
+                : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50"
             )}
           />
         ))}
       </div>
 
       {/* Navigation arrows */}
-      <div className="absolute bottom-8 left-8 flex items-center gap-2">
+      <div className="absolute bottom-8 left-6">
         <Button
-          variant="glass"
+          variant="ghost"
           size="icon"
           onClick={prevSection}
           disabled={currentSectionIndex === 0}
+          className="text-muted-foreground"
         >
           <ChevronLeft className="w-5 h-5" />
         </Button>
       </div>
 
-      <div className="absolute bottom-8 right-8 flex items-center gap-2">
+      <div className="absolute bottom-8 right-6">
         <Button
-          variant="glass"
+          variant="ghost"
           size="icon"
           onClick={nextSection}
           disabled={currentSectionIndex === narrative.sections.length - 1}
+          className="text-muted-foreground"
         >
           <ChevronRight className="w-5 h-5" />
         </Button>
-      </div>
-
-      {/* Keyboard hints */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 text-xs text-muted-foreground">
-        <span>← → Navigate</span>
-        <span>Space Next</span>
-        <span>Esc Exit</span>
       </div>
     </div>
   );

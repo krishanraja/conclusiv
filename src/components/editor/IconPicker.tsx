@@ -11,9 +11,9 @@ interface IconPickerProps {
 export const IconPicker = ({ selectedIcon, onSelect, icons = availableIcons }: IconPickerProps) => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
+      initial={{ opacity: 0, y: -5 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-2 p-2 rounded-lg bg-background border border-border"
+      className="mt-2 p-2 rounded-md bg-background border border-border/40"
     >
       <div className="grid grid-cols-6 gap-1">
         {icons.map((iconName) => {
@@ -25,14 +25,14 @@ export const IconPicker = ({ selectedIcon, onSelect, icons = availableIcons }: I
               key={iconName}
               onClick={() => onSelect(iconName)}
               className={cn(
-                "p-2 rounded-md transition-all",
+                "p-1.5 rounded transition-all",
                 isSelected 
                   ? "bg-primary text-primary-foreground" 
-                  : "hover:bg-secondary text-muted-foreground hover:text-foreground"
+                  : "hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
               )}
               title={iconName}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-3.5 h-3.5" />
             </button>
           );
         })}
