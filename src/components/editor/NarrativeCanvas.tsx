@@ -14,7 +14,6 @@ export const NarrativeCanvas = ({
   selectedSectionId, 
   onSelectSection 
 }: NarrativeCanvasProps) => {
-  // Calculate layout bounds
   const positions = narrative.sections.map(s => s.position);
   const minX = Math.min(...positions.map(p => p.x));
   const maxX = Math.max(...positions.map(p => p.x));
@@ -37,12 +36,10 @@ export const NarrativeCanvas = ({
     <div className="w-full h-full relative overflow-hidden">
       {/* Background grid */}
       <div 
-        className="absolute inset-0 opacity-20"
+        className="absolute inset-0 opacity-10"
         style={{
-          backgroundImage: `
-            radial-gradient(circle at 1px 1px, hsl(var(--muted-foreground) / 0.3) 1px, transparent 0)
-          `,
-          backgroundSize: '40px 40px',
+          backgroundImage: `radial-gradient(circle at 1px 1px, hsl(var(--muted-foreground) / 0.3) 1px, transparent 0)`,
+          backgroundSize: '32px 32px',
         }}
       />
 
@@ -50,8 +47,8 @@ export const NarrativeCanvas = ({
       <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
         <defs>
           <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="hsl(var(--accent))" stopOpacity="0.6" />
+            <stop offset="0%" stopColor="hsl(var(--shimmer-start))" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="hsl(var(--shimmer-end))" stopOpacity="0.4" />
           </linearGradient>
         </defs>
         {normalizedSections.slice(0, -1).map((section, i) => {
@@ -61,14 +58,14 @@ export const NarrativeCanvas = ({
               key={`line-${i}`}
               initial={{ pathLength: 0, opacity: 0 }}
               animate={{ pathLength: 1, opacity: 1 }}
-              transition={{ delay: i * 0.1 + 0.3, duration: 0.6 }}
+              transition={{ delay: i * 0.1 + 0.3, duration: 0.5 }}
               x1={`${section.normalizedPos.x}%`}
               y1={`${section.normalizedPos.y}%`}
               x2={`${next.normalizedPos.x}%`}
               y2={`${next.normalizedPos.y}%`}
               stroke="url(#lineGradient)"
-              strokeWidth={2}
-              strokeDasharray="8 4"
+              strokeWidth={1.5}
+              strokeDasharray="6 3"
             />
           );
         })}
@@ -85,15 +82,13 @@ export const NarrativeCanvas = ({
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ 
-              delay: section.index * 0.1, 
+              delay: section.index * 0.08, 
               type: "spring", 
               stiffness: 300,
               damping: 20
             }}
             onClick={() => onSelectSection(section.id)}
-            className={cn(
-              "absolute transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer",
-            )}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
             style={{
               left: `${section.normalizedPos.x}%`,
               top: `${section.normalizedPos.y}%`,
@@ -102,48 +97,38 @@ export const NarrativeCanvas = ({
           >
             <motion.div
               animate={{
-                scale: isSelected ? 1.1 : 1,
-                boxShadow: isSelected 
-                  ? "0 0 40px hsl(var(--primary) / 0.5)" 
-                  : "0 0 20px hsl(var(--primary) / 0.2)",
+                scale: isSelected ? 1.05 : 1,
               }}
               transition={{ duration: 0.2 }}
               className={cn(
-                "relative p-4 rounded-xl glass border-2 transition-all duration-200",
+                "relative p-3 rounded-lg border transition-all duration-200",
                 isSelected 
-                  ? "border-primary bg-card/90" 
-                  : "border-border/50 hover:border-primary/50"
+                  ? "border-primary/50 bg-card/80 shimmer-border-subtle" 
+                  : "border-border/40 bg-card/50 hover:border-border/60"
               )}
             >
               {/* Index badge */}
-              <div className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
+              <div className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">
                 {section.index + 1}
               </div>
               
               {/* Icon */}
               <div className={cn(
-                "w-12 h-12 rounded-lg flex items-center justify-center mb-3 transition-all",
+                "w-10 h-10 rounded-md flex items-center justify-center mb-2 transition-all",
                 isSelected 
-                  ? "bg-gradient-to-br from-primary to-accent" 
-                  : "bg-primary/20"
+                  ? "bg-primary/20" 
+                  : "bg-secondary/50"
               )}>
                 <Icon className={cn(
-                  "w-6 h-6",
-                  isSelected ? "text-primary-foreground" : "text-primary"
+                  "w-5 h-5",
+                  isSelected ? "text-primary" : "text-muted-foreground"
                 )} />
               </div>
               
               {/* Title */}
-              <h3 className="font-display font-semibold text-foreground text-sm text-center max-w-[140px]">
+              <h3 className="font-medium text-foreground text-xs text-center max-w-[120px] truncate">
                 {section.title}
               </h3>
-              
-              {/* Content preview */}
-              {section.content && (
-                <p className="text-xs text-muted-foreground mt-1 text-center max-w-[140px] line-clamp-2">
-                  {section.content}
-                </p>
-              )}
             </motion.div>
           </motion.button>
         );
