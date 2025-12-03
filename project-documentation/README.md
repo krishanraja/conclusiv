@@ -1,6 +1,6 @@
-# Narrative Builder - Project Documentation
+# conclusiv
 
-> Transform research into compelling presentations with AI-powered narrative generation
+> Transform research into compelling business narratives
 
 ## Quick Links
 

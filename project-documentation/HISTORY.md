@@ -1,6 +1,6 @@
 # History
 
-Changelog and version history for Narrative Builder.
+Changelog and version history for conclusiv.
 
 ## Format
 
