@@ -1,10 +1,20 @@
 import { create } from "zustand";
-import { Theme, TemplateName, NarrativeSchema, Priority } from "@/lib/types";
+import { Theme, TemplateName, NarrativeSchema, Priority, BusinessContext } from "@/lib/types";
 
 interface NarrativeState {
   // Input
   rawText: string;
   setRawText: (text: string) => void;
+  
+  // Voice
+  isRecording: boolean;
+  setIsRecording: (recording: boolean) => void;
+  
+  // Business Context
+  businessWebsite: string;
+  setBusinessWebsite: (url: string) => void;
+  businessContext: BusinessContext | null;
+  setBusinessContext: (context: BusinessContext | null) => void;
   
   // Themes
   themes: Theme[];
@@ -23,11 +33,13 @@ interface NarrativeState {
   updateSectionIcon: (sectionId: string, icon: string) => void;
   reorderSections: (fromIndex: number, toIndex: number) => void;
   
-  // UI State
-  currentStep: "extract" | "review" | "template" | "editor" | "present";
-  setCurrentStep: (step: "extract" | "review" | "template" | "editor" | "present") => void;
+  // UI State - Simplified 3-step flow
+  currentStep: "input" | "preview" | "present";
+  setCurrentStep: (step: "input" | "preview" | "present") => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
+  loadingMessage: string;
+  setLoadingMessage: (message: string) => void;
   
   // Present mode
   currentSectionIndex: number;
@@ -35,24 +47,39 @@ interface NarrativeState {
   nextSection: () => void;
   prevSection: () => void;
   
+  // View mode
+  viewMode: "present" | "reader";
+  setViewMode: (mode: "present" | "reader") => void;
+  
   // Reset
   reset: () => void;
 }
 
 const initialState = {
   rawText: "",
+  isRecording: false,
+  businessWebsite: "",
+  businessContext: null,
   themes: [],
   selectedTemplate: null,
   narrative: null,
-  currentStep: "extract" as const,
+  currentStep: "input" as const,
   isLoading: false,
+  loadingMessage: "",
   currentSectionIndex: 0,
+  viewMode: "present" as const,
 };
 
 export const useNarrativeStore = create<NarrativeState>((set, get) => ({
   ...initialState,
   
   setRawText: (text) => set({ rawText: text }),
+  
+  setIsRecording: (recording) => set({ isRecording: recording }),
+  
+  setBusinessWebsite: (url) => set({ businessWebsite: url }),
+  
+  setBusinessContext: (context) => set({ businessContext: context }),
   
   setThemes: (themes) => set({ themes }),
   
@@ -108,6 +135,8 @@ export const useNarrativeStore = create<NarrativeState>((set, get) => ({
   
   setIsLoading: (loading) => set({ isLoading: loading }),
   
+  setLoadingMessage: (message) => set({ loadingMessage: message }),
+  
   setCurrentSectionIndex: (index) => set({ currentSectionIndex: index }),
   
   nextSection: () => set((state) => {
@@ -120,6 +149,8 @@ export const useNarrativeStore = create<NarrativeState>((set, get) => ({
   prevSection: () => set((state) => ({
     currentSectionIndex: Math.max(state.currentSectionIndex - 1, 0),
   })),
+  
+  setViewMode: (mode) => set({ viewMode: mode }),
   
   reset: () => set(initialState),
 }));

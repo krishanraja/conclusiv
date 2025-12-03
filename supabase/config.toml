@@ -2,3 +2,9 @@ project_id = "bqzickzpceriwcbbzntk"
 
 [functions.extract-themes]
 verify_jwt = false
+
+[functions.build-narrative]
+verify_jwt = false
+
+[functions.scrape-business-context]
+verify_jwt = false

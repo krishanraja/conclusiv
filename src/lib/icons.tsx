@@ -6,19 +6,34 @@ import {
   LucideIcon,
 } from "lucide-react";
 
-const iconMap: Record<string, LucideIcon> = {
+export const iconMap: Record<string, LucideIcon> = {
+  "Lightbulb": Lightbulb,
   "lightbulb": Lightbulb,
+  "TrendingUp": TrendingUp,
   "trending-up": TrendingUp,
-  "shield-alert": ShieldAlert,
-  "git-branch": GitBranch,
+  "Target": Target,
   "target": Target,
-  "book-open": BookOpen,
-  "sparkles": Sparkles,
+  "Shield": ShieldAlert,
+  "shield-alert": ShieldAlert,
+  "AlertTriangle": ShieldAlert,
+  "CheckCircle": CheckCircle,
   "check-circle": CheckCircle,
-  "arrow-right": ArrowRight,
-  "map": Map,
+  "BarChart3": TrendingUp,
+  "Users": Users,
   "users": Users,
+  "Zap": Sparkles,
+  "sparkles": Sparkles,
+  "Globe": Map,
+  "map": Map,
+  "Star": Star,
+  "star": Star,
+  "Award": Trophy,
   "trophy": Trophy,
+  "Clock": Circle,
+  "DollarSign": Target,
+  "git-branch": GitBranch,
+  "book-open": BookOpen,
+  "arrow-right": ArrowRight,
   "search": Search,
   "layout": Layout,
   "minus-circle": MinusCircle,
@@ -28,9 +43,7 @@ const iconMap: Record<string, LucideIcon> = {
   "box": Box,
   "circle": Circle,
   "triangle": Triangle,
-  "star": Star,
   "flag": Flag,
-  "chess": Target, // fallback
 };
 
 export const getIcon = (iconName: string): LucideIcon => {
