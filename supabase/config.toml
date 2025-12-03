@@ -1,0 +1,4 @@
+project_id = "bqzickzpceriwcbbzntk"
+
+[functions.extract-themes]
+verify_jwt = false
