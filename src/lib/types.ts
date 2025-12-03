@@ -84,11 +84,25 @@ export interface ExtractionResult {
   recommendations: TemplateRecommendation[];
 }
 
-// App State
+export interface BusinessContext {
+  companyName: string;
+  industry: string;
+  products: string[];
+  valuePropositions: string[];
+  brandVoice: string;
+}
+
+export interface BuildNarrativeResponse {
+  themes: Theme[];
+  recommendedTemplate: TemplateName;
+  narrative: NarrativeSchema;
+  businessContext?: BusinessContext;
+}
+
 export interface AppState {
   rawText: string;
   themes: Theme[];
   selectedTemplate: TemplateName | null;
   narrative: NarrativeSchema | null;
-  currentStep: "extract" | "review" | "template" | "editor" | "present";
+  currentStep: "input" | "preview" | "present";
 }

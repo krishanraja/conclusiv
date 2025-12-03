@@ -95,7 +95,7 @@ export const PresentScreen = () => {
     } else if (e.key === "ArrowLeft") {
       prevSection();
     } else if (e.key === "Escape") {
-      setCurrentStep("editor");
+      setCurrentStep("preview");
     }
   }, [nextSection, prevSection, setCurrentStep]);
 
@@ -118,7 +118,7 @@ export const PresentScreen = () => {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setCurrentStep("editor")}
+          onClick={() => setCurrentStep("preview")}
           className="text-muted-foreground"
         >
           <X className="w-4 h-4 mr-1" />
