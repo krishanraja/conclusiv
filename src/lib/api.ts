@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Theme, BusinessContext, NarrativeSchema, TemplateName } from "./types";
+import type { Theme, BusinessContext, NarrativeSchema, TemplateName } from "./types";
 
 export interface ExtractThemesResponse {
   themes: Theme[];

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Theme, TemplateName, NarrativeSchema, Priority, BusinessContext } from "@/lib/types";
+import type { Theme, TemplateName, NarrativeSchema, Priority, BusinessContext } from "@/lib/types";
 
 interface NarrativeState {
   // Input
