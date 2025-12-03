@@ -7,7 +7,14 @@ import { LoadingOverlay } from "@/components/ui/loading";
 import { AnimatePresence, motion } from "framer-motion";
 
 const Index = () => {
-  const { currentStep, isLoading, loadingMessage } = useNarrativeStore();
+  const { 
+    currentStep, 
+    isLoading, 
+    loadingMessage, 
+    loadingStage, 
+    loadingProgress,
+    rawText 
+  } = useNarrativeStore();
 
   // Present mode is fullscreen, no header
   if (currentStep === "present") {
@@ -20,7 +27,12 @@ const Index = () => {
       
       <AnimatePresence>
         {isLoading && (
-          <LoadingOverlay message={loadingMessage || "Processing..."} />
+          <LoadingOverlay 
+            message={loadingMessage || "Processing..."} 
+            stage={loadingStage}
+            progress={loadingProgress}
+            inputLength={rawText.length}
+          />
         )}
       </AnimatePresence>
       
