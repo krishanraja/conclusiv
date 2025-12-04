@@ -9,29 +9,23 @@ export const Header = () => {
       animate={{ opacity: 1, y: 0 }}
       className="fixed top-0 left-0 right-0 z-50 glass-strong"
     >
-      <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {/* C. Icon */}
+      <div className="container mx-auto px-6 h-20 flex items-center">
+        <div className="flex items-center gap-4">
+          {/* C. Icon - Large and commanding */}
           <img 
             src={conclusivIcon} 
             alt="conclusiv" 
-            className="h-8 w-auto"
+            className="h-12 md:h-14 w-auto"
             style={{ aspectRatio: 'auto' }}
           />
-          {/* Text Logo */}
+          {/* Text Logo - Large and commanding */}
           <img 
             src={conclusivLogo} 
             alt="conclusiv" 
-            className="h-5 w-auto hidden sm:block"
+            className="h-8 md:h-10 w-auto hidden sm:block"
             style={{ aspectRatio: 'auto' }}
           />
         </div>
-        
-        <nav className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground px-3 py-1.5 rounded-full bg-secondary">
-            Research → Story → Impact
-          </span>
-        </nav>
       </div>
     </motion.header>
   );
