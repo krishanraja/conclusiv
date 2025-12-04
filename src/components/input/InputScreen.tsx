@@ -213,7 +213,7 @@ export const InputScreen = () => {
             <img 
               src={conclusivIcon} 
               alt="conclusiv" 
-              className="h-16 md:h-20 lg:h-24 w-auto"
+              className="h-10 md:h-12 lg:h-14 w-auto"
               style={{ aspectRatio: 'auto' }}
             />
             <img 
