@@ -41,7 +41,7 @@ export const DocumentUploadInput = ({
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <FileText className="w-4 h-4" />
-        <span>Upload document</span>
+        <span>Upload PDF</span>
         <span className="text-xs opacity-50">(optional)</span>
         <motion.div
           animate={{ rotate: isExpanded ? 180 : 0 }}
@@ -64,7 +64,7 @@ export const DocumentUploadInput = ({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
+                accept=".pdf,application/pdf"
                 onChange={handleFileChange}
                 className="hidden"
                 id="document-upload"
@@ -91,7 +91,7 @@ export const DocumentUploadInput = ({
                 ) : (
                   <>
                     <Upload className="w-4 h-4" />
-                    <span>Choose PDF or Word file</span>
+                    <span>Choose PDF file</span>
                   </>
                 )}
               </button>

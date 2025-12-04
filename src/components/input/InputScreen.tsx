@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
@@ -31,16 +31,24 @@ export const InputScreen = () => {
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isDocumentExpanded, setIsDocumentExpanded] = useState(false);
   const [isContextExpanded, setIsContextExpanded] = useState(false);
+  
+  // Debounced URL scraping
+  const [pendingUrl, setPendingUrl] = useState("");
+  const lastScrapedUrl = useRef("");
 
-  // Handle website URL blur to auto-scrape
-  const handleWebsiteChange = async (url: string) => {
-    setBusinessWebsite(url);
-    
-    // Auto-scrape when URL looks valid
-    if (url && url.includes(".") && !isScrapingContext) {
+  // Debounce URL scraping - only fire 800ms after user stops typing
+  useEffect(() => {
+    if (!pendingUrl || !pendingUrl.includes(".") || pendingUrl === lastScrapedUrl.current) {
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      if (isScrapingContext) return;
+      
+      lastScrapedUrl.current = pendingUrl;
       setIsScrapingContext(true);
       try {
-        const result = await scrapeBusinessContext(url);
+        const result = await scrapeBusinessContext(pendingUrl);
         if (result.context) {
           setBusinessContext(result.context);
         }
@@ -49,27 +57,31 @@ export const InputScreen = () => {
       } finally {
         setIsScrapingContext(false);
       }
-    }
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [pendingUrl, isScrapingContext, setBusinessContext]);
+
+  // Handle website URL change - just update state, debounce handles scraping
+  const handleWebsiteChange = (url: string) => {
+    setBusinessWebsite(url);
+    setPendingUrl(url);
   };
 
   const handleClearContext = () => {
     setBusinessWebsite("");
+    setPendingUrl("");
+    lastScrapedUrl.current = "";
     setBusinessContext(null);
   };
 
-  // Handle file upload
+  // Handle file upload - PDF only
   const handleFileSelect = async (file: File) => {
-    // Validate file type
-    const validTypes = [
-      'application/pdf',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/msword'
-    ];
-    
-    if (!validTypes.includes(file.type)) {
+    // Validate file type - PDF only
+    if (file.type !== 'application/pdf') {
       toast({
-        title: "Invalid file type",
-        description: "Please upload a PDF or Word document (.pdf, .docx)",
+        title: "PDF files only",
+        description: "Please upload a PDF document. Word documents are not yet supported.",
         variant: "destructive",
       });
       return;
@@ -151,114 +163,139 @@ export const InputScreen = () => {
 
   return (
     <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-4 md:py-6 relative z-10">
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-float" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/8 rounded-full blur-3xl animate-float" style={{ animationDelay: '-3s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/3 rounded-full blur-[100px]" />
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-3xl space-y-4 md:space-y-5"
+        className="w-full max-w-3xl space-y-4 md:space-y-5 relative"
       >
-        {/* Brand Logo - matched heights */}
+        {/* Brand Logo with glow effect */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="flex items-center justify-center gap-2"
+          className="flex items-center justify-center gap-3 relative"
         >
+          {/* Glow behind logo */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-32 h-12 bg-primary/20 blur-2xl rounded-full" />
+          </div>
           <img 
             src={conclusivIcon} 
             alt="conclusiv" 
-            className="h-6 md:h-7 w-auto"
+            className="h-8 md:h-10 w-auto relative z-10"
             style={{ aspectRatio: 'auto' }}
           />
           <img 
             src={conclusivLogo} 
             alt="conclusiv" 
-            className="h-6 md:h-7 w-auto"
+            className="h-8 md:h-10 w-auto relative z-10"
             style={{ aspectRatio: 'auto' }}
           />
         </motion.div>
 
-        {/* Hero Section - Updated text, 1.5X larger, bold */}
+        {/* Hero Section */}
         <div className="text-center">
           <motion.p 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-lg md:text-xl lg:text-2xl font-semibold text-muted-foreground max-w-2xl mx-auto leading-relaxed"
+            className="text-lg md:text-xl lg:text-2xl font-semibold text-foreground/90 max-w-2xl mx-auto leading-relaxed"
           >
-            Load your business plan, AI research output or strategy document below - and watch it become a stunning, clear interactive and shareable demo that turns hours of pitching in to minutes.
+            Load your business plan, AI research output or strategy document below - and watch it become a{" "}
+            <span className="gradient-text">stunning, clear interactive</span> and shareable demo that turns hours of pitching into minutes.
           </motion.p>
         </div>
 
-        {/* Text Input with shimmer border */}
-        <div className="space-y-1">
-          <div className="shimmer-border shimmer-border-subtle shimmer-glow rounded-lg">
-            <Textarea
-              value={rawText}
-              onChange={(e) => {
-                setRawText(e.target.value);
-                if (uploadedFileName) setUploadedFileName(null);
-              }}
-              placeholder="Paste your research, notes, or findings..."
-              className="min-h-[100px] md:min-h-[120px] bg-card border-0 resize-none text-sm rounded-lg"
-              disabled={isParsingDocument}
-            />
-          </div>
-          <div className="flex justify-between items-center text-xs">
-            <div className="flex items-center gap-2">
-              <span className={isTooShort ? "text-amber-500" : "text-muted-foreground"}>
-                {charCount.toLocaleString()} characters
-              </span>
-              {isTooShort && (
-                <span className="text-amber-500 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  Min {MIN_CHARS} required
+        {/* Main Input Card with glassmorphism */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="glass-strong rounded-xl p-4 md:p-5 space-y-3"
+        >
+          {/* Text Input with enhanced shimmer border */}
+          <div className="space-y-1">
+            <div className="shimmer-border shimmer-glow rounded-lg">
+              <Textarea
+                value={rawText}
+                onChange={(e) => {
+                  setRawText(e.target.value);
+                  if (uploadedFileName) setUploadedFileName(null);
+                }}
+                placeholder="Paste your research, strategy document, or business plan..."
+                className="min-h-[100px] md:min-h-[120px] bg-background/50 border-0 resize-none text-sm rounded-lg focus:ring-primary/50"
+                disabled={isParsingDocument}
+              />
+            </div>
+            <div className="flex justify-between items-center text-xs px-1">
+              <div className="flex items-center gap-2">
+                <span className={isTooShort ? "text-amber-500" : "text-muted-foreground"}>
+                  {charCount.toLocaleString()} characters
+                </span>
+                {isTooShort && (
+                  <span className="text-amber-500 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Min {MIN_CHARS} required
+                  </span>
+                )}
+              </div>
+              {isLongInput && (
+                <span className={isVeryLongInput ? "text-amber-500" : "text-shimmer-start"}>
+                  {isVeryLongInput 
+                    ? "Very large — may take longer" 
+                    : "Large document — will process in chunks"}
                 </span>
               )}
             </div>
-            {isLongInput && (
-              <span className={isVeryLongInput ? "text-amber-500" : "text-shimmer-start"}>
-                {isVeryLongInput 
-                  ? "Very large — may take longer" 
-                  : "Large document — will process in chunks"}
-              </span>
-            )}
           </div>
-        </div>
 
-        {/* Optional Features - Compact */}
-        <div className="space-y-2">
-          <DocumentUploadInput
-            isExpanded={isDocumentExpanded}
-            onToggle={() => setIsDocumentExpanded(!isDocumentExpanded)}
-            isLoading={isParsingDocument}
-            fileName={uploadedFileName}
-            onFileSelect={handleFileSelect}
-            onClear={handleClearDocument}
-          />
+          {/* Optional Features - Compact */}
+          <div className="space-y-2 pt-1">
+            <DocumentUploadInput
+              isExpanded={isDocumentExpanded}
+              onToggle={() => setIsDocumentExpanded(!isDocumentExpanded)}
+              isLoading={isParsingDocument}
+              fileName={uploadedFileName}
+              onFileSelect={handleFileSelect}
+              onClear={handleClearDocument}
+            />
 
-          <BusinessContextInput
-            value={businessWebsite}
-            onChange={handleWebsiteChange}
-            context={businessContext}
-            isLoading={isScrapingContext}
-            onClear={handleClearContext}
-            isExpanded={isContextExpanded}
-            onToggle={() => setIsContextExpanded(!isContextExpanded)}
-          />
-        </div>
+            <BusinessContextInput
+              value={businessWebsite}
+              onChange={handleWebsiteChange}
+              context={businessContext}
+              isLoading={isScrapingContext}
+              onClear={handleClearContext}
+              isExpanded={isContextExpanded}
+              onToggle={() => setIsContextExpanded(!isContextExpanded)}
+            />
+          </div>
+        </motion.div>
 
-        {/* Continue Button */}
-        <div className="flex justify-center pt-2">
+        {/* Continue Button with enhanced styling */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="flex justify-center pt-1"
+        >
           <Button
             variant="shimmer"
             size="xl"
             onClick={handleContinue}
             disabled={!rawText.trim() || isTooShort || isParsingDocument}
-            className="min-w-[200px]"
+            className="min-w-[200px] shadow-lg shadow-primary/20"
           >
             <Sparkles className="w-4 h-4 mr-2" />
             Continue
           </Button>
-        </div>
+        </motion.div>
       </motion.div>
     </div>
   );
