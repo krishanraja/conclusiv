@@ -196,14 +196,34 @@ export const InputScreen = () => {
         )}
       </AnimatePresence>
 
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-6">
+      <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center p-6 pt-24">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-2xl space-y-8"
+          className="w-full max-w-3xl space-y-10"
         >
+          {/* Hero Section */}
+          <div className="text-center space-y-6">
+            <motion.h1 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight"
+            >
+              Go from complex info to a business plan in seconds
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed"
+            >
+              AI enables you to produce detailed research and strategy. conclusiv turns that in to ordered, business-enriched, clear and visually stunning mini-interactive presos which speed up business communication by 10X.
+            </motion.p>
+          </div>
+
           {/* Voice Input */}
-          <div className="flex justify-center">
+          <div className="flex justify-center pt-4">
             <VoiceRecorder
               isRecording={isRecording}
               isSupported={isSupported}
