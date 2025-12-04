@@ -12,6 +12,8 @@ import { ErrorRecovery, parseAPIError } from "@/components/ui/error-recovery";
 import type { ErrorCode } from "@/components/ui/error-recovery";
 import { Sparkles, AlertCircle } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
+import conclusivIcon from "@/assets/conclusiv-icon.png";
+import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 const MIN_CHARS = 50;
 const MAX_CHARS_WARNING = 50000;
@@ -202,6 +204,26 @@ export const InputScreen = () => {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-3xl space-y-10"
         >
+          {/* Large Brand Logo */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center justify-center gap-4"
+          >
+            <img 
+              src={conclusivIcon} 
+              alt="conclusiv" 
+              className="h-16 md:h-20 lg:h-24 w-auto"
+              style={{ aspectRatio: 'auto' }}
+            />
+            <img 
+              src={conclusivLogo} 
+              alt="conclusiv" 
+              className="h-12 md:h-16 lg:h-[72px] w-auto"
+              style={{ aspectRatio: 'auto' }}
+            />
+          </motion.div>
+
           {/* Hero Section */}
           <div className="text-center space-y-6">
             <motion.h1 
