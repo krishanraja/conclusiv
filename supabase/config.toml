@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.extract-claims]
 verify_jwt = false
+
+[functions.parse-document]
+verify_jwt = false
