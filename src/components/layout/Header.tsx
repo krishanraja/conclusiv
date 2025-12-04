@@ -14,7 +14,7 @@ export const Header = () => {
           <img 
             src={conclusivIcon} 
             alt="conclusiv" 
-            className="h-6 w-auto"
+            className="h-9 w-auto"
             style={{ aspectRatio: 'auto' }}
           />
         </div>

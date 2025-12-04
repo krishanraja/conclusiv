@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Theme, TemplateName, NarrativeSchema, Priority, BusinessContext } from "@/lib/types";
+import type { Theme, TemplateName, NarrativeSchema, Priority, BusinessContext, RefinementHighlight, KeyClaim } from "@/lib/types";
 
 interface NarrativeState {
   // Input
@@ -33,9 +33,20 @@ interface NarrativeState {
   updateSectionIcon: (sectionId: string, icon: string) => void;
   reorderSections: (fromIndex: number, toIndex: number) => void;
   
-  // UI State - Simplified 3-step flow
-  currentStep: "input" | "preview" | "present";
-  setCurrentStep: (step: "input" | "preview" | "present") => void;
+  // Refinement state
+  highlights: RefinementHighlight[];
+  setHighlights: (highlights: RefinementHighlight[]) => void;
+  keyClaims: KeyClaim[];
+  setKeyClaims: (claims: KeyClaim[]) => void;
+  approveClaim: (claimId: string) => void;
+  rejectClaim: (claimId: string) => void;
+  flagClaimMisleading: (claimId: string) => void;
+  voiceFeedback: string;
+  setVoiceFeedback: (feedback: string) => void;
+  
+  // UI State - 4-step flow with refine
+  currentStep: "input" | "refine" | "preview" | "present";
+  setCurrentStep: (step: "input" | "refine" | "preview" | "present") => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
   loadingMessage: string;
@@ -69,6 +80,9 @@ const initialState = {
   themes: [],
   selectedTemplate: null,
   narrative: null,
+  highlights: [] as RefinementHighlight[],
+  keyClaims: [] as KeyClaim[],
+  voiceFeedback: "",
   currentStep: "input" as const,
   isLoading: false,
   loadingMessage: "",
@@ -138,6 +152,31 @@ export const useNarrativeStore = create<NarrativeState>((set, get) => ({
       narrative: { ...state.narrative, sections },
     };
   }),
+  
+  // Refinement actions
+  setHighlights: (highlights) => set({ highlights }),
+  
+  setKeyClaims: (keyClaims) => set({ keyClaims }),
+  
+  approveClaim: (claimId) => set((state) => ({
+    keyClaims: state.keyClaims.map((c) =>
+      c.id === claimId ? { ...c, approved: c.approved === true ? null : true } : c
+    ),
+  })),
+  
+  rejectClaim: (claimId) => set((state) => ({
+    keyClaims: state.keyClaims.map((c) =>
+      c.id === claimId ? { ...c, approved: c.approved === false ? null : false } : c
+    ),
+  })),
+  
+  flagClaimMisleading: (claimId) => set((state) => ({
+    keyClaims: state.keyClaims.map((c) =>
+      c.id === claimId ? { ...c, flaggedMisleading: !c.flaggedMisleading } : c
+    ),
+  })),
+  
+  setVoiceFeedback: (voiceFeedback) => set({ voiceFeedback }),
   
   setCurrentStep: (step) => set({ currentStep: step }),
   

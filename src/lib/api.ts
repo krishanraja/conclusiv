@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Theme, BusinessContext, NarrativeSchema, TemplateName } from "./types";
+import type { Theme, BusinessContext, NarrativeSchema, TemplateName, KeyClaim } from "./types";
 import type { ErrorCode } from "@/components/ui/error-recovery";
 
 export interface ExtractThemesResponse {
@@ -20,6 +20,11 @@ export interface ScrapeBusinessContextResponse {
   context?: BusinessContext;
   error?: string;
   errorCode?: ErrorCode;
+}
+
+export interface ExtractClaimsResponse {
+  claims?: KeyClaim[];
+  error?: string;
 }
 
 export const extractThemesFromAI = async (text: string): Promise<ExtractThemesResponse> => {
@@ -163,3 +168,31 @@ function mapErrorToCode(error: unknown): ErrorCode {
   
   return 'UNKNOWN';
 }
+
+export const extractKeyClaims = async (text: string): Promise<ExtractClaimsResponse> => {
+  try {
+    console.log('[API] Extracting key claims', { textLength: text.length });
+
+    const { data, error } = await supabase.functions.invoke('extract-claims', {
+      body: { text }
+    });
+
+    if (error) {
+      console.error('[API] Edge function error:', error);
+      throw new Error(error.message || 'Failed to extract claims');
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    console.log('[API] Claims extracted', { count: data.claims?.length });
+
+    return { claims: data.claims };
+  } catch (err) {
+    console.error('[API] Error extracting claims:', err);
+    return { 
+      error: err instanceof Error ? err.message : 'Failed to extract claims' 
+    };
+  }
+};

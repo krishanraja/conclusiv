@@ -1,6 +1,7 @@
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { Header } from "@/components/layout/Header";
 import { InputScreen } from "@/components/input/InputScreen";
+import { RefineScreen } from "@/components/refine/RefineScreen";
 import { PreviewScreen } from "@/components/preview/PreviewScreen";
 import { PresentScreen } from "@/components/present/PresentScreen";
 import { LoadingOverlay } from "@/components/ui/loading";
@@ -45,6 +46,7 @@ const Index = () => {
           transition={{ duration: 0.3 }}
         >
           {currentStep === "input" && <InputScreen />}
+          {currentStep === "refine" && <RefineScreen />}
           {currentStep === "preview" && <PreviewScreen />}
         </motion.main>
       </AnimatePresence>
