@@ -1,12 +1,13 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
 import { scrapeBusinessContext, parseDocument } from "@/lib/api";
 import { BusinessContextInput } from "./BusinessContextInput";
+import { DocumentUploadInput } from "./DocumentUploadInput";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, AlertCircle, Upload, FileText, Loader2 } from "lucide-react";
+import { Sparkles, AlertCircle } from "lucide-react";
 import conclusivIcon from "@/assets/conclusiv-icon.png";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 
@@ -27,7 +28,9 @@ export const InputScreen = () => {
 
   const [isScrapingContext, setIsScrapingContext] = useState(false);
   const [isParsingDocument, setIsParsingDocument] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [isDocumentExpanded, setIsDocumentExpanded] = useState(false);
+  const [isContextExpanded, setIsContextExpanded] = useState(false);
 
   // Handle website URL blur to auto-scrape
   const handleWebsiteChange = async (url: string) => {
@@ -55,10 +58,7 @@ export const InputScreen = () => {
   };
 
   // Handle file upload
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handleFileSelect = async (file: File) => {
     // Validate file type
     const validTypes = [
       'application/pdf',
@@ -95,6 +95,7 @@ export const InputScreen = () => {
 
       if (result.text) {
         setRawText(result.text);
+        setUploadedFileName(file.name);
         toast({
           title: "Document parsed",
           description: `Extracted ${result.text.length.toLocaleString()} characters from ${file.name}`,
@@ -109,11 +110,12 @@ export const InputScreen = () => {
       });
     } finally {
       setIsParsingDocument(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
     }
+  };
+
+  const handleClearDocument = () => {
+    setUploadedFileName(null);
+    setRawText("");
   };
 
   // Move to refine step
@@ -148,7 +150,7 @@ export const InputScreen = () => {
   const isTooShort = charCount > 0 && charCount < MIN_CHARS;
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center p-6 pt-24">
+    <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center p-6 pt-24 relative z-10">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -158,18 +160,18 @@ export const InputScreen = () => {
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="flex items-center justify-center gap-4"
+          className="flex items-center justify-center gap-3"
         >
           <img 
             src={conclusivIcon} 
             alt="conclusiv" 
-            className="h-12 md:h-16 lg:h-[72px] w-auto"
+            className="h-7 md:h-9 lg:h-11 w-auto"
             style={{ aspectRatio: 'auto' }}
           />
           <img 
             src={conclusivLogo} 
             alt="conclusiv" 
-            className="h-12 md:h-16 lg:h-[72px] w-auto"
+            className="h-20 md:h-24 lg:h-28 w-auto"
             style={{ aspectRatio: 'auto' }}
           />
         </motion.div>
@@ -190,7 +192,7 @@ export const InputScreen = () => {
             transition={{ delay: 0.2 }}
             className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed"
           >
-            Conclusiv turns firehoses of information in to stunning mini-interactive presos which you can pitch in minutes, not hours.
+            Conclusiv turns firehoses of information into stunning mini-interactive presos which you can pitch in minutes, not hours.
           </motion.p>
         </div>
 
@@ -198,7 +200,10 @@ export const InputScreen = () => {
         <div className="space-y-2">
           <Textarea
             value={rawText}
-            onChange={(e) => setRawText(e.target.value)}
+            onChange={(e) => {
+              setRawText(e.target.value);
+              if (uploadedFileName) setUploadedFileName(null);
+            }}
             placeholder="Paste your research, notes, or findings..."
             className="min-h-[200px] bg-card border-border/50 resize-none text-sm"
             disabled={isParsingDocument}
@@ -225,51 +230,27 @@ export const InputScreen = () => {
           </div>
         </div>
 
-        {/* File Upload Option */}
-        <div className="flex items-center gap-4">
-          <div className="flex-1 h-px bg-border" />
-          <span className="text-xs text-muted-foreground">or</span>
-          <div className="flex-1 h-px bg-border" />
-        </div>
-
-        <div className="flex justify-center">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
-            onChange={handleFileUpload}
-            className="hidden"
-            id="document-upload"
+        {/* Optional Features - Sister Components */}
+        <div className="space-y-4">
+          <DocumentUploadInput
+            isExpanded={isDocumentExpanded}
+            onToggle={() => setIsDocumentExpanded(!isDocumentExpanded)}
+            isLoading={isParsingDocument}
+            fileName={uploadedFileName}
+            onFileSelect={handleFileSelect}
+            onClear={handleClearDocument}
           />
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isParsingDocument}
-            className="gap-2"
-          >
-            {isParsingDocument ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Parsing document...
-              </>
-            ) : (
-              <>
-                <FileText className="w-4 h-4" />
-                Upload PDF or Word Document
-              </>
-            )}
-          </Button>
-        </div>
 
-        {/* Business Context */}
-        <BusinessContextInput
-          value={businessWebsite}
-          onChange={handleWebsiteChange}
-          context={businessContext}
-          isLoading={isScrapingContext}
-          onClear={handleClearContext}
-        />
+          <BusinessContextInput
+            value={businessWebsite}
+            onChange={handleWebsiteChange}
+            context={businessContext}
+            isLoading={isScrapingContext}
+            onClear={handleClearContext}
+            isExpanded={isContextExpanded}
+            onToggle={() => setIsContextExpanded(!isContextExpanded)}
+          />
+        </div>
 
         {/* Continue Button */}
         <div className="flex justify-center pt-4">

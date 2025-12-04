@@ -17,10 +17,10 @@
     --primary-foreground: 0 0% 2%;
 
     --secondary: 0 0% 8%;
-    --secondary-foreground: 0 0% 70%;
+    --secondary-foreground: 0 0% 78%;
 
     --muted: 0 0% 6%;
-    --muted-foreground: 0 0% 60%;
+    --muted-foreground: 0 0% 72%;
 
     --accent: 157 35% 28%;
     --accent-foreground: 0 0% 98%;
@@ -58,15 +58,44 @@
     @apply bg-background text-foreground antialiased;
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
     background: 
-      radial-gradient(ellipse at 20% 0%, hsl(78 100% 83% / 0.02) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 100%, hsl(157 35% 28% / 0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 20% 0%, hsl(78 100% 83% / 0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, hsl(157 35% 28% / 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, hsl(78 100% 83% / 0.02) 0%, transparent 60%),
       hsl(0 0% 2%);
     min-height: 100vh;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: 
+      radial-gradient(circle at 30% 20%, hsl(78 100% 83% / 0.04) 0%, transparent 40%),
+      radial-gradient(circle at 70% 80%, hsl(157 35% 28% / 0.05) 0%, transparent 40%);
+    animation: gradient-float 20s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
     font-weight: 600;
+  }
+}
+
+@keyframes gradient-float {
+  0%, 100% { 
+    transform: translate(0, 0) scale(1);
+    opacity: 0.6;
+  }
+  33% { 
+    transform: translate(3%, 2%) scale(1.03);
+    opacity: 0.8;
+  }
+  66% { 
+    transform: translate(-2%, -3%) scale(0.98);
+    opacity: 0.7;
   }
 }
 
