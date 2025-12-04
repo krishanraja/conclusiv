@@ -150,64 +150,58 @@ export const InputScreen = () => {
   const isTooShort = charCount > 0 && charCount < MIN_CHARS;
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center p-6 pt-24 relative z-10">
+    <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-4 md:py-6 relative z-10">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-3xl space-y-10"
+        className="w-full max-w-3xl space-y-4 md:space-y-5"
       >
-        {/* Large Brand Logo */}
+        {/* Brand Logo - matched heights */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="flex items-center justify-center gap-3"
+          className="flex items-center justify-center gap-2"
         >
           <img 
             src={conclusivIcon} 
             alt="conclusiv" 
-            className="h-7 md:h-9 lg:h-11 w-auto"
+            className="h-6 md:h-7 w-auto"
             style={{ aspectRatio: 'auto' }}
           />
           <img 
             src={conclusivLogo} 
             alt="conclusiv" 
-            className="h-20 md:h-24 lg:h-28 w-auto"
+            className="h-6 md:h-7 w-auto"
             style={{ aspectRatio: 'auto' }}
           />
         </motion.div>
 
-        {/* Hero Section */}
-        <div className="text-center space-y-4">
+        {/* Hero Section - Updated text, 1.5X larger, bold */}
+        <div className="text-center">
           <motion.p 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed"
+            className="text-lg md:text-xl lg:text-2xl font-semibold text-muted-foreground max-w-2xl mx-auto leading-relaxed"
           >
-            AI already enables you to produce detailed research & strategy but it's still hard to communicate with crystal clarity.
-          </motion.p>
-          <motion.p 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed"
-          >
-            Conclusiv turns firehoses of information into stunning mini-interactive presos which you can pitch in minutes, not hours.
+            Load your business plan, AI research output or strategy document below - and watch it become a stunning, clear interactive and shareable demo that turns hours of pitching in to minutes.
           </motion.p>
         </div>
 
-        {/* Text Input */}
-        <div className="space-y-2">
-          <Textarea
-            value={rawText}
-            onChange={(e) => {
-              setRawText(e.target.value);
-              if (uploadedFileName) setUploadedFileName(null);
-            }}
-            placeholder="Paste your research, notes, or findings..."
-            className="min-h-[200px] bg-card border-border/50 resize-none text-sm"
-            disabled={isParsingDocument}
-          />
+        {/* Text Input with shimmer border */}
+        <div className="space-y-1">
+          <div className="shimmer-border shimmer-border-subtle shimmer-glow rounded-lg">
+            <Textarea
+              value={rawText}
+              onChange={(e) => {
+                setRawText(e.target.value);
+                if (uploadedFileName) setUploadedFileName(null);
+              }}
+              placeholder="Paste your research, notes, or findings..."
+              className="min-h-[100px] md:min-h-[120px] bg-card border-0 resize-none text-sm rounded-lg"
+              disabled={isParsingDocument}
+            />
+          </div>
           <div className="flex justify-between items-center text-xs">
             <div className="flex items-center gap-2">
               <span className={isTooShort ? "text-amber-500" : "text-muted-foreground"}>
@@ -230,8 +224,8 @@ export const InputScreen = () => {
           </div>
         </div>
 
-        {/* Optional Features - Sister Components */}
-        <div className="space-y-4">
+        {/* Optional Features - Compact */}
+        <div className="space-y-2">
           <DocumentUploadInput
             isExpanded={isDocumentExpanded}
             onToggle={() => setIsDocumentExpanded(!isDocumentExpanded)}
@@ -253,7 +247,7 @@ export const InputScreen = () => {
         </div>
 
         {/* Continue Button */}
-        <div className="flex justify-center pt-4">
+        <div className="flex justify-center pt-2">
           <Button
             variant="shimmer"
             size="xl"
