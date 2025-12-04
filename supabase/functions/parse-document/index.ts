@@ -24,10 +24,29 @@ serve(async (req) => {
 
     console.log('[parse-document] Processing file:', fileName, 'Type:', fileType);
 
+    // Check for unsupported file types - DOCX not supported by AI API
+    if (fileType.includes('wordprocessingml') || fileType.includes('msword') || fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
+      console.error('[parse-document] Word documents not supported');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Word documents (.docx, .doc) are not yet supported. Please convert to PDF and try again.' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Only accept PDF files
+    if (fileType !== 'application/pdf') {
+      console.error('[parse-document] Unsupported file type:', fileType);
+      return new Response(
+        JSON.stringify({ error: 'Only PDF files are supported at this time.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Decode base64 to binary
     const binaryData = Uint8Array.from(atob(fileData), c => c.charCodeAt(0));
     
-    // For PDFs and DOCX, we'll use Lovable AI to extract the text
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       console.error('[parse-document] LOVABLE_API_KEY not configured');
@@ -36,16 +55,9 @@ serve(async (req) => {
 
     // Convert binary to base64 for the API
     const base64ForAPI = btoa(String.fromCharCode(...binaryData));
-    
-    // Determine MIME type for the data URI
-    let mimeType = fileType;
-    if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-      mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    }
+    const dataUri = `data:application/pdf;base64,${base64ForAPI}`;
 
-    const dataUri = `data:${mimeType};base64,${base64ForAPI}`;
-
-    console.log('[parse-document] Sending to AI for extraction...');
+    console.log('[parse-document] Sending PDF to AI for extraction...');
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -58,14 +70,14 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a document text extractor. Your job is to extract ALL the text content from the provided document. Return ONLY the extracted text, nothing else. Preserve paragraph breaks. Do not add any commentary or formatting markers.'
+            content: 'You are a document text extractor. Your job is to extract ALL the text content from the provided PDF document. Return ONLY the extracted text, nothing else. Preserve paragraph breaks. Do not add any commentary or formatting markers.'
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: `Extract all text from this ${fileType.includes('pdf') ? 'PDF' : 'Word'} document. Return only the raw text content.`
+                text: 'Extract all text from this PDF document. Return only the raw text content.'
               },
               {
                 type: 'file',
