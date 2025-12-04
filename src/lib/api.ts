@@ -169,6 +169,49 @@ function mapErrorToCode(error: unknown): ErrorCode {
   return 'UNKNOWN';
 }
 
+export interface ParseDocumentResponse {
+  text?: string;
+  error?: string;
+}
+
+export const parseDocument = async (file: File): Promise<ParseDocumentResponse> => {
+  try {
+    console.log('[API] Parsing document', { name: file.name, size: file.size, type: file.type });
+
+    // Convert file to base64
+    const buffer = await file.arrayBuffer();
+    const base64 = btoa(
+      new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+    );
+
+    const { data, error } = await supabase.functions.invoke('parse-document', {
+      body: { 
+        fileData: base64,
+        fileName: file.name,
+        fileType: file.type
+      }
+    });
+
+    if (error) {
+      console.error('[API] Edge function error:', error);
+      throw new Error(error.message || 'Failed to parse document');
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    console.log('[API] Document parsed', { textLength: data.text?.length });
+
+    return { text: data.text };
+  } catch (err) {
+    console.error('[API] Error parsing document:', err);
+    return { 
+      error: err instanceof Error ? err.message : 'Failed to parse document' 
+    };
+  }
+};
+
 export const extractKeyClaims = async (text: string): Promise<ExtractClaimsResponse> => {
   try {
     console.log('[API] Extracting key claims', { textLength: text.length });

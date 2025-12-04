@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
-import { scrapeBusinessContext } from "@/lib/api";
+import { scrapeBusinessContext, parseDocument } from "@/lib/api";
 import { BusinessContextInput } from "./BusinessContextInput";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, AlertCircle } from "lucide-react";
+import { Sparkles, AlertCircle, Upload, FileText, Loader2 } from "lucide-react";
 import conclusivIcon from "@/assets/conclusiv-icon.png";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 
@@ -26,6 +26,8 @@ export const InputScreen = () => {
   } = useNarrativeStore();
 
   const [isScrapingContext, setIsScrapingContext] = useState(false);
+  const [isParsingDocument, setIsParsingDocument] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Handle website URL blur to auto-scrape
   const handleWebsiteChange = async (url: string) => {
@@ -50,6 +52,68 @@ export const InputScreen = () => {
   const handleClearContext = () => {
     setBusinessWebsite("");
     setBusinessContext(null);
+  };
+
+  // Handle file upload
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword'
+    ];
+    
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a PDF or Word document (.pdf, .docx)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 20MB)
+    if (file.size > 20 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload a file smaller than 20MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsParsingDocument(true);
+    try {
+      const result = await parseDocument(file);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      if (result.text) {
+        setRawText(result.text);
+        toast({
+          title: "Document parsed",
+          description: `Extracted ${result.text.length.toLocaleString()} characters from ${file.name}`,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to parse document:", err);
+      toast({
+        title: "Failed to parse document",
+        description: err instanceof Error ? err.message : "Please try pasting the text instead",
+        variant: "destructive",
+      });
+    } finally {
+      setIsParsingDocument(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   // Move to refine step
@@ -111,22 +175,22 @@ export const InputScreen = () => {
         </motion.div>
 
         {/* Hero Section */}
-        <div className="text-center space-y-6">
-          <motion.h1 
+        <div className="text-center space-y-4">
+          <motion.p 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight"
+            className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed"
           >
-            Go from complex info to a business plan in seconds
-          </motion.h1>
+            AI already enables you to produce detailed research & strategy but it's still hard to communicate with crystal clarity.
+          </motion.p>
           <motion.p 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed"
           >
-            AI enables you to produce detailed research and strategy. conclusiv turns that in to ordered, business-enriched, clear and visually stunning mini-interactive presos which speed up business communication by 10X.
+            Conclusiv turns firehoses of information in to stunning mini-interactive presos which you can pitch in minutes, not hours.
           </motion.p>
         </div>
 
@@ -137,6 +201,7 @@ export const InputScreen = () => {
             onChange={(e) => setRawText(e.target.value)}
             placeholder="Paste your research, notes, or findings..."
             className="min-h-[200px] bg-card border-border/50 resize-none text-sm"
+            disabled={isParsingDocument}
           />
           <div className="flex justify-between items-center text-xs">
             <div className="flex items-center gap-2">
@@ -160,6 +225,43 @@ export const InputScreen = () => {
           </div>
         </div>
 
+        {/* File Upload Option */}
+        <div className="flex items-center gap-4">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-xs text-muted-foreground">or</span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
+
+        <div className="flex justify-center">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
+            onChange={handleFileUpload}
+            className="hidden"
+            id="document-upload"
+          />
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isParsingDocument}
+            className="gap-2"
+          >
+            {isParsingDocument ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Parsing document...
+              </>
+            ) : (
+              <>
+                <FileText className="w-4 h-4" />
+                Upload PDF or Word Document
+              </>
+            )}
+          </Button>
+        </div>
+
         {/* Business Context */}
         <BusinessContextInput
           value={businessWebsite}
@@ -175,7 +277,7 @@ export const InputScreen = () => {
             variant="shimmer"
             size="xl"
             onClick={handleContinue}
-            disabled={!rawText.trim() || isTooShort}
+            disabled={!rawText.trim() || isTooShort || isParsingDocument}
             className="min-w-[200px]"
           >
             <Sparkles className="w-4 h-4 mr-2" />
