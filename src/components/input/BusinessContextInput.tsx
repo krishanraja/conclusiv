@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Globe, Loader2, Check, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,8 @@ interface BusinessContextInputProps {
   context: BusinessContext | null;
   isLoading: boolean;
   onClear: () => void;
+  isExpanded: boolean;
+  onToggle: () => void;
 }
 
 export const BusinessContextInput = ({
@@ -19,14 +20,14 @@ export const BusinessContextInput = ({
   context,
   isLoading,
   onClear,
+  isExpanded,
+  onToggle,
 }: BusinessContextInputProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   return (
     <div className="w-full">
       <button
         type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={onToggle}
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <Globe className="w-4 h-4" />
