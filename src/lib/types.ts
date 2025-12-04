@@ -104,5 +104,31 @@ export interface AppState {
   themes: Theme[];
   selectedTemplate: TemplateName | null;
   narrative: NarrativeSchema | null;
-  currentStep: "input" | "preview" | "present";
+  currentStep: "input" | "refine" | "preview" | "present";
+}
+
+// Refinement types
+export interface RefinementHighlight {
+  start: number;
+  end: number;
+  text: string;
+}
+
+export interface KeyClaim {
+  id: string;
+  text: string;
+  source?: string;
+  approved: boolean | null;
+  flaggedMisleading: boolean;
+}
+
+export interface RefinementState {
+  highlights: RefinementHighlight[];
+  keyClaims: KeyClaim[];
+  voiceFeedback: string;
+}
+
+export interface ExtractClaimsResponse {
+  claims?: KeyClaim[];
+  error?: string;
 }

@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.scrape-business-context]
 verify_jwt = false
+
+[functions.extract-claims]
+verify_jwt = false

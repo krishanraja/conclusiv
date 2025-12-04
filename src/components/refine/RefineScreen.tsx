@@ -1,0 +1,197 @@
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { useNarrativeStore } from "@/store/narrativeStore";
+import { useToast } from "@/hooks/use-toast";
+import { extractKeyClaims } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HighlightableText } from "./HighlightableText";
+import { ClaimCard } from "./ClaimCard";
+import { VoiceRefinement } from "./VoiceRefinement";
+import { ArrowLeft, ArrowRight, Highlighter, MessageCircleQuestion, Mic, Loader2 } from "lucide-react";
+
+export const RefineScreen = () => {
+  const { toast } = useToast();
+  const {
+    rawText,
+    setCurrentStep,
+    highlights,
+    setHighlights,
+    keyClaims,
+    setKeyClaims,
+    approveClaim,
+    rejectClaim,
+    flagClaimMisleading,
+    voiceFeedback,
+    setVoiceFeedback,
+    setIsLoading,
+  } = useNarrativeStore();
+
+  const [activeTab, setActiveTab] = useState<string>("claims");
+  const [isExtractingClaims, setIsExtractingClaims] = useState(false);
+  const [claimsLoaded, setClaimsLoaded] = useState(false);
+
+  // Extract claims when switching to claims tab
+  const handleTabChange = async (value: string) => {
+    setActiveTab(value);
+    
+    if (value === "claims" && !claimsLoaded && keyClaims.length === 0) {
+      setIsExtractingClaims(true);
+      try {
+        const result = await extractKeyClaims(rawText);
+        if (result.claims) {
+          setKeyClaims(result.claims);
+          setClaimsLoaded(true);
+        } else if (result.error) {
+          toast({
+            title: "Couldn't extract claims",
+            description: result.error,
+            variant: "destructive",
+          });
+        }
+      } catch (err) {
+        console.error("Failed to extract claims:", err);
+      } finally {
+        setIsExtractingClaims(false);
+      }
+    }
+  };
+
+  // Load claims on mount if tab is claims
+  useState(() => {
+    if (activeTab === "claims" && !claimsLoaded && keyClaims.length === 0) {
+      handleTabChange("claims");
+    }
+  });
+
+  const handleBack = () => {
+    setCurrentStep("input");
+  };
+
+  const handleContinue = () => {
+    setCurrentStep("preview");
+  };
+
+  // Stats
+  const approvedCount = keyClaims.filter(c => c.approved === true).length;
+  const rejectedCount = keyClaims.filter(c => c.approved === false).length;
+  const flaggedCount = keyClaims.filter(c => c.flaggedMisleading).length;
+
+  return (
+    <div className="min-h-[calc(100vh-5rem)] flex flex-col p-6 pt-24">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <Button variant="ghost" onClick={handleBack}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
+        <Button variant="shimmer" onClick={handleContinue}>
+          Continue
+          <ArrowRight className="w-4 h-4 ml-2" />
+        </Button>
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex-1 max-w-4xl mx-auto w-full space-y-8"
+      >
+        {/* Title */}
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+            Fine-tune your research
+          </h1>
+          <p className="text-muted-foreground">
+            Make it yours before we build your story
+          </p>
+        </div>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="claims" className="flex items-center gap-2">
+              <MessageCircleQuestion className="w-4 h-4" />
+              <span className="hidden sm:inline">Quick Q's</span>
+            </TabsTrigger>
+            <TabsTrigger value="highlight" className="flex items-center gap-2">
+              <Highlighter className="w-4 h-4" />
+              <span className="hidden sm:inline">Highlight</span>
+            </TabsTrigger>
+            <TabsTrigger value="voice" className="flex items-center gap-2">
+              <Mic className="w-4 h-4" />
+              <span className="hidden sm:inline">Voice</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Claims Tab */}
+          <TabsContent value="claims" className="space-y-4">
+            {isExtractingClaims ? (
+              <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-muted-foreground">Extracting key claims...</p>
+              </div>
+            ) : keyClaims.length > 0 ? (
+              <>
+                <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
+                  <span>Review {keyClaims.length} key claims</span>
+                  <div className="flex gap-4">
+                    <span className="text-green-500">{approvedCount} approved</span>
+                    <span className="text-red-500">{rejectedCount} rejected</span>
+                    {flaggedCount > 0 && (
+                      <span className="text-amber-500">{flaggedCount} flagged</span>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {keyClaims.map((claim) => (
+                    <ClaimCard
+                      key={claim.id}
+                      claim={claim}
+                      onApprove={() => approveClaim(claim.id)}
+                      onReject={() => rejectClaim(claim.id)}
+                      onFlagMisleading={() => flagClaimMisleading(claim.id)}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-16 text-muted-foreground">
+                <p>No claims to review yet</p>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Highlight Tab */}
+          <TabsContent value="highlight">
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Select text you want to emphasize in your story
+              </p>
+              <HighlightableText
+                text={rawText}
+                highlights={highlights}
+                onHighlight={(highlight) => setHighlights([...highlights, highlight])}
+                onRemoveHighlight={(index) => 
+                  setHighlights(highlights.filter((_, i) => i !== index))
+                }
+              />
+              {highlights.length > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  {highlights.length} selection{highlights.length !== 1 ? 's' : ''} highlighted
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Voice Tab */}
+          <TabsContent value="voice">
+            <VoiceRefinement
+              feedback={voiceFeedback}
+              onFeedbackChange={setVoiceFeedback}
+            />
+          </TabsContent>
+        </Tabs>
+      </motion.div>
+    </div>
+  );
+};
