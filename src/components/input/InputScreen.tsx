@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, DragEvent } from "react";
 import { motion } from "framer-motion";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,19 @@ import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 const MIN_CHARS = 50;
 const MAX_CHARS_WARNING = 50000;
+
+const ACCEPTED_FILE_TYPES = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+];
+
+const getFileTypeLabel = (type: string): string => {
+  if (type === 'application/pdf') return 'PDF';
+  if (type.includes('wordprocessing')) return 'Word';
+  if (type.includes('presentation')) return 'PowerPoint';
+  return 'document';
+};
 
 export const InputScreen = () => {
   const { toast } = useToast();
@@ -31,6 +44,7 @@ export const InputScreen = () => {
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isDocumentExpanded, setIsDocumentExpanded] = useState(false);
   const [isContextExpanded, setIsContextExpanded] = useState(false);
+  const [isDraggingOnTextarea, setIsDraggingOnTextarea] = useState(false);
   
   // Debounced URL scraping
   const [pendingUrl, setPendingUrl] = useState("");
@@ -75,13 +89,13 @@ export const InputScreen = () => {
     setBusinessContext(null);
   };
 
-  // Handle file upload - PDF only
+  // Handle file upload - PDF, DOCX, PPTX
   const handleFileSelect = async (file: File) => {
-    // Validate file type - PDF only
-    if (file.type !== 'application/pdf') {
+    // Validate file type
+    if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
       toast({
-        title: "PDF files only",
-        description: "Please upload a PDF document. Word documents are not yet supported.",
+        title: "Unsupported file type",
+        description: "Please upload a PDF, Word (.docx), or PowerPoint (.pptx) document.",
         variant: "destructive",
       });
       return;
@@ -108,8 +122,9 @@ export const InputScreen = () => {
       if (result.text) {
         setRawText(result.text);
         setUploadedFileName(file.name);
+        const fileType = getFileTypeLabel(file.type);
         toast({
-          title: "Document parsed",
+          title: `${fileType} parsed`,
           description: `Extracted ${result.text.length.toLocaleString()} characters from ${file.name}`,
         });
       }
@@ -128,6 +143,37 @@ export const InputScreen = () => {
   const handleClearDocument = () => {
     setUploadedFileName(null);
     setRawText("");
+  };
+
+  // Drag handlers for textarea
+  const handleTextareaDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingOnTextarea(true);
+  };
+
+  const handleTextareaDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingOnTextarea(true);
+  };
+
+  const handleTextareaDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setIsDraggingOnTextarea(false);
+    }
+  };
+
+  const handleTextareaDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingOnTextarea(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleFileSelect(files[0]);
+    }
   };
 
   // Move to refine step
@@ -219,19 +265,33 @@ export const InputScreen = () => {
           transition={{ delay: 0.2 }}
           className="glass-strong rounded-xl p-4 md:p-5 space-y-3"
         >
-          {/* Text Input with enhanced shimmer border */}
+          {/* Text Input with drag & drop support */}
           <div className="space-y-1">
-            <div className="shimmer-border shimmer-glow rounded-lg">
+            <div 
+              className={`shimmer-border shimmer-glow rounded-lg relative transition-all duration-300 ${
+                isDraggingOnTextarea ? 'ring-2 ring-shimmer-start scale-[1.01]' : ''
+              }`}
+              onDragEnter={handleTextareaDragEnter}
+              onDragOver={handleTextareaDragOver}
+              onDragLeave={handleTextareaDragLeave}
+              onDrop={handleTextareaDrop}
+            >
               <Textarea
                 value={rawText}
                 onChange={(e) => {
                   setRawText(e.target.value);
                   if (uploadedFileName) setUploadedFileName(null);
                 }}
-                placeholder="Paste your research, strategy document, or business plan..."
+                placeholder="Paste your research, strategy document, or business plan... or drag & drop a file"
                 className="min-h-[100px] md:min-h-[120px] bg-background/50 border-0 resize-none text-sm rounded-lg focus:ring-primary/50"
                 disabled={isParsingDocument}
               />
+              {/* Drag overlay for textarea */}
+              {isDraggingOnTextarea && (
+                <div className="absolute inset-0 flex items-center justify-center bg-shimmer-start/10 rounded-lg pointer-events-none">
+                  <p className="text-shimmer-start font-medium">Drop file here</p>
+                </div>
+              )}
             </div>
             <div className="flex justify-between items-center text-xs px-1">
               <div className="flex items-center gap-2">

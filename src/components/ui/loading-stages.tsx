@@ -46,7 +46,7 @@ export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStage
             strokeLinecap="round"
             initial={{ strokeDasharray: "0 352" }}
             animate={{ strokeDasharray: `${(progress / 100) * 352} 352` }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
+            transition={{ duration: 1.2, ease: "easeInOut" }}
           />
           <defs>
             <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -56,15 +56,22 @@ export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStage
           </defs>
         </svg>
         
-        {/* Center icon */}
+        {/* Center icon with gentle breathing glow */}
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.div
             key={stage}
-            initial={{ scale: 0.5, opacity: 0 }}
+            initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 200 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="relative"
           >
-            <StageIcon className="w-10 h-10 text-shimmer-start" />
+            {/* Breathing glow behind icon */}
+            <motion.div
+              className="absolute inset-0 w-10 h-10 bg-shimmer-start/30 rounded-full blur-xl"
+              animate={{ opacity: [0.3, 0.6, 0.3] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <StageIcon className="w-10 h-10 text-shimmer-start relative z-10" />
           </motion.div>
         </div>
       </div>
@@ -74,25 +81,26 @@ export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStage
         key={stage}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
         className="text-center space-y-2"
       >
         <p className="text-lg font-medium text-foreground">{currentStage.label}</p>
         <p className="text-sm text-muted-foreground">{currentStage.description}</p>
       </motion.div>
 
-      {/* Stage indicators */}
+      {/* Stage indicators - gentle opacity pulse instead of jarring scale */}
       <div className="flex items-center gap-2">
         {stages.map((s, i) => (
           <motion.div
             key={i}
             className={cn(
-              "w-2 h-2 rounded-full transition-colors duration-300",
+              "w-2 h-2 rounded-full transition-colors duration-500",
               i < stage ? "bg-shimmer-start" :
               i === stage ? "bg-shimmer-end" :
               "bg-muted/30"
             )}
-            animate={i === stage ? { scale: [1, 1.3, 1] } : {}}
-            transition={{ duration: 1, repeat: Infinity }}
+            animate={i === stage ? { opacity: [0.6, 1, 0.6] } : { opacity: 1 }}
+            transition={i === stage ? { duration: 2, repeat: Infinity, ease: "easeInOut" } : {}}
           />
         ))}
       </div>
@@ -108,7 +116,7 @@ export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStage
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 2 }}
+        transition={{ delay: 2, duration: 0.8 }}
         className="text-xs text-muted-foreground/70 text-center max-w-xs"
       >
         <TipCarousel />
@@ -141,6 +149,7 @@ const TipCarousel = () => {
       initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -5 }}
+      transition={{ duration: 0.5 }}
     >
       {tips[tipIndex]}
     </motion.p>
