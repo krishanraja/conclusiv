@@ -62,18 +62,18 @@ export const useAnalytics = () => {
       sessionStorage.setItem(SESSION_KEY, sessionId);
       sessionStorage.setItem(SESSION_START_KEY, Date.now().toString());
       
-      // Create session in database
-      createSession(sessionId);
+      // Create session in database (pass user?.id directly to avoid stale closure)
+      createSession(sessionId, user?.id);
     }
     return sessionId;
-  }, []);
+  }, [user?.id]);
 
-  const createSession = async (sessionId: string) => {
+  const createSession = async (sessionId: string, userId: string | undefined) => {
     const deviceInfo = getDeviceInfo();
     try {
       await supabase.from("analytics_sessions").insert({
         session_id: sessionId,
-        user_id: user?.id || null,
+        user_id: userId || null,
         device: deviceInfo.isMobile ? "mobile" : "desktop",
         browser: getBrowserName(deviceInfo.userAgent),
         referrer: document.referrer || null,

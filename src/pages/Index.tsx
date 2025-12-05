@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
@@ -36,8 +36,12 @@ const Index = () => {
   }, [trackPageView]);
 
   // Track step changes
+  const previousStepRef = React.useRef(currentStep);
   useEffect(() => {
-    trackStepChange("previous", currentStep);
+    if (previousStepRef.current !== currentStep) {
+      trackStepChange(previousStepRef.current, currentStep);
+      previousStepRef.current = currentStep;
+    }
     if (currentStep === "preview") {
       incrementUsageCount();
     }
