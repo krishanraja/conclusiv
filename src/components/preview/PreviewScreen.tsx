@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Play, BookOpen, Share2, Download, FileText, Presentation, Lock } from "lucide-react";
+import { ArrowLeft, Play, BookOpen, Share2, Download, FileText, Presentation, Lock, Copy, Check } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
 import { buildNarrative } from "@/lib/api";
@@ -13,15 +13,28 @@ import { cn } from "@/lib/utils";
 import { AnimatePresence } from "framer-motion";
 import { useFeatureGate } from "@/components/subscription/FeatureGate";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { exportToPDF } from "@/lib/exports/pdfExport";
+import { exportToPPTX } from "@/lib/exports/pptxExport";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 export const PreviewScreen = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const {
     rawText,
     setCurrentStep,
@@ -47,6 +60,10 @@ export const PreviewScreen = () => {
 
   const [error, setError] = useState<{ code: ErrorCode; message: string; retryable: boolean } | null>(null);
   const [hasBuilt, setHasBuilt] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [isSharing, setIsSharing] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Build narrative on mount if not already built
   useEffect(() => {
@@ -138,22 +155,104 @@ export const PreviewScreen = () => {
       return;
     }
     
-    // TODO: Implement actual export
-    toast({
-      title: `${type.toUpperCase()} Export`,
-      description: "Export functionality coming soon!",
-    });
+    if (!narrative) {
+      toast({
+        title: "No narrative",
+        description: "Please build a narrative first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const title = businessContext?.companyName || 'Narrative';
+      
+      if (type === 'pdf') {
+        exportToPDF(narrative, businessContext, title);
+        toast({
+          title: "PDF Downloaded",
+          description: "Your narrative has been exported as a PDF.",
+        });
+      } else {
+        exportToPPTX(narrative, businessContext, title);
+        toast({
+          title: "PowerPoint Downloaded",
+          description: "Your narrative has been exported as a presentation.",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Export failed",
+        description: "There was an error exporting your narrative.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     if (!requireFeature('export')) {
       return;
     }
+
+    if (!narrative) {
+      toast({
+        title: "No narrative",
+        description: "Please build a narrative first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to create shareable links.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSharing(true);
     
-    // TODO: Implement shareable links
+    try {
+      // Generate unique share ID
+      const shareId = crypto.randomUUID().slice(0, 8);
+      const title = businessContext?.companyName || 'Shared Narrative';
+
+      // Save to database
+      const { error: insertError } = await supabase
+        .from("narratives")
+        .insert([{
+          user_id: user.id,
+          narrative_data: JSON.parse(JSON.stringify(narrative)),
+          title,
+          share_id: shareId,
+          is_public: true,
+        }]);
+
+      if (insertError) throw insertError;
+
+      const url = `${window.location.origin}/share/${shareId}`;
+      setShareUrl(url);
+      setShareDialogOpen(true);
+    } catch (err) {
+      toast({
+        title: "Share failed",
+        description: "There was an error creating your shareable link.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const copyToClipboard = async () => {
+    await navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
     toast({
-      title: "Share",
-      description: "Shareable links coming soon!",
+      title: "Copied!",
+      description: "Link copied to clipboard.",
     });
   };
 
@@ -161,6 +260,24 @@ export const PreviewScreen = () => {
     <>
       {UpgradePromptComponent}
       
+      {/* Share Dialog */}
+      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share your narrative</DialogTitle>
+            <DialogDescription>
+              Anyone with this link can view your narrative.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 mt-4">
+            <Input value={shareUrl} readOnly className="flex-1" />
+            <Button onClick={copyToClipboard} variant="outline">
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Error Recovery Modal */}
       <AnimatePresence>
         {error && (
@@ -219,9 +336,10 @@ export const PreviewScreen = () => {
               size="sm"
               className="text-muted-foreground"
               onClick={handleShare}
+              disabled={isSharing}
             >
               <Share2 className="w-4 h-4 mr-1" />
-              Share
+              {isSharing ? "Creating..." : "Share"}
               {!isPro && <Lock className="w-3 h-3 ml-1 opacity-50" />}
             </Button>
           </div>
