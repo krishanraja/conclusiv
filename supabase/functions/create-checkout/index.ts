@@ -33,7 +33,7 @@ serve(async (req) => {
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-      apiVersion: "2025-08-27.basil",
+      apiVersion: "2024-11-20.acacia",
     });
 
     // Check if a Stripe customer record exists for this user
@@ -47,17 +47,19 @@ serve(async (req) => {
     const origin = req.headers.get("origin") || "https://bqzickzpceriwcbbzntk.lovableproject.com";
     
     // Create subscription checkout session with 7-day trial
+    // Price: $10/month USD (price_1SarxoHv8qNXfrXZv7VUgjJY)
     // allow_promotion_codes lets users enter EARLYADOPTER or 3MONTHS at checkout
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       line_items: [
         {
-          price: "price_1SaqzDHv8qNXfrXZHCePqnfN",
+          price: "price_1SarxoHv8qNXfrXZv7VUgjJY",
           quantity: 1,
         },
       ],
       mode: "subscription",
+      currency: "usd",
       allow_promotion_codes: true,
       subscription_data: {
         trial_period_days: 7,

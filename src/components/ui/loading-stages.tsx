@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Sparkles, Layout, FileText, Check } from "lucide-react";
+import { Search, Sparkles, Layout, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LoadingStagesProps {
@@ -14,19 +14,25 @@ const stages = [
   { icon: Sparkles, label: "Extracting themes", description: "Identifying key insights" },
   { icon: Layout, label: "Building structure", description: "Creating narrative flow" },
   { icon: FileText, label: "Generating content", description: "Writing section content" },
-  { icon: Check, label: "Finalizing", description: "Polishing your story" },
+  { icon: Loader2, label: "Finalizing", description: "Almost done — this may take a moment" },
 ];
 
 export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStagesProps) => {
   const estimatedSeconds = Math.max(10, Math.ceil(inputLength / 2000) * 5);
   const currentStage = stages[Math.min(stage, stages.length - 1)];
   const StageIcon = currentStage.icon;
+  const isFinalizing = stage >= stages.length - 1;
 
   return (
     <div className="flex flex-col items-center gap-8 w-full max-w-md">
       {/* Main progress ring */}
       <div className="relative">
-        <svg className="w-32 h-32 transform -rotate-90">
+        <motion.svg 
+          className="w-32 h-32"
+          animate={isFinalizing ? { rotate: 360 } : { rotate: -90 }}
+          transition={isFinalizing ? { duration: 3, repeat: Infinity, ease: "linear" } : { duration: 0 }}
+          style={{ transform: isFinalizing ? undefined : 'rotate(-90deg)' }}
+        >
           <circle
             cx="64"
             cy="64"
@@ -45,8 +51,12 @@ export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStage
             fill="none"
             strokeLinecap="round"
             initial={{ strokeDasharray: "0 352" }}
-            animate={{ strokeDasharray: `${(progress / 100) * 352} 352` }}
-            transition={{ duration: 1.2, ease: "easeInOut" }}
+            animate={{ 
+              strokeDasharray: isFinalizing 
+                ? "88 352" // Quarter circle for spinning effect
+                : `${(progress / 100) * 352} 352` 
+            }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
           />
           <defs>
             <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -54,7 +64,7 @@ export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStage
               <stop offset="100%" stopColor="hsl(var(--shimmer-end))" />
             </linearGradient>
           </defs>
-        </svg>
+        </motion.svg>
         
         {/* Center icon with gentle breathing glow */}
         <div className="absolute inset-0 flex items-center justify-center">
@@ -71,7 +81,12 @@ export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStage
               animate={{ opacity: [0.3, 0.6, 0.3] }}
               transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
             />
-            <StageIcon className="w-10 h-10 text-shimmer-start relative z-10" />
+            <StageIcon 
+              className={cn(
+                "w-10 h-10 text-shimmer-start relative z-10",
+                isFinalizing && "animate-spin"
+              )} 
+            />
           </motion.div>
         </div>
       </div>
@@ -86,6 +101,15 @@ export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStage
       >
         <p className="text-lg font-medium text-foreground">{currentStage.label}</p>
         <p className="text-sm text-muted-foreground">{currentStage.description}</p>
+        {isFinalizing && (
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-xs text-muted-foreground/70"
+          >
+            Still working...
+          </motion.p>
+        )}
       </motion.div>
 
       {/* Stage indicators - gentle opacity pulse instead of jarring scale */}
