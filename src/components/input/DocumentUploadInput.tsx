@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState, DragEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, FileText, Loader2, Check, X, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ export const DocumentUploadInput = ({
   onClear,
 }: DocumentUploadInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -33,6 +34,41 @@ export const DocumentUploadInput = ({
     }
   };
 
+  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set dragging false if we're leaving the container entirely
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      onFileSelect(files[0]);
+    }
+  };
+
   return (
     <div className="w-full">
       <button
@@ -41,8 +77,8 @@ export const DocumentUploadInput = ({
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <FileText className="w-4 h-4" />
-        <span>Upload PDF</span>
-        <span className="text-xs opacity-50">(optional)</span>
+        <span>Upload document</span>
+        <span className="text-xs opacity-50">(PDF, Word, PowerPoint)</span>
         <motion.div
           animate={{ rotate: isExpanded ? 180 : 0 }}
           transition={{ duration: 0.2 }}
@@ -64,37 +100,60 @@ export const DocumentUploadInput = ({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,application/pdf"
+                accept=".pdf,.docx,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
                 onChange={handleFileChange}
                 className="hidden"
                 id="document-upload"
               />
               
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isLoading}
+              {/* Drag & Drop Zone */}
+              <div
+                onDragEnter={handleDragEnter}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => !isLoading && fileInputRef.current?.click()}
                 className={cn(
-                  "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-md",
-                  "bg-card border border-border/50 text-muted-foreground",
-                  "hover:bg-card/80 hover:border-border hover:text-foreground",
-                  "transition-all duration-200",
+                  "relative w-full flex flex-col items-center justify-center gap-2 px-4 py-6 rounded-lg cursor-pointer",
+                  "border-2 border-dashed transition-all duration-300",
+                  isDragging 
+                    ? "border-shimmer-start bg-shimmer-start/10 scale-[1.02]" 
+                    : "border-border/50 bg-card hover:bg-card/80 hover:border-border",
                   isLoading && "opacity-50 cursor-not-allowed",
                   fileName && "border-shimmer-start/50"
                 )}
               >
+                {/* Drag overlay */}
+                <AnimatePresence>
+                  {isDragging && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute inset-0 flex items-center justify-center bg-shimmer-start/5 rounded-lg"
+                    >
+                      <p className="text-shimmer-start font-medium">Drop file here</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Parsing document...</span>
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Parsing document...</span>
                   </>
-                ) : (
+                ) : !isDragging && (
                   <>
-                    <Upload className="w-4 h-4" />
-                    <span>Choose PDF file</span>
+                    <Upload className="w-6 h-6 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Drag & drop or click to upload
+                    </span>
+                    <span className="text-xs text-muted-foreground/60">
+                      PDF, Word (.docx), PowerPoint (.pptx)
+                    </span>
                   </>
                 )}
-              </button>
+              </div>
 
               {/* File Preview */}
               <AnimatePresence>
@@ -114,7 +173,10 @@ export const DocumentUploadInput = ({
                       </div>
                       <button
                         type="button"
-                        onClick={onClear}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onClear();
+                        }}
                         className="text-muted-foreground hover:text-foreground"
                       >
                         <X className="w-4 h-4" />

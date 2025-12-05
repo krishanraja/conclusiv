@@ -22,6 +22,7 @@ export const LoadingOverlay = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      transition={{ duration: 0.6, ease: "easeInOut" }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm"
     >
       {useStages ? (
@@ -31,7 +32,7 @@ export const LoadingOverlay = ({
           <motion.div
             className="relative"
             animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
           >
             <div className="w-12 h-12 rounded-full border-2 border-shimmer-start/20" />
             <div className="absolute inset-0 w-12 h-12 rounded-full border-2 border-transparent border-t-shimmer-start" />
@@ -39,7 +40,7 @@ export const LoadingOverlay = ({
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
             className="text-sm text-muted-foreground"
           >
             {message}
