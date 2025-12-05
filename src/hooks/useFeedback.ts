@@ -35,9 +35,18 @@ export const useFeedback = () => {
 
   const calculateSentiment = (rating?: number, message?: string): Sentiment => {
     if (rating !== undefined) {
-      if (rating >= 4 || rating >= 8) return "positive";
-      if (rating >= 2 || rating >= 5) return "neutral";
-      return "negative";
+      // Handle both 5-point (1-5) and 10-point (0-10) scales
+      if (rating <= 5) {
+        // 5-point scale
+        if (rating >= 4) return "positive";
+        if (rating >= 3) return "neutral";
+        return "negative";
+      } else {
+        // 10-point scale (NPS style)
+        if (rating >= 9) return "positive";
+        if (rating >= 7) return "neutral";
+        return "negative";
+      }
     }
     
     if (message) {
