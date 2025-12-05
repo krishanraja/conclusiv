@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, RefreshCw, FileText, HelpCircle } from "lucide-react";
 import { Button } from "./button";
@@ -182,8 +183,6 @@ const RetryTimer = ({ seconds }: { seconds: number }) => {
     </div>
   );
 };
-
-import { useState, useEffect } from "react";
 
 // Helper to create APIError from various error sources
 export const parseAPIError = (error: unknown): APIError => {

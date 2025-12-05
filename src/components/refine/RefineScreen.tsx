@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
@@ -58,11 +58,11 @@ export const RefineScreen = () => {
   };
 
   // Load claims on mount if tab is claims
-  useState(() => {
+  useEffect(() => {
     if (activeTab === "claims" && !claimsLoaded && keyClaims.length === 0) {
       handleTabChange("claims");
     }
-  });
+  }, []);
 
   const handleBack = () => {
     setCurrentStep("input");

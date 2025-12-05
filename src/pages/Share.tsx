@@ -15,6 +15,17 @@ const Share = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!narrative) return;
+      if (e.key === 'ArrowLeft') handlePrev();
+      if (e.key === 'ArrowRight') handleNext();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [narrative, currentIndex]);
+
   useEffect(() => {
     const fetchNarrative = async () => {
       if (!shareId) {
@@ -44,10 +55,16 @@ const Share = () => {
     fetchNarrative();
   }, [shareId]);
 
+  const handlePrev = () => setCurrentIndex((prev) => Math.max(0, prev - 1));
+  const handleNext = () => setCurrentIndex((prev) => Math.min((narrative?.sections.length || 1) - 1, prev + 1));
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-shimmer-start border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground text-sm">Loading narrative...</p>
+        </div>
       </div>
     );
   }
@@ -68,9 +85,6 @@ const Share = () => {
 
   const currentSection = narrative.sections[currentIndex];
   const IconComponent = iconMap[currentSection?.icon] || Play;
-
-  const handlePrev = () => setCurrentIndex(Math.max(0, currentIndex - 1));
-  const handleNext = () => setCurrentIndex(Math.min(narrative.sections.length - 1, currentIndex + 1));
 
   return (
     <div className="min-h-screen bg-background">
