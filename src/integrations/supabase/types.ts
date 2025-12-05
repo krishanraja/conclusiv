@@ -14,6 +14,162 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          created_at: string
+          device_info: Json | null
+          event_data: Json | null
+          event_name: string
+          event_type: string
+          id: string
+          page: string | null
+          session_id: string
+          step: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_info?: Json | null
+          event_data?: Json | null
+          event_name: string
+          event_type: string
+          id?: string
+          page?: string | null
+          session_id: string
+          step?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_info?: Json | null
+          event_data?: Json | null
+          event_name?: string
+          event_type?: string
+          id?: string
+          page?: string | null
+          session_id?: string
+          step?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      analytics_sessions: {
+        Row: {
+          browser: string | null
+          created_at: string
+          device: string | null
+          ended_at: string | null
+          id: string
+          pages_viewed: number | null
+          referrer: string | null
+          session_id: string
+          started_at: string
+          user_id: string | null
+        }
+        Insert: {
+          browser?: string | null
+          created_at?: string
+          device?: string | null
+          ended_at?: string | null
+          id?: string
+          pages_viewed?: number | null
+          referrer?: string | null
+          session_id: string
+          started_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          browser?: string | null
+          created_at?: string
+          device?: string | null
+          ended_at?: string | null
+          id?: string
+          pages_viewed?: number | null
+          referrer?: string | null
+          session_id?: string
+          started_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      contact_inquiries: {
+        Row: {
+          category: string | null
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          responded_at: string | null
+          status: string | null
+          subject: string
+          user_id: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          name: string
+          responded_at?: string | null
+          status?: string | null
+          subject: string
+          user_id?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          responded_at?: string | null
+          status?: string | null
+          subject?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      feedback: {
+        Row: {
+          context: Json | null
+          created_at: string
+          feedback_type: string
+          id: string
+          message: string | null
+          page: string | null
+          rating: number | null
+          sentiment: string | null
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string
+          feedback_type: string
+          id?: string
+          message?: string | null
+          page?: string | null
+          rating?: number | null
+          sentiment?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string
+          feedback_type?: string
+          id?: string
+          message?: string | null
+          page?: string | null
+          rating?: number | null
+          sentiment?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       narratives: {
         Row: {
           created_at: string | null
