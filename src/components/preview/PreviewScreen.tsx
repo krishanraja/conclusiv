@@ -12,7 +12,6 @@ import type { ErrorCode } from "@/components/ui/error-recovery";
 import { cn } from "@/lib/utils";
 import { AnimatePresence } from "framer-motion";
 import { useFeatureGate } from "@/components/subscription/FeatureGate";
-import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { exportToPDF } from "@/lib/exports/pdfExport";
@@ -56,7 +55,6 @@ export const PreviewScreen = () => {
   } = useNarrativeStore();
 
   const { requireFeature, UpgradePromptComponent, isPro, limits } = useFeatureGate();
-  const { } = useSubscription();
 
   const [error, setError] = useState<{ code: ErrorCode; message: string; retryable: boolean } | null>(null);
   const [hasBuilt, setHasBuilt] = useState(false);

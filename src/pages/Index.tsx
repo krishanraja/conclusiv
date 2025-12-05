@@ -1,5 +1,10 @@
+import { useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useNarrativeStore } from "@/store/narrativeStore";
+import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
 import { InputScreen } from "@/components/input/InputScreen";
 import { RefineScreen } from "@/components/refine/RefineScreen";
 import { PreviewScreen } from "@/components/preview/PreviewScreen";
@@ -8,6 +13,9 @@ import { LoadingOverlay } from "@/components/ui/loading";
 import { AnimatePresence, motion } from "framer-motion";
 
 const Index = () => {
+  const { toast } = useToast();
+  const { checkSubscription } = useSubscription();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { 
     currentStep, 
     isLoading, 
@@ -17,13 +25,36 @@ const Index = () => {
     rawText 
   } = useNarrativeStore();
 
+  // Handle checkout success/cancel
+  useEffect(() => {
+    const checkoutStatus = searchParams.get('checkout');
+    
+    if (checkoutStatus === 'success') {
+      toast({
+        title: "Subscription activated!",
+        description: "Welcome to Pro. Your premium features are now unlocked.",
+      });
+      checkSubscription();
+      searchParams.delete('checkout');
+      setSearchParams(searchParams, { replace: true });
+    } else if (checkoutStatus === 'cancelled') {
+      toast({
+        title: "Checkout cancelled",
+        description: "No charges were made. You can upgrade anytime.",
+        variant: "destructive",
+      });
+      searchParams.delete('checkout');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams]);
+
   // Present mode is fullscreen, no header
   if (currentStep === "present") {
     return <PresentScreen />;
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header />
       
       <AnimatePresence>
@@ -44,12 +75,15 @@ const Index = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
+          className="flex-1"
         >
           {currentStep === "input" && <InputScreen />}
           {currentStep === "refine" && <RefineScreen />}
           {currentStep === "preview" && <PreviewScreen />}
         </motion.main>
       </AnimatePresence>
+      
+      {currentStep === "input" && <Footer />}
     </div>
   );
 };

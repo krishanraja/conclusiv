@@ -63,16 +63,14 @@ export const buildNarrative = async (
       hasContext: !!businessContext 
     });
 
-    // Simulate progress stages during the API call
-    const progressInterval = setInterval(() => {
-      if (onProgress) {
-        // Gradual progress simulation
-        onProgress(1, 25);
-        setTimeout(() => onProgress(2, 45), 2000);
-        setTimeout(() => onProgress(3, 65), 5000);
-        setTimeout(() => onProgress(4, 85), 10000);
-      }
-    }, 100);
+    // Progress simulation with proper cleanup
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+    if (onProgress) {
+      onProgress(1, 25);
+      timeouts.push(setTimeout(() => onProgress(2, 45), 2000));
+      timeouts.push(setTimeout(() => onProgress(3, 65), 5000));
+      timeouts.push(setTimeout(() => onProgress(4, 85), 10000));
+    }
 
     const { data, error } = await supabase.functions.invoke('build-narrative', {
       body: { 
@@ -81,7 +79,7 @@ export const buildNarrative = async (
       }
     });
 
-    clearInterval(progressInterval);
+    timeouts.forEach(t => clearTimeout(t));
     if (onProgress) onProgress(4, 100);
 
     if (error) {
