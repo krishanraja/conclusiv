@@ -47,6 +47,7 @@ serve(async (req) => {
     const origin = req.headers.get("origin") || "https://bqzickzpceriwcbbzntk.lovableproject.com";
     
     // Create subscription checkout session with 7-day trial
+    // allow_promotion_codes lets users enter EARLYADOPTER or 3MONTHS at checkout
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
@@ -57,6 +58,7 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
+      allow_promotion_codes: true,
       subscription_data: {
         trial_period_days: 7,
       },
