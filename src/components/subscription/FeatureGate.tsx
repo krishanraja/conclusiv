@@ -19,11 +19,12 @@ export const FeatureGate = ({
   showLock = true,
   className 
 }: FeatureGateProps) => {
-  const { isPro, limits, canBuild } = useSubscription();
+  const { isPro, limits, canBuild, isLoading } = useSubscription();
   const [showUpgrade, setShowUpgrade] = useState(false);
 
-  // Determine if feature is accessible
+  // Determine if feature is accessible (default to accessible while loading)
   const hasAccess = (() => {
+    if (isLoading) return true; // Don't block while loading
     switch (feature) {
       case 'build_limit':
         return canBuild;
@@ -86,10 +87,11 @@ export const FeatureGate = ({
 
 // Hook for programmatic upgrade prompts
 export const useFeatureGate = () => {
-  const { isPro, limits, canBuild } = useSubscription();
+  const { isPro, limits, canBuild, isLoading } = useSubscription();
   const [upgradePrompt, setUpgradePrompt] = useState<UpgradeTrigger | null>(null);
 
   const checkFeature = (feature: UpgradeTrigger): boolean => {
+    if (isLoading) return true; // Don't block while loading
     switch (feature) {
       case 'build_limit':
         return canBuild;
@@ -133,5 +135,6 @@ export const useFeatureGate = () => {
     isPro,
     canBuild,
     limits,
+    isLoading,
   };
 };

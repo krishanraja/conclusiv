@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -64,9 +64,20 @@ export const UpgradePrompt = ({ trigger, isOpen, onClose }: UpgradePromptProps) 
   
   const message = TRIGGER_MESSAGES[trigger];
 
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   const handleUpgrade = async () => {
     if (!user) {
-      // Redirect to auth with upgrade intent
       navigate('/auth?mode=signup&intent=upgrade');
       onClose();
       return;
@@ -88,8 +99,14 @@ export const UpgradePrompt = ({ trigger, isOpen, onClose }: UpgradePromptProps) 
     }
   };
 
+  const handleClose = () => {
+    if (!isLoading) {
+      onClose();
+    }
+  };
+
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {isOpen && (
         <>
           {/* Backdrop */}
@@ -97,8 +114,9 @@ export const UpgradePrompt = ({ trigger, isOpen, onClose }: UpgradePromptProps) 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             className="fixed inset-0 bg-background/60 backdrop-blur-sm z-50"
-            onClick={onClose}
+            onClick={handleClose}
           />
 
           {/* Modal */}
@@ -112,8 +130,9 @@ export const UpgradePrompt = ({ trigger, isOpen, onClose }: UpgradePromptProps) 
             <div className="glass-strong rounded-xl p-6 shadow-2xl border border-border/50">
               {/* Close button */}
               <button
-                onClick={onClose}
-                className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+                onClick={handleClose}
+                disabled={isLoading}
+                className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
               >
                 <X className="w-4 h-4" />
               </button>
