@@ -6,7 +6,7 @@ import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
 import { getIcon } from "@/lib/icons";
 import { TransitionType } from "@/lib/types";
-import conclusivIcon from "@/assets/conclusiv-icon.png";
+import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 // Canvas size for infinite canvas
 const CANVAS_SIZE = 6000;
@@ -644,9 +644,9 @@ export const PresentScreen = () => {
       {/* Watermark */}
       <div className="absolute bottom-4 right-4 opacity-20 hover:opacity-40 transition-opacity z-20">
         <img 
-          src={conclusivIcon} 
+          src={conclusivLogo} 
           alt="conclusiv" 
-          className="h-6 w-auto"
+          className="h-5 w-auto"
           style={{ aspectRatio: 'auto' }}
         />
       </div>
