@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import conclusivIcon from "@/assets/conclusiv-icon.png";
+import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 export const Header = () => {
   return (
@@ -9,12 +9,11 @@ export const Header = () => {
       className="fixed top-0 left-0 right-0 z-50 glass-strong"
     >
       <div className="container mx-auto px-6 h-16 flex items-center">
-        <div className="flex items-center gap-3">
-          {/* C. Icon only in header */}
+        <div className="flex items-center">
           <img 
-            src={conclusivIcon} 
+            src={conclusivLogo} 
             alt="conclusiv" 
-            className="h-9 w-auto"
+            className="h-7 w-auto"
             style={{ aspectRatio: 'auto' }}
           />
         </div>

@@ -8,7 +8,6 @@ import { DocumentUploadInput } from "./DocumentUploadInput";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, AlertCircle } from "lucide-react";
-import conclusivIcon from "@/assets/conclusiv-icon.png";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 const MIN_CHARS = 50;
@@ -225,22 +224,16 @@ export const InputScreen = () => {
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="flex items-center justify-center gap-3 relative"
+          className="flex items-center justify-center relative"
         >
           {/* Glow behind logo */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-32 h-12 bg-primary/20 blur-2xl rounded-full" />
+            <div className="w-48 h-12 bg-primary/20 blur-2xl rounded-full" />
           </div>
-          <img 
-            src={conclusivIcon} 
-            alt="conclusiv" 
-            className="h-12 md:h-14 w-auto relative z-10"
-            style={{ aspectRatio: 'auto' }}
-          />
           <img 
             src={conclusivLogo} 
             alt="conclusiv" 
-            className="h-12 md:h-14 w-auto relative z-10"
+            className="h-16 md:h-20 w-auto relative z-10"
             style={{ aspectRatio: 'auto' }}
           />
         </motion.div>
