@@ -3,6 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useAnalytics } from "@/hooks/useAnalytics";
+import { useFeedback } from "@/hooks/useFeedback";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { InputScreen } from "@/components/input/InputScreen";
@@ -10,11 +12,14 @@ import { RefineScreen } from "@/components/refine/RefineScreen";
 import { PreviewScreen } from "@/components/preview/PreviewScreen";
 import { PresentScreen } from "@/components/present/PresentScreen";
 import { LoadingOverlay } from "@/components/ui/loading";
+import { FeedbackWidget } from "@/components/feedback/FeedbackWidget";
 import { AnimatePresence, motion } from "framer-motion";
 
 const Index = () => {
   const { toast } = useToast();
   const { checkSubscription } = useSubscription();
+  const { trackPageView, trackStepChange, trackSubscriptionAction } = useAnalytics();
+  const { incrementUsageCount } = useFeedback();
   const [searchParams, setSearchParams] = useSearchParams();
   const { 
     currentStep, 
@@ -25,11 +30,25 @@ const Index = () => {
     rawText 
   } = useNarrativeStore();
 
+  // Track page view on mount
+  useEffect(() => {
+    trackPageView("/");
+  }, [trackPageView]);
+
+  // Track step changes
+  useEffect(() => {
+    trackStepChange("previous", currentStep);
+    if (currentStep === "preview") {
+      incrementUsageCount();
+    }
+  }, [currentStep, trackStepChange, incrementUsageCount]);
+
   // Handle checkout success/cancel
   useEffect(() => {
     const checkoutStatus = searchParams.get('checkout');
     
     if (checkoutStatus === 'success') {
+      trackSubscriptionAction("checkout_completed");
       toast({
         title: "Subscription activated!",
         description: "Welcome to Pro. Your premium features are now unlocked.",
@@ -38,6 +57,7 @@ const Index = () => {
       searchParams.delete('checkout');
       setSearchParams(searchParams, { replace: true });
     } else if (checkoutStatus === 'cancelled') {
+      trackSubscriptionAction("checkout_cancelled");
       toast({
         title: "Checkout cancelled",
         description: "No charges were made. You can upgrade anytime.",
@@ -46,7 +66,7 @@ const Index = () => {
       searchParams.delete('checkout');
       setSearchParams(searchParams, { replace: true });
     }
-  }, [searchParams]);
+  }, [searchParams, trackSubscriptionAction]);
 
   // Present mode is fullscreen, no header
   if (currentStep === "present") {
@@ -84,6 +104,8 @@ const Index = () => {
       </AnimatePresence>
       
       {currentStep === "input" && <Footer />}
+      
+      <FeedbackWidget currentStep={currentStep} />
     </div>
   );
 };
