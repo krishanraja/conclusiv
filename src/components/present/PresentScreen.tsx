@@ -6,6 +6,9 @@ import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
 import { getIcon } from "@/lib/icons";
 import { TransitionType } from "@/lib/types";
+import { useSubscription } from "@/hooks/useSubscription";
+import { Watermark } from "@/components/subscription/Watermark";
+import { UpgradePrompt } from "@/components/subscription/UpgradePrompt";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 // Canvas size for infinite canvas
@@ -148,9 +151,12 @@ export const PresentScreen = () => {
     setCurrentStep,
   } = useNarrativeStore();
 
+  const { isPro, limits } = useSubscription();
   const [showMinimap, setShowMinimap] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [prevIndex, setPrevIndex] = useState(0);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const showWatermark = limits.hasWatermark;
 
   // Generate particles and node positions once
   const particles = useMemo(() => generateParticles(), []);
@@ -250,7 +256,10 @@ export const PresentScreen = () => {
   if (!narrative) return null;
 
   return (
-    <div className="fixed inset-0 bg-background z-50 overflow-hidden">
+    <>
+      {showWatermark && <Watermark onUpgrade={() => setShowUpgrade(true)} />}
+      <UpgradePrompt trigger="presentation" isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} />
+      <div className="fixed inset-0 bg-background z-50 overflow-hidden">
       {/* Infinite Canvas Container */}
       <motion.div
         className="absolute inset-0"

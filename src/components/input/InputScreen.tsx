@@ -8,15 +8,18 @@ import { DocumentUploadInput } from "./DocumentUploadInput";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, AlertCircle } from "lucide-react";
+import { useFeatureGate } from "@/components/subscription/FeatureGate";
+import { useSubscription } from "@/hooks/useSubscription";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 const MIN_CHARS = 50;
 const MAX_CHARS_WARNING = 50000;
+const FREE_MAX_CHARS = 15000;
 
 const ACCEPTED_FILE_TYPES = [
   'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 ];
 
 const getFileTypeLabel = (type: string): string => {
@@ -38,6 +41,9 @@ export const InputScreen = () => {
     setCurrentStep,
   } = useNarrativeStore();
 
+  const { requireFeature, UpgradePromptComponent, canBuild, isPro } = useFeatureGate();
+  const { incrementBuildCount, usage, limits } = useSubscription();
+
   const [isScrapingContext, setIsScrapingContext] = useState(false);
   const [isParsingDocument, setIsParsingDocument] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
@@ -45,11 +51,9 @@ export const InputScreen = () => {
   const [isContextExpanded, setIsContextExpanded] = useState(false);
   const [isDraggingOnTextarea, setIsDraggingOnTextarea] = useState(false);
   
-  // Debounced URL scraping
   const [pendingUrl, setPendingUrl] = useState("");
   const lastScrapedUrl = useRef("");
 
-  // Debounce URL scraping - only fire 800ms after user stops typing
   useEffect(() => {
     if (!pendingUrl || !pendingUrl.includes(".") || pendingUrl === lastScrapedUrl.current) {
       return;
@@ -75,7 +79,6 @@ export const InputScreen = () => {
     return () => clearTimeout(timer);
   }, [pendingUrl, isScrapingContext, setBusinessContext]);
 
-  // Handle website URL change - just update state, debounce handles scraping
   const handleWebsiteChange = (url: string) => {
     setBusinessWebsite(url);
     setPendingUrl(url);
@@ -88,9 +91,7 @@ export const InputScreen = () => {
     setBusinessContext(null);
   };
 
-  // Handle file upload - PDF, DOCX, PPTX
   const handleFileSelect = async (file: File) => {
-    // Validate file type
     if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
       toast({
         title: "Unsupported file type",
@@ -100,7 +101,6 @@ export const InputScreen = () => {
       return;
     }
 
-    // Validate file size (max 20MB)
     if (file.size > 20 * 1024 * 1024) {
       toast({
         title: "File too large",
@@ -144,7 +144,6 @@ export const InputScreen = () => {
     setRawText("");
   };
 
-  // Drag handlers for textarea
   const handleTextareaDragEnter = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDraggingOnTextarea(true);
@@ -175,11 +174,9 @@ export const InputScreen = () => {
     }
   };
 
-  // Move to refine step
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const trimmedText = rawText.trim();
     
-    // Validation
     if (!trimmedText) {
       toast({
         title: "Nothing to analyze",
@@ -198,6 +195,14 @@ export const InputScreen = () => {
       return;
     }
 
+    // Check build limit
+    if (!requireFeature('build_limit')) {
+      return;
+    }
+
+    // Increment build count
+    await incrementBuildCount();
+    
     setCurrentStep("refine");
   };
 
@@ -205,9 +210,13 @@ export const InputScreen = () => {
   const isLongInput = charCount > 15000;
   const isVeryLongInput = charCount > MAX_CHARS_WARNING;
   const isTooShort = charCount > 0 && charCount < MIN_CHARS;
+  const exceedsFreeLimit = !isPro && charCount > FREE_MAX_CHARS;
+  const buildsRemaining = isPro ? '∞' : Math.max(0, limits.buildsPerWeek - usage.buildsThisWeek);
 
   return (
     <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-4 md:py-6 relative z-10">
+      {UpgradePromptComponent}
+      
       {/* Decorative background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-float" />
@@ -226,7 +235,6 @@ export const InputScreen = () => {
           animate={{ opacity: 1, scale: 1 }}
           className="flex items-center justify-center relative"
         >
-          {/* Glow behind logo */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-48 h-12 bg-primary/20 blur-2xl rounded-full" />
           </div>
@@ -279,7 +287,6 @@ export const InputScreen = () => {
                 className="min-h-[100px] md:min-h-[120px] bg-background/50 border-0 resize-none text-sm rounded-lg focus:ring-primary/50"
                 disabled={isParsingDocument}
               />
-              {/* Drag overlay for textarea */}
               {isDraggingOnTextarea && (
                 <div className="absolute inset-0 flex items-center justify-center bg-shimmer-start/10 rounded-lg pointer-events-none">
                   <p className="text-shimmer-start font-medium">Drop file here</p>
@@ -297,14 +304,27 @@ export const InputScreen = () => {
                     Min {MIN_CHARS} required
                   </span>
                 )}
+                {exceedsFreeLimit && (
+                  <span className="text-amber-500 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Exceeds free limit
+                  </span>
+                )}
               </div>
-              {isLongInput && (
-                <span className={isVeryLongInput ? "text-amber-500" : "text-shimmer-start"}>
-                  {isVeryLongInput 
-                    ? "Very large — may take longer" 
-                    : "Large document — will process in chunks"}
-                </span>
-              )}
+              <div className="flex items-center gap-3">
+                {!isPro && (
+                  <span className="text-muted-foreground">
+                    {buildsRemaining} build{buildsRemaining !== 1 ? 's' : ''} left this week
+                  </span>
+                )}
+                {isLongInput && (
+                  <span className={isVeryLongInput ? "text-amber-500" : "text-shimmer-start"}>
+                    {isVeryLongInput 
+                      ? "Very large — may take longer" 
+                      : "Large document — will process in chunks"}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -342,7 +362,7 @@ export const InputScreen = () => {
             variant="shimmer"
             size="xl"
             onClick={handleContinue}
-            disabled={!rawText.trim() || isTooShort || isParsingDocument}
+            disabled={!rawText.trim() || isTooShort || isParsingDocument || !canBuild}
             className="min-w-[200px] shadow-lg shadow-primary/20"
           >
             <Sparkles className="w-4 h-4 mr-2" />

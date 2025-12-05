@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Play, BookOpen, Share2 } from "lucide-react";
+import { ArrowLeft, Play, BookOpen, Share2, Download, FileText, Presentation, Lock } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
 import { buildNarrative } from "@/lib/api";
@@ -11,6 +11,14 @@ import { ErrorRecovery, parseAPIError } from "@/components/ui/error-recovery";
 import type { ErrorCode } from "@/components/ui/error-recovery";
 import { cn } from "@/lib/utils";
 import { AnimatePresence } from "framer-motion";
+import { useFeatureGate } from "@/components/subscription/FeatureGate";
+import { useSubscription } from "@/hooks/useSubscription";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const PreviewScreen = () => {
   const { toast } = useToast();
@@ -33,6 +41,9 @@ export const PreviewScreen = () => {
     keyClaims,
     voiceFeedback,
   } = useNarrativeStore();
+
+  const { requireFeature, UpgradePromptComponent, isPro, limits } = useFeatureGate();
+  const { } = useSubscription();
 
   const [error, setError] = useState<{ code: ErrorCode; message: string; retryable: boolean } | null>(null);
   const [hasBuilt, setHasBuilt] = useState(false);
@@ -66,7 +77,6 @@ export const PreviewScreen = () => {
         setLoadingProgress(progress);
       };
 
-      // Include refinement data in the build
       const refinementContext = {
         highlights: highlights.map(h => h.text),
         approvedClaims: keyClaims.filter(c => c.approved === true).map(c => c.text),
@@ -93,6 +103,14 @@ export const PreviewScreen = () => {
         setSelectedTemplate(result.recommendedTemplate);
       }
       if (result.narrative) {
+        // Limit sections for free users
+        if (!isPro && result.narrative.sections.length > limits.maxSections) {
+          result.narrative.sections = result.narrative.sections.slice(0, limits.maxSections);
+          toast({
+            title: "Narrative trimmed",
+            description: `Free accounts are limited to ${limits.maxSections} sections. Upgrade to get the full story.`,
+          });
+        }
         setNarrative(result.narrative);
       }
     } catch (err) {
@@ -115,8 +133,34 @@ export const PreviewScreen = () => {
     setCurrentStep("present");
   };
 
+  const handleExport = (type: 'pdf' | 'pptx') => {
+    if (!requireFeature('export')) {
+      return;
+    }
+    
+    // TODO: Implement actual export
+    toast({
+      title: `${type.toUpperCase()} Export`,
+      description: "Export functionality coming soon!",
+    });
+  };
+
+  const handleShare = () => {
+    if (!requireFeature('export')) {
+      return;
+    }
+    
+    // TODO: Implement shareable links
+    toast({
+      title: "Share",
+      description: "Shareable links coming soon!",
+    });
+  };
+
   return (
     <>
+      {UpgradePromptComponent}
+      
       {/* Error Recovery Modal */}
       <AnimatePresence>
         {error && (
@@ -147,13 +191,38 @@ export const PreviewScreen = () => {
           )}
 
           <div className="flex items-center gap-2">
+            {/* Export dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-muted-foreground">
+                  <Download className="w-4 h-4 mr-1" />
+                  Export
+                  {!isPro && <Lock className="w-3 h-3 ml-1 opacity-50" />}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  PDF Document
+                  {!isPro && <Lock className="w-3 h-3 ml-auto opacity-50" />}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('pptx')}>
+                  <Presentation className="w-4 h-4 mr-2" />
+                  PowerPoint
+                  {!isPro && <Lock className="w-3 h-3 ml-auto opacity-50" />}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               variant="ghost"
               size="sm"
               className="text-muted-foreground"
+              onClick={handleShare}
             >
               <Share2 className="w-4 h-4 mr-1" />
               Share
+              {!isPro && <Lock className="w-3 h-3 ml-1 opacity-50" />}
             </Button>
           </div>
         </div>

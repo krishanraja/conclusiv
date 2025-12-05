@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
+import { AccountMenu } from "./AccountMenu";
 
 export const Header = () => {
   return (
@@ -8,7 +9,7 @@ export const Header = () => {
       animate={{ opacity: 1, y: 0 }}
       className="fixed top-0 left-0 right-0 z-50 glass-strong"
     >
-      <div className="container mx-auto px-6 h-16 flex items-center">
+      <div className="container mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center">
           <img 
             src={conclusivLogo} 
@@ -17,6 +18,7 @@ export const Header = () => {
             style={{ aspectRatio: 'auto' }}
           />
         </div>
+        <AccountMenu />
       </div>
     </motion.header>
   );
