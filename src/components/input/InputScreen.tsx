@@ -240,7 +240,7 @@ export const InputScreen = () => {
           <img 
             src={conclusivLogo} 
             alt="conclusiv" 
-            className="h-16 md:h-20 w-auto relative z-10"
+            className="h-12 md:h-14 w-auto relative z-10"
             style={{ aspectRatio: 'auto' }}
           />
         </motion.div>
