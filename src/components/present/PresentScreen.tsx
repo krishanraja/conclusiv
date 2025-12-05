@@ -10,7 +10,34 @@ import conclusivIcon from "@/assets/conclusiv-icon.png";
 
 // Canvas size for infinite canvas
 const CANVAS_SIZE = 6000;
-const NODE_SPACING = 1200;
+const PARTICLE_COUNT = 80;
+
+// Generate floating particles for the background
+const generateParticles = () => {
+  const particles: Array<{
+    x: number;
+    y: number;
+    size: number;
+    opacity: number;
+    duration: number;
+    delay: number;
+    drift: number;
+  }> = [];
+  
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push({
+      x: Math.random() * CANVAS_SIZE,
+      y: Math.random() * CANVAS_SIZE,
+      size: 2 + Math.random() * 6,
+      opacity: 0.1 + Math.random() * 0.3,
+      duration: 15 + Math.random() * 25,
+      delay: Math.random() * -20,
+      drift: 50 + Math.random() * 150,
+    });
+  }
+  
+  return particles;
+};
 
 // Generate positions for nodes in a spiral/organic pattern
 const generateNodePositions = (count: number) => {
@@ -19,13 +46,12 @@ const generateNodePositions = (count: number) => {
   const centerY = CANVAS_SIZE / 2;
   
   for (let i = 0; i < count; i++) {
-    // Create an interesting spiral/constellation pattern
-    const angle = (i * 137.5 * Math.PI) / 180; // Golden angle for natural distribution
-    const radius = 400 + i * 180;
+    const angle = (i * 137.5 * Math.PI) / 180;
+    const radius = 500 + i * 200;
     const x = centerX + Math.cos(angle) * radius;
     const y = centerY + Math.sin(angle) * radius;
-    const scale = 1 + (Math.random() * 0.3 - 0.15); // Slight scale variation
-    const rotation = Math.sin(i * 0.5) * 8; // Subtle rotation variation
+    const scale = 1 + (Math.random() * 0.2 - 0.1);
+    const rotation = Math.sin(i * 0.5) * 5;
     
     positions.push({ x, y, scale, rotation });
   }
@@ -33,35 +59,84 @@ const generateNodePositions = (count: number) => {
   return positions;
 };
 
-// Dramatic transition configurations
+// Refined dramatic transition configurations - slower, more cinematic
 const getTransitionConfig = (type: TransitionType, fromIdx: number, toIdx: number) => {
   const isForward = toIdx > fromIdx;
   const distance = Math.abs(toIdx - fromIdx);
   
   const configs: Record<TransitionType, { duration: number; ease: number[]; zoomOut: number; rotationDelta: number }> = {
-    zoom_in: { duration: 1.2, ease: [0.22, 1, 0.36, 1], zoomOut: 0.3, rotationDelta: 0 },
-    zoom_out: { duration: 1.0, ease: [0.33, 1, 0.68, 1], zoomOut: 0.5, rotationDelta: 0 },
-    pan: { duration: 0.8, ease: [0.4, 0, 0.2, 1], zoomOut: 0.15, rotationDelta: 0 },
-    slide_left: { duration: 0.9, ease: [0.25, 1, 0.5, 1], zoomOut: 0.2, rotationDelta: isForward ? 3 : -3 },
-    fade: { duration: 0.7, ease: [0.4, 0, 0.2, 1], zoomOut: 0.1, rotationDelta: 0 },
-    card_expand: { duration: 1.0, ease: [0.22, 1, 0.36, 1], zoomOut: 0.35, rotationDelta: 0 },
-    pan_to_node: { duration: 1.3, ease: [0.16, 1, 0.3, 1], zoomOut: 0.4, rotationDelta: isForward ? 5 : -5 },
-    orbit: { duration: 1.5, ease: [0.22, 1, 0.36, 1], zoomOut: 0.45, rotationDelta: isForward ? 15 : -15 },
-    tilt: { duration: 1.1, ease: [0.33, 1, 0.68, 1], zoomOut: 0.25, rotationDelta: isForward ? 8 : -8 },
-    split_reveal: { duration: 1.0, ease: [0.4, 0, 0.2, 1], zoomOut: 0.2, rotationDelta: 0 },
-    side_flip: { duration: 1.2, ease: [0.22, 1, 0.36, 1], zoomOut: 0.3, rotationDelta: 0 },
-    step_up: { duration: 0.9, ease: [0.25, 1, 0.5, 1], zoomOut: 0.2, rotationDelta: 0 },
-    highlight: { duration: 0.8, ease: [0.4, 0, 0.2, 1], zoomOut: 0.15, rotationDelta: 0 },
+    zoom_in: { duration: 1.8, ease: [0.16, 1, 0.3, 1], zoomOut: 0.35, rotationDelta: 0 },
+    zoom_out: { duration: 1.5, ease: [0.22, 1, 0.36, 1], zoomOut: 0.5, rotationDelta: 0 },
+    pan: { duration: 1.2, ease: [0.33, 1, 0.68, 1], zoomOut: 0.2, rotationDelta: 0 },
+    slide_left: { duration: 1.4, ease: [0.16, 1, 0.3, 1], zoomOut: 0.25, rotationDelta: isForward ? 4 : -4 },
+    fade: { duration: 1.0, ease: [0.4, 0, 0.2, 1], zoomOut: 0.15, rotationDelta: 0 },
+    card_expand: { duration: 1.6, ease: [0.16, 1, 0.3, 1], zoomOut: 0.4, rotationDelta: 0 },
+    pan_to_node: { duration: 2.0, ease: [0.12, 0.8, 0.25, 1], zoomOut: 0.45, rotationDelta: isForward ? 6 : -6 },
+    orbit: { duration: 2.2, ease: [0.16, 1, 0.3, 1], zoomOut: 0.5, rotationDelta: isForward ? 18 : -18 },
+    tilt: { duration: 1.6, ease: [0.22, 1, 0.36, 1], zoomOut: 0.3, rotationDelta: isForward ? 10 : -10 },
+    split_reveal: { duration: 1.4, ease: [0.33, 1, 0.68, 1], zoomOut: 0.25, rotationDelta: 0 },
+    side_flip: { duration: 1.8, ease: [0.16, 1, 0.3, 1], zoomOut: 0.35, rotationDelta: 0 },
+    step_up: { duration: 1.3, ease: [0.22, 1, 0.36, 1], zoomOut: 0.25, rotationDelta: 0 },
+    highlight: { duration: 1.2, ease: [0.33, 1, 0.68, 1], zoomOut: 0.2, rotationDelta: 0 },
   };
   
-  // Increase duration for larger jumps
   const config = configs[type] || configs.fade;
   return {
     ...config,
-    duration: config.duration + distance * 0.15,
-    zoomOut: Math.min(0.6, config.zoomOut + distance * 0.05),
+    duration: config.duration + distance * 0.2,
+    zoomOut: Math.min(0.65, config.zoomOut + distance * 0.06),
   };
 };
+
+// Floating particle component
+const FloatingParticle = ({ particle }: { particle: ReturnType<typeof generateParticles>[0] }) => (
+  <motion.div
+    className="absolute rounded-full bg-primary/40"
+    style={{
+      left: particle.x,
+      top: particle.y,
+      width: particle.size,
+      height: particle.size,
+    }}
+    animate={{
+      y: [0, -particle.drift, 0],
+      x: [0, particle.drift * 0.3, 0],
+      opacity: [particle.opacity, particle.opacity * 1.5, particle.opacity],
+      scale: [1, 1.2, 1],
+    }}
+    transition={{
+      duration: particle.duration,
+      repeat: Infinity,
+      ease: "easeInOut",
+      delay: particle.delay,
+    }}
+  />
+);
+
+// Nebula/glow effect component
+const NebulaGlow = ({ x, y, size, color, delay }: { x: number; y: number; size: number; color: string; delay: number }) => (
+  <motion.div
+    className="absolute rounded-full pointer-events-none"
+    style={{
+      left: x,
+      top: y,
+      width: size,
+      height: size,
+      background: `radial-gradient(circle, ${color} 0%, transparent 70%)`,
+      filter: "blur(40px)",
+    }}
+    animate={{
+      scale: [1, 1.3, 1],
+      opacity: [0.15, 0.25, 0.15],
+    }}
+    transition={{
+      duration: 12 + Math.random() * 8,
+      repeat: Infinity,
+      ease: "easeInOut",
+      delay,
+    }}
+  />
+);
 
 export const PresentScreen = () => {
   const { 
@@ -77,19 +152,27 @@ export const PresentScreen = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [prevIndex, setPrevIndex] = useState(0);
 
-  // Generate node positions once
+  // Generate particles and node positions once
+  const particles = useMemo(() => generateParticles(), []);
+  const nebulaPositions = useMemo(() => [
+    { x: CANVAS_SIZE * 0.2, y: CANVAS_SIZE * 0.3, size: 600, color: "hsl(var(--primary))", delay: 0 },
+    { x: CANVAS_SIZE * 0.7, y: CANVAS_SIZE * 0.2, size: 500, color: "hsl(var(--accent))", delay: 3 },
+    { x: CANVAS_SIZE * 0.5, y: CANVAS_SIZE * 0.6, size: 700, color: "hsl(var(--primary))", delay: 6 },
+    { x: CANVAS_SIZE * 0.3, y: CANVAS_SIZE * 0.8, size: 450, color: "hsl(var(--accent))", delay: 9 },
+    { x: CANVAS_SIZE * 0.8, y: CANVAS_SIZE * 0.7, size: 550, color: "hsl(var(--primary))", delay: 4 },
+  ], []);
+
   const nodePositions = useMemo(() => {
     if (!narrative) return [];
     return generateNodePositions(narrative.sections.length);
   }, [narrative?.sections.length]);
 
-  // Spring-based camera position for smooth movement
-  const cameraX = useSpring(CANVAS_SIZE / 2, { stiffness: 80, damping: 25 });
-  const cameraY = useSpring(CANVAS_SIZE / 2, { stiffness: 80, damping: 25 });
-  const cameraZoom = useSpring(1, { stiffness: 60, damping: 20 });
-  const cameraRotation = useSpring(0, { stiffness: 50, damping: 18 });
+  // Spring-based camera - refined for smoother, more cinematic movement
+  const cameraX = useSpring(CANVAS_SIZE / 2, { stiffness: 40, damping: 20, mass: 1.2 });
+  const cameraY = useSpring(CANVAS_SIZE / 2, { stiffness: 40, damping: 20, mass: 1.2 });
+  const cameraZoom = useSpring(1, { stiffness: 35, damping: 18, mass: 1 });
+  const cameraRotation = useSpring(0, { stiffness: 30, damping: 15, mass: 0.8 });
 
-  // Motion blur based on camera velocity
   const blurAmount = useMotionValue(0);
 
   // Update camera when section changes
@@ -108,32 +191,27 @@ export const PresentScreen = () => {
 
     setIsTransitioning(true);
     
-    // Calculate travel distance for motion blur
     const dx = targetPos.x - cameraX.get();
     const dy = targetPos.y - cameraY.get();
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    // Apply motion blur during transition
-    blurAmount.set(Math.min(8, distance / 200));
+    // Smoother motion blur
+    blurAmount.set(Math.min(6, distance / 300));
     
-    // Dramatic zoom out during travel, then zoom back in
-    const midpointDelay = config.duration * 0.4;
+    // Cinematic zoom sequence
+    const midpointDelay = config.duration * 0.45;
     
-    // First: zoom out and start rotating
     cameraZoom.set(1 - config.zoomOut);
     cameraRotation.set(cameraRotation.get() + config.rotationDelta);
     
-    // Move to target
     cameraX.set(targetPos.x);
     cameraY.set(targetPos.y);
     
-    // Then: zoom back in after reaching midpoint
     setTimeout(() => {
       cameraZoom.set(1);
       blurAmount.set(0);
     }, midpointDelay * 1000);
 
-    // End transition
     setTimeout(() => {
       setIsTransitioning(false);
       setPrevIndex(currentSectionIndex);
@@ -141,7 +219,7 @@ export const PresentScreen = () => {
 
   }, [currentSectionIndex, narrative, nodePositions]);
 
-  // Initialize camera position on mount
+  // Initialize camera position
   useEffect(() => {
     if (nodePositions.length > 0) {
       const pos = nodePositions[0];
@@ -171,15 +249,13 @@ export const PresentScreen = () => {
 
   if (!narrative) return null;
 
-  const currentSection = narrative.sections[currentSectionIndex];
-
   return (
     <div className="fixed inset-0 bg-background z-50 overflow-hidden">
       {/* Infinite Canvas Container */}
       <motion.div
         className="absolute inset-0"
         style={{
-          perspective: 2000,
+          perspective: 2500,
           perspectiveOrigin: "50% 50%",
         }}
       >
@@ -195,23 +271,41 @@ export const PresentScreen = () => {
             transformStyle: "preserve-3d",
           }}
         >
+          {/* Nebula glows - ambient background */}
+          {nebulaPositions.map((nebula, i) => (
+            <NebulaGlow key={`nebula-${i}`} {...nebula} />
+          ))}
+
+          {/* Floating particles */}
+          {particles.map((particle, i) => (
+            <FloatingParticle key={`particle-${i}`} particle={particle} />
+          ))}
+
           {/* Connecting lines between nodes */}
           <svg 
             className="absolute top-0 left-0 pointer-events-none"
             width={CANVAS_SIZE}
             height={CANVAS_SIZE}
-            style={{ opacity: 0.15 }}
+            style={{ opacity: 0.2 }}
           >
             <defs>
               <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
-                <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity="0.6" />
-                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
+                <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity="0.5" />
+                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
               </linearGradient>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                <feMerge>
+                  <feMergeNode in="coloredBlur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
             </defs>
             {nodePositions.map((pos, i) => {
               if (i === 0) return null;
               const prevPos = nodePositions[i - 1];
+              const isActive = i === currentSectionIndex || i - 1 === currentSectionIndex;
               return (
                 <motion.line
                   key={`line-${i}`}
@@ -220,11 +314,12 @@ export const PresentScreen = () => {
                   x2={pos.x}
                   y2={pos.y}
                   stroke="url(#lineGradient)"
-                  strokeWidth={2}
-                  strokeDasharray="8 4"
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{ duration: 1, delay: i * 0.1 }}
+                  strokeWidth={isActive ? 3 : 2}
+                  strokeDasharray="12 6"
+                  filter={isActive ? "url(#glow)" : undefined}
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: 1, opacity: isActive ? 0.6 : 0.3 }}
+                  transition={{ duration: 1.5, delay: i * 0.15, ease: "easeOut" }}
                 />
               );
             })}
@@ -240,9 +335,8 @@ export const PresentScreen = () => {
             const isPast = i < currentSectionIndex;
             const distance = Math.abs(i - currentSectionIndex);
             
-            // Depth of field - blur unfocused nodes
-            const nodeBlur = isActive ? 0 : Math.min(6, distance * 1.5);
-            const nodeOpacity = isActive ? 1 : Math.max(0.3, 1 - distance * 0.15);
+            const nodeBlur = isActive ? 0 : Math.min(5, distance * 1.2);
+            const nodeOpacity = isActive ? 1 : Math.max(0.35, 1 - distance * 0.12);
             
             return (
               <motion.div
@@ -255,21 +349,22 @@ export const PresentScreen = () => {
                   y: "-50%",
                   transformStyle: "preserve-3d",
                 }}
-                initial={{ opacity: 0, scale: 0.5 }}
+                initial={{ opacity: 0, scale: 0.3, rotateY: -30 }}
                 animate={{ 
                   opacity: nodeOpacity,
                   scale: isActive ? 1 : 0.85,
                   filter: `blur(${nodeBlur}px)`,
-                  rotateX: isActive ? 0 : (i % 2 === 0 ? 5 : -5),
-                  rotateY: isActive ? 0 : (i % 3 === 0 ? 8 : -8),
+                  rotateX: isActive ? 0 : (i % 2 === 0 ? 4 : -4),
+                  rotateY: isActive ? 0 : (i % 3 === 0 ? 6 : -6),
+                  z: isActive ? 50 : 0,
                 }}
-                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
               >
                 <div 
                   className={cn(
-                    "w-[500px] rounded-2xl border bg-card/95 backdrop-blur-sm p-8 text-center shadow-2xl transition-all duration-500",
+                    "w-[520px] rounded-2xl border bg-card/95 backdrop-blur-md p-8 text-center shadow-2xl transition-all duration-700",
                     isActive 
-                      ? "border-primary/50 shadow-primary/20" 
+                      ? "border-primary/60 shadow-primary/30" 
                       : isPast 
                         ? "border-border/30 shadow-none" 
                         : "border-border/20 shadow-none"
@@ -278,32 +373,50 @@ export const PresentScreen = () => {
                     transform: `rotateZ(${pos.rotation}deg)`,
                   }}
                 >
-                  {/* Glow effect for active node */}
+                  {/* Pulsing glow effect for active node */}
                   {isActive && (
-                    <motion.div
-                      className="absolute inset-0 -z-10 rounded-2xl bg-primary/10 blur-3xl"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1.2 }}
-                      transition={{ duration: 0.5 }}
-                    />
+                    <>
+                      <motion.div
+                        className="absolute inset-0 -z-10 rounded-2xl bg-primary/15 blur-3xl"
+                        animate={{ 
+                          opacity: [0.5, 0.8, 0.5],
+                          scale: [1, 1.15, 1],
+                        }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                      />
+                      <motion.div
+                        className="absolute inset-0 -z-20 rounded-2xl bg-accent/10 blur-[60px]"
+                        animate={{ 
+                          opacity: [0.3, 0.5, 0.3],
+                          scale: [1.1, 1.3, 1.1],
+                        }}
+                        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                      />
+                    </>
                   )}
 
                   {/* Icon */}
-                  <div className={cn(
-                    "w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-5 transition-all duration-300",
-                    isActive 
-                      ? "bg-gradient-to-br from-primary/30 to-accent/30 border border-primary/40" 
-                      : "bg-muted/50 border border-border/30"
-                  )}>
+                  <motion.div 
+                    className={cn(
+                      "w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-5 transition-all duration-500",
+                      isActive 
+                        ? "bg-gradient-to-br from-primary/40 to-accent/40 border border-primary/50" 
+                        : "bg-muted/50 border border-border/30"
+                    )}
+                    animate={isActive ? { 
+                      boxShadow: ["0 0 20px hsl(var(--primary) / 0.3)", "0 0 40px hsl(var(--primary) / 0.5)", "0 0 20px hsl(var(--primary) / 0.3)"]
+                    } : {}}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  >
                     <Icon className={cn(
-                      "w-7 h-7 transition-colors",
+                      "w-8 h-8 transition-colors duration-300",
                       isActive ? "text-primary" : "text-muted-foreground"
                     )} />
-                  </div>
+                  </motion.div>
 
                   {/* Title */}
                   <h2 className={cn(
-                    "text-2xl font-semibold mb-3 tracking-tight transition-colors",
+                    "text-2xl font-semibold mb-3 tracking-tight transition-colors duration-300",
                     isActive ? "text-foreground" : "text-muted-foreground"
                   )}>
                     {section.title}
@@ -312,33 +425,37 @@ export const PresentScreen = () => {
                   {/* Content */}
                   {section.content && isActive && (
                     <motion.p
-                      initial={{ opacity: 0, y: 10 }}
+                      initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
+                      transition={{ delay: 0.4, duration: 0.6, ease: "easeOut" }}
                       className="text-base text-muted-foreground max-w-md mx-auto mb-4"
                     >
                       {section.content}
                     </motion.p>
                   )}
 
-                  {/* Items - only show for active node */}
+                  {/* Items */}
                   {section.items && section.items.length > 0 && isActive && (
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ delay: 0.4 }}
+                      transition={{ delay: 0.5, duration: 0.5 }}
                       className="grid grid-cols-1 gap-2 mt-4 text-left"
                     >
                       {section.items.slice(0, 4).map((item, idx) => (
                         <motion.div
                           key={idx}
-                          initial={{ opacity: 0, x: -10 }}
+                          initial={{ opacity: 0, x: -15 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.4 + idx * 0.08 }}
+                          transition={{ delay: 0.5 + idx * 0.1, duration: 0.5, ease: "easeOut" }}
                           className="p-2.5 rounded-lg bg-background/60 border border-border/20"
                         >
                           <div className="flex items-start gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                            <motion.div 
+                              className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0"
+                              animate={{ scale: [1, 1.3, 1] }}
+                              transition={{ duration: 2, repeat: Infinity, delay: idx * 0.2 }}
+                            />
                             <p className="text-sm text-foreground">{item}</p>
                           </div>
                         </motion.div>
@@ -346,11 +463,11 @@ export const PresentScreen = () => {
                     </motion.div>
                   )}
 
-                  {/* Node number indicator */}
+                  {/* Node number */}
                   <div className={cn(
-                    "absolute -top-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all",
+                    "absolute -top-3 -right-3 w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300",
                     isActive 
-                      ? "bg-primary text-primary-foreground" 
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/40" 
                       : "bg-muted text-muted-foreground"
                   )}>
                     {i + 1}
@@ -366,9 +483,9 @@ export const PresentScreen = () => {
       <div 
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse at center, transparent 50%, hsl(var(--background)) 100%)",
-          opacity: isTransitioning ? 0.7 : 0.4,
-          transition: "opacity 0.5s ease",
+          background: "radial-gradient(ellipse at center, transparent 40%, hsl(var(--background)) 100%)",
+          opacity: isTransitioning ? 0.75 : 0.5,
+          transition: "opacity 0.8s ease",
         }}
       />
 
@@ -409,22 +526,22 @@ export const PresentScreen = () => {
             initial={{ opacity: 0, scale: 0.9, x: 20 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             exit={{ opacity: 0, scale: 0.9, x: 20 }}
+            transition={{ duration: 0.3 }}
             className="absolute top-20 right-6 z-20"
           >
-            <div className="w-48 h-48 rounded-xl border border-border/50 bg-card/80 backdrop-blur-md overflow-hidden">
+            <div className="w-48 h-48 rounded-xl border border-border/50 bg-card/90 backdrop-blur-md overflow-hidden shadow-xl">
               <div 
                 className="relative w-full h-full"
                 style={{ transform: `scale(${48 / CANVAS_SIZE * 100})`, transformOrigin: "top left" }}
               >
-                {/* Mini nodes */}
                 {nodePositions.map((pos, i) => (
                   <button
                     key={i}
                     onClick={() => !isTransitioning && setCurrentSectionIndex(i)}
                     className={cn(
-                      "absolute w-6 h-6 rounded-full transition-all",
+                      "absolute w-6 h-6 rounded-full transition-all duration-300",
                       i === currentSectionIndex 
-                        ? "bg-primary scale-150" 
+                        ? "bg-primary scale-150 shadow-lg shadow-primary/50" 
                         : i < currentSectionIndex
                           ? "bg-primary/50"
                           : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
@@ -435,7 +552,6 @@ export const PresentScreen = () => {
                     }}
                   />
                 ))}
-                {/* Mini connecting lines */}
                 <svg className="absolute inset-0 pointer-events-none" width={CANVAS_SIZE} height={CANVAS_SIZE}>
                   {nodePositions.map((pos, i) => {
                     if (i === 0) return null;
@@ -449,7 +565,7 @@ export const PresentScreen = () => {
                         y2={pos.y}
                         stroke="hsl(var(--primary))"
                         strokeWidth={2}
-                        opacity={0.3}
+                        opacity={0.4}
                       />
                     );
                   })}
@@ -461,17 +577,17 @@ export const PresentScreen = () => {
       </AnimatePresence>
 
       {/* Navigation dots */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
         {narrative.sections.map((_, i) => (
           <button
             key={i}
             onClick={() => !isTransitioning && setCurrentSectionIndex(i)}
             disabled={isTransitioning}
             className={cn(
-              "h-1.5 rounded-full transition-all duration-300",
+              "rounded-full transition-all duration-500",
               i === currentSectionIndex 
-                ? "w-8 bg-primary" 
-                : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                ? "w-10 h-2 bg-primary shadow-lg shadow-primary/50" 
+                : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
             )}
           />
         ))}
@@ -484,7 +600,7 @@ export const PresentScreen = () => {
           size="icon"
           onClick={prevSection}
           disabled={currentSectionIndex === 0 || isTransitioning}
-          className="text-muted-foreground"
+          className="text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="w-5 h-5" />
         </Button>
@@ -496,7 +612,7 @@ export const PresentScreen = () => {
           size="icon"
           onClick={nextSection}
           disabled={currentSectionIndex === narrative.sections.length - 1 || isTransitioning}
-          className="text-muted-foreground"
+          className="text-muted-foreground hover:text-foreground"
         >
           <ChevronRight className="w-5 h-5" />
         </Button>
@@ -506,13 +622,20 @@ export const PresentScreen = () => {
       <AnimatePresence>
         {isTransitioning && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
             className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20"
           >
-            <div className="px-4 py-2 rounded-full bg-card/80 backdrop-blur-sm border border-border/50">
-              <span className="text-xs text-muted-foreground">Flying to section {currentSectionIndex + 1}...</span>
+            <div className="px-5 py-2.5 rounded-full bg-card/90 backdrop-blur-md border border-border/50 shadow-lg">
+              <span className="text-xs text-muted-foreground flex items-center gap-2">
+                <motion.span
+                  className="w-2 h-2 rounded-full bg-primary"
+                  animate={{ scale: [1, 1.3, 1] }}
+                  transition={{ duration: 0.6, repeat: Infinity }}
+                />
+                Flying to section {currentSectionIndex + 1}
+              </span>
             </div>
           </motion.div>
         )}
