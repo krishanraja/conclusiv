@@ -13,7 +13,7 @@ export const Header = () => {
           <img 
             src={conclusivLogo} 
             alt="conclusiv" 
-            className="h-7 w-auto"
+            className="h-2.5 w-auto"
             style={{ aspectRatio: 'auto' }}
           />
         </div>
