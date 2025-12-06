@@ -9,14 +9,15 @@ import { TransitionType } from "@/lib/types";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Watermark } from "@/components/subscription/Watermark";
 import { UpgradePrompt } from "@/components/subscription/UpgradePrompt";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 // Canvas size for infinite canvas
 const CANVAS_SIZE = 6000;
-const PARTICLE_COUNT = 80;
 
-// Generate floating particles for the background
-const generateParticles = () => {
+// Generate floating particles for the background - reduced count on mobile
+const generateParticles = (count: number) => {
   const particles: Array<{
     x: number;
     y: number;
@@ -27,7 +28,7 @@ const generateParticles = () => {
     drift: number;
   }> = [];
   
-  for (let i = 0; i < PARTICLE_COUNT; i++) {
+  for (let i = 0; i < count; i++) {
     particles.push({
       x: Math.random() * CANVAS_SIZE,
       y: Math.random() * CANVAS_SIZE,
@@ -62,10 +63,13 @@ const generateNodePositions = (count: number) => {
   return positions;
 };
 
-// Refined dramatic transition configurations - slower, more cinematic
-const getTransitionConfig = (type: TransitionType, fromIdx: number, toIdx: number) => {
+// Refined dramatic transition configurations - faster on mobile
+const getTransitionConfig = (type: TransitionType, fromIdx: number, toIdx: number, isMobile: boolean) => {
   const isForward = toIdx > fromIdx;
   const distance = Math.abs(toIdx - fromIdx);
+  
+  // Mobile gets 40% faster animations
+  const mobileMultiplier = isMobile ? 0.6 : 1;
   
   const configs: Record<TransitionType, { duration: number; ease: number[]; zoomOut: number; rotationDelta: number }> = {
     zoom_in: { duration: 1.8, ease: [0.16, 1, 0.3, 1], zoomOut: 0.35, rotationDelta: 0 },
@@ -86,60 +90,111 @@ const getTransitionConfig = (type: TransitionType, fromIdx: number, toIdx: numbe
   const config = configs[type] || configs.fade;
   return {
     ...config,
-    duration: config.duration + distance * 0.2,
+    duration: (config.duration + distance * 0.2) * mobileMultiplier,
     zoomOut: Math.min(0.65, config.zoomOut + distance * 0.06),
+    // Disable rotation on mobile
+    rotationDelta: isMobile ? 0 : config.rotationDelta,
   };
 };
 
-// Floating particle component
-const FloatingParticle = ({ particle }: { particle: ReturnType<typeof generateParticles>[0] }) => (
-  <motion.div
-    className="absolute rounded-full bg-primary/40"
-    style={{
-      left: particle.x,
-      top: particle.y,
-      width: particle.size,
-      height: particle.size,
-    }}
-    animate={{
-      y: [0, -particle.drift, 0],
-      x: [0, particle.drift * 0.3, 0],
-      opacity: [particle.opacity, particle.opacity * 1.5, particle.opacity],
-      scale: [1, 1.2, 1],
-    }}
-    transition={{
-      duration: particle.duration,
-      repeat: Infinity,
-      ease: "easeInOut",
-      delay: particle.delay,
-    }}
-  />
-);
+// Floating particle component - simplified on mobile
+const FloatingParticle = ({ particle, isMobile, reducedMotion }: { 
+  particle: ReturnType<typeof generateParticles>[0]; 
+  isMobile: boolean;
+  reducedMotion: boolean;
+}) => {
+  // Static particle for reduced motion or very simple animation on mobile
+  if (reducedMotion) {
+    return (
+      <div
+        className="absolute rounded-full bg-primary/40"
+        style={{
+          left: particle.x,
+          top: particle.y,
+          width: particle.size,
+          height: particle.size,
+          opacity: particle.opacity,
+        }}
+      />
+    );
+  }
 
-// Nebula/glow effect component
-const NebulaGlow = ({ x, y, size, color, delay }: { x: number; y: number; size: number; color: string; delay: number }) => (
-  <motion.div
-    className="absolute rounded-full pointer-events-none"
-    style={{
-      left: x,
-      top: y,
-      width: size,
-      height: size,
-      background: `radial-gradient(circle, ${color} 0%, transparent 70%)`,
-      filter: "blur(40px)",
-    }}
-    animate={{
-      scale: [1, 1.3, 1],
-      opacity: [0.15, 0.25, 0.15],
-    }}
-    transition={{
-      duration: 12 + Math.random() * 8,
-      repeat: Infinity,
-      ease: "easeInOut",
-      delay,
-    }}
-  />
-);
+  return (
+    <motion.div
+      className="absolute rounded-full bg-primary/40 will-change-transform"
+      style={{
+        left: particle.x,
+        top: particle.y,
+        width: particle.size,
+        height: particle.size,
+        transform: "translateZ(0)",
+        backfaceVisibility: "hidden",
+      }}
+      animate={isMobile ? {
+        // Simpler animation on mobile - just opacity pulse
+        opacity: [particle.opacity, particle.opacity * 1.3, particle.opacity],
+      } : {
+        y: [0, -particle.drift, 0],
+        x: [0, particle.drift * 0.3, 0],
+        opacity: [particle.opacity, particle.opacity * 1.5, particle.opacity],
+        scale: [1, 1.2, 1],
+      }}
+      transition={{
+        duration: isMobile ? particle.duration * 1.5 : particle.duration,
+        repeat: Infinity,
+        ease: "easeInOut",
+        delay: particle.delay,
+      }}
+    />
+  );
+};
+
+// Nebula/glow effect component - disabled blur on mobile
+const NebulaGlow = ({ x, y, size, color, delay, isMobile, reducedMotion }: { 
+  x: number; 
+  y: number; 
+  size: number; 
+  color: string; 
+  delay: number;
+  isMobile: boolean;
+  reducedMotion: boolean;
+}) => {
+  // Skip entirely for reduced motion
+  if (reducedMotion) {
+    return null;
+  }
+
+  return (
+    <motion.div
+      className="absolute rounded-full pointer-events-none will-change-transform"
+      style={{
+        left: x,
+        top: y,
+        width: size,
+        height: size,
+        background: `radial-gradient(circle, ${color} 0%, transparent 70%)`,
+        // Disable blur on mobile for performance
+        filter: isMobile ? "none" : "blur(40px)",
+        opacity: isMobile ? 0.1 : 0.15,
+        transform: "translateZ(0)",
+        backfaceVisibility: "hidden",
+      }}
+      animate={isMobile ? {
+        // Simpler scale animation on mobile
+        opacity: [0.08, 0.12, 0.08],
+      } : {
+        scale: [1, 1.3, 1],
+        opacity: [0.15, 0.25, 0.15],
+      }}
+      transition={{
+        duration: 12 + Math.random() * 8,
+        repeat: Infinity,
+        ease: "easeInOut",
+        delay,
+      }}
+    />
+  );
+};
 
 export const PresentScreen = () => {
   const { 
@@ -152,31 +207,41 @@ export const PresentScreen = () => {
   } = useNarrativeStore();
 
   const { isPro, limits } = useSubscription();
-  const [showMinimap, setShowMinimap] = useState(true);
+  const isMobile = useIsMobile();
+  const reducedMotion = useReducedMotion();
+  const [showMinimap, setShowMinimap] = useState(!isMobile);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [prevIndex, setPrevIndex] = useState(0);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const showWatermark = limits.hasWatermark;
 
+  // Reduce particles and effects on mobile
+  const particleCount = isMobile ? 15 : 80;
+  const nebulaCount = isMobile ? 2 : 5;
+
   // Generate particles and node positions once
-  const particles = useMemo(() => generateParticles(), []);
+  const particles = useMemo(() => generateParticles(particleCount), [particleCount]);
   const nebulaPositions = useMemo(() => [
     { x: CANVAS_SIZE * 0.2, y: CANVAS_SIZE * 0.3, size: 600, color: "hsl(var(--primary))", delay: 0 },
     { x: CANVAS_SIZE * 0.7, y: CANVAS_SIZE * 0.2, size: 500, color: "hsl(var(--accent))", delay: 3 },
     { x: CANVAS_SIZE * 0.5, y: CANVAS_SIZE * 0.6, size: 700, color: "hsl(var(--primary))", delay: 6 },
     { x: CANVAS_SIZE * 0.3, y: CANVAS_SIZE * 0.8, size: 450, color: "hsl(var(--accent))", delay: 9 },
     { x: CANVAS_SIZE * 0.8, y: CANVAS_SIZE * 0.7, size: 550, color: "hsl(var(--primary))", delay: 4 },
-  ], []);
+  ].slice(0, nebulaCount), [nebulaCount]);
 
   const nodePositions = useMemo(() => {
     if (!narrative) return [];
     return generateNodePositions(narrative.sections.length);
   }, [narrative?.sections.length]);
 
-  // Spring-based camera - refined for smoother, more cinematic movement
-  const cameraX = useSpring(CANVAS_SIZE / 2, { stiffness: 40, damping: 20, mass: 1.2 });
-  const cameraY = useSpring(CANVAS_SIZE / 2, { stiffness: 40, damping: 20, mass: 1.2 });
-  const cameraZoom = useSpring(1, { stiffness: 35, damping: 18, mass: 1 });
+  // Spring-based camera - simpler physics on mobile
+  const springConfig = isMobile 
+    ? { stiffness: 100, damping: 30, mass: 0.8 } // Faster, snappier on mobile
+    : { stiffness: 40, damping: 20, mass: 1.2 };
+  
+  const cameraX = useSpring(CANVAS_SIZE / 2, springConfig);
+  const cameraY = useSpring(CANVAS_SIZE / 2, springConfig);
+  const cameraZoom = useSpring(1, isMobile ? { stiffness: 80, damping: 25, mass: 0.6 } : { stiffness: 35, damping: 18, mass: 1 });
   const cameraRotation = useSpring(0, { stiffness: 30, damping: 15, mass: 0.8 });
 
   const blurAmount = useMotionValue(0);
@@ -192,7 +257,8 @@ export const PresentScreen = () => {
     const config = getTransitionConfig(
       currentTransition?.type || "fade",
       prevIndex,
-      currentSectionIndex
+      currentSectionIndex,
+      isMobile
     );
 
     setIsTransitioning(true);
@@ -201,14 +267,20 @@ export const PresentScreen = () => {
     const dy = targetPos.y - cameraY.get();
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    // Smoother motion blur
-    blurAmount.set(Math.min(6, distance / 300));
+    // Disable motion blur on mobile
+    if (!isMobile && !reducedMotion) {
+      blurAmount.set(Math.min(6, distance / 300));
+    }
     
     // Cinematic zoom sequence
     const midpointDelay = config.duration * 0.45;
     
     cameraZoom.set(1 - config.zoomOut);
-    cameraRotation.set(cameraRotation.get() + config.rotationDelta);
+    
+    // Disable rotation on mobile
+    if (!isMobile) {
+      cameraRotation.set(cameraRotation.get() + config.rotationDelta);
+    }
     
     cameraX.set(targetPos.x);
     cameraY.set(targetPos.y);
@@ -223,7 +295,7 @@ export const PresentScreen = () => {
       setPrevIndex(currentSectionIndex);
     }, config.duration * 1000);
 
-  }, [currentSectionIndex, narrative, nodePositions]);
+  }, [currentSectionIndex, narrative, nodePositions, isMobile, reducedMotion]);
 
   // Initialize camera position
   useEffect(() => {
@@ -233,6 +305,11 @@ export const PresentScreen = () => {
       cameraY.set(pos.y);
     }
   }, [nodePositions]);
+
+  // Hide minimap on mobile by default
+  useEffect(() => {
+    setShowMinimap(!isMobile);
+  }, [isMobile]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (isTransitioning) return;
@@ -255,6 +332,9 @@ export const PresentScreen = () => {
 
   if (!narrative) return null;
 
+  // Simplified rendering for reduced motion preference
+  const shouldSimplifyAnimations = reducedMotion || isMobile;
+
   return (
     <>
       {showWatermark && <Watermark onUpgrade={() => setShowUpgrade(true)} />}
@@ -263,31 +343,45 @@ export const PresentScreen = () => {
       {/* Infinite Canvas Container */}
       <motion.div
         className="absolute inset-0"
-        style={{
+        style={isMobile ? {
+          // Disable 3D transforms on mobile for performance
+        } : {
           perspective: 2500,
           perspectiveOrigin: "50% 50%",
         }}
       >
         {/* Camera/Viewport */}
         <motion.div
-          className="absolute w-full h-full"
+          className="absolute w-full h-full will-change-transform"
           style={{
             x: useTransform(cameraX, (x) => `calc(50vw - ${x}px)`),
             y: useTransform(cameraY, (y) => `calc(50vh - ${y}px)`),
             scale: cameraZoom,
-            rotate: cameraRotation,
-            filter: useTransform(blurAmount, (b) => `blur(${b}px)`),
-            transformStyle: "preserve-3d",
+            rotate: isMobile ? 0 : cameraRotation,
+            // Disable motion blur on mobile
+            filter: isMobile ? "none" : useTransform(blurAmount, (b) => `blur(${b}px)`),
+            transformStyle: isMobile ? "flat" : "preserve-3d",
+            backfaceVisibility: "hidden",
           }}
         >
           {/* Nebula glows - ambient background */}
           {nebulaPositions.map((nebula, i) => (
-            <NebulaGlow key={`nebula-${i}`} {...nebula} />
+            <NebulaGlow 
+              key={`nebula-${i}`} 
+              {...nebula} 
+              isMobile={isMobile} 
+              reducedMotion={reducedMotion}
+            />
           ))}
 
           {/* Floating particles */}
           {particles.map((particle, i) => (
-            <FloatingParticle key={`particle-${i}`} particle={particle} />
+            <FloatingParticle 
+              key={`particle-${i}`} 
+              particle={particle} 
+              isMobile={isMobile}
+              reducedMotion={reducedMotion}
+            />
           ))}
 
           {/* Connecting lines between nodes */}
@@ -303,13 +397,15 @@ export const PresentScreen = () => {
                 <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity="0.5" />
                 <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
               </linearGradient>
-              <filter id="glow">
-                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                <feMerge>
-                  <feMergeNode in="coloredBlur"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
+              {!isMobile && (
+                <filter id="glow">
+                  <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                  <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
+              )}
             </defs>
             {nodePositions.map((pos, i) => {
               if (i === 0) return null;
@@ -325,10 +421,14 @@ export const PresentScreen = () => {
                   stroke="url(#lineGradient)"
                   strokeWidth={isActive ? 3 : 2}
                   strokeDasharray="12 6"
-                  filter={isActive ? "url(#glow)" : undefined}
+                  filter={isActive && !isMobile ? "url(#glow)" : undefined}
                   initial={{ pathLength: 0, opacity: 0 }}
                   animate={{ pathLength: 1, opacity: isActive ? 0.6 : 0.3 }}
-                  transition={{ duration: 1.5, delay: i * 0.15, ease: "easeOut" }}
+                  transition={{ 
+                    duration: shouldSimplifyAnimations ? 0.5 : 1.5, 
+                    delay: shouldSimplifyAnimations ? i * 0.05 : i * 0.15, 
+                    ease: "easeOut" 
+                  }}
                 />
               );
             })}
@@ -344,34 +444,37 @@ export const PresentScreen = () => {
             const isPast = i < currentSectionIndex;
             const distance = Math.abs(i - currentSectionIndex);
             
-            const nodeBlur = isActive ? 0 : Math.min(5, distance * 1.2);
+            // Disable blur on mobile
+            const nodeBlur = isMobile ? 0 : (isActive ? 0 : Math.min(5, distance * 1.2));
             const nodeOpacity = isActive ? 1 : Math.max(0.35, 1 - distance * 0.12);
             
             return (
               <motion.div
                 key={section.id}
-                className="absolute"
+                className="absolute will-change-transform"
                 style={{
                   left: pos.x,
                   top: pos.y,
                   x: "-50%",
                   y: "-50%",
-                  transformStyle: "preserve-3d",
+                  transformStyle: isMobile ? "flat" : "preserve-3d",
+                  backfaceVisibility: "hidden",
                 }}
-                initial={{ opacity: 0, scale: 0.3, rotateY: -30 }}
+                initial={{ opacity: 0, scale: 0.3 }}
                 animate={{ 
                   opacity: nodeOpacity,
                   scale: isActive ? 1 : 0.85,
-                  filter: `blur(${nodeBlur}px)`,
-                  rotateX: isActive ? 0 : (i % 2 === 0 ? 4 : -4),
-                  rotateY: isActive ? 0 : (i % 3 === 0 ? 6 : -6),
-                  z: isActive ? 50 : 0,
+                  filter: isMobile ? "none" : `blur(${nodeBlur}px)`,
                 }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ 
+                  duration: shouldSimplifyAnimations ? 0.3 : 0.8, 
+                  ease: shouldSimplifyAnimations ? "easeOut" : [0.16, 1, 0.3, 1] 
+                }}
               >
                 <div 
                   className={cn(
-                    "w-[520px] rounded-2xl border bg-card/95 backdrop-blur-md p-8 text-center shadow-2xl transition-all duration-700",
+                    "w-[520px] max-w-[90vw] rounded-2xl border bg-card/95 backdrop-blur-md p-8 text-center shadow-2xl transition-all",
+                    shouldSimplifyAnimations ? "duration-300" : "duration-700",
                     isActive 
                       ? "border-primary/60 shadow-primary/30" 
                       : isPast 
@@ -379,40 +482,48 @@ export const PresentScreen = () => {
                         : "border-border/20 shadow-none"
                   )}
                   style={{
-                    transform: `rotateZ(${pos.rotation}deg)`,
+                    transform: isMobile ? "none" : `rotateZ(${pos.rotation}deg)`,
                   }}
                 >
-                  {/* Pulsing glow effect for active node */}
-                  {isActive && (
+                  {/* Pulsing glow effect for active node - simplified on mobile */}
+                  {isActive && !reducedMotion && (
                     <>
                       <motion.div
-                        className="absolute inset-0 -z-10 rounded-2xl bg-primary/15 blur-3xl"
-                        animate={{ 
+                        className="absolute inset-0 -z-10 rounded-2xl bg-primary/15"
+                        style={{ 
+                          filter: isMobile ? "none" : "blur(24px)",
+                        }}
+                        animate={isMobile ? { 
+                          opacity: [0.3, 0.5, 0.3],
+                        } : { 
                           opacity: [0.5, 0.8, 0.5],
                           scale: [1, 1.15, 1],
                         }}
                         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                       />
-                      <motion.div
-                        className="absolute inset-0 -z-20 rounded-2xl bg-accent/10 blur-[60px]"
-                        animate={{ 
-                          opacity: [0.3, 0.5, 0.3],
-                          scale: [1.1, 1.3, 1.1],
-                        }}
-                        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                      />
+                      {!isMobile && (
+                        <motion.div
+                          className="absolute inset-0 -z-20 rounded-2xl bg-accent/10 blur-[60px]"
+                          animate={{ 
+                            opacity: [0.3, 0.5, 0.3],
+                            scale: [1.1, 1.3, 1.1],
+                          }}
+                          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                        />
+                      )}
                     </>
                   )}
 
                   {/* Icon */}
                   <motion.div 
                     className={cn(
-                      "w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-5 transition-all duration-500",
+                      "w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-5 transition-all",
+                      shouldSimplifyAnimations ? "duration-200" : "duration-500",
                       isActive 
                         ? "bg-gradient-to-br from-primary/40 to-accent/40 border border-primary/50" 
                         : "bg-muted/50 border border-border/30"
                     )}
-                    animate={isActive ? { 
+                    animate={isActive && !reducedMotion && !isMobile ? { 
                       boxShadow: ["0 0 20px hsl(var(--primary) / 0.3)", "0 0 40px hsl(var(--primary) / 0.5)", "0 0 20px hsl(var(--primary) / 0.3)"]
                     } : {}}
                     transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
@@ -436,7 +547,11 @@ export const PresentScreen = () => {
                     <motion.p
                       initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.4, duration: 0.6, ease: "easeOut" }}
+                      transition={{ 
+                        delay: shouldSimplifyAnimations ? 0.15 : 0.4, 
+                        duration: shouldSimplifyAnimations ? 0.3 : 0.6, 
+                        ease: "easeOut" 
+                      }}
                       className="text-base text-muted-foreground max-w-md mx-auto mb-4"
                     >
                       {section.content}
@@ -448,7 +563,10 @@ export const PresentScreen = () => {
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ delay: 0.5, duration: 0.5 }}
+                      transition={{ 
+                        delay: shouldSimplifyAnimations ? 0.2 : 0.5, 
+                        duration: shouldSimplifyAnimations ? 0.2 : 0.5 
+                      }}
                       className="grid grid-cols-1 gap-2 mt-4 text-left"
                     >
                       {section.items.slice(0, 4).map((item, idx) => (
@@ -456,13 +574,17 @@ export const PresentScreen = () => {
                           key={idx}
                           initial={{ opacity: 0, x: -15 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.5 + idx * 0.1, duration: 0.5, ease: "easeOut" }}
+                          transition={{ 
+                            delay: shouldSimplifyAnimations ? 0.2 + idx * 0.05 : 0.5 + idx * 0.1, 
+                            duration: shouldSimplifyAnimations ? 0.2 : 0.5, 
+                            ease: "easeOut" 
+                          }}
                           className="p-2.5 rounded-lg bg-background/60 border border-border/20"
                         >
                           <div className="flex items-start gap-2">
                             <motion.div 
                               className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0"
-                              animate={{ scale: [1, 1.3, 1] }}
+                              animate={reducedMotion ? {} : { scale: [1, 1.3, 1] }}
                               transition={{ duration: 2, repeat: Infinity, delay: idx * 0.2 }}
                             />
                             <p className="text-sm text-foreground">{item}</p>
@@ -529,13 +651,14 @@ export const PresentScreen = () => {
       </div>
 
       {/* Mini-map */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {showMinimap && (
           <motion.div
+            key="minimap"
             initial={{ opacity: 0, scale: 0.9, x: 20 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             exit={{ opacity: 0, scale: 0.9, x: 20 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: shouldSimplifyAnimations ? 0.15 : 0.3 }}
             className="absolute top-20 right-6 z-20"
           >
             <div className="w-48 h-48 rounded-xl border border-border/50 bg-card/90 backdrop-blur-md overflow-hidden shadow-xl">
@@ -593,7 +716,8 @@ export const PresentScreen = () => {
             onClick={() => !isTransitioning && setCurrentSectionIndex(i)}
             disabled={isTransitioning}
             className={cn(
-              "rounded-full transition-all duration-500",
+              "rounded-full transition-all",
+              shouldSimplifyAnimations ? "duration-200" : "duration-500",
               i === currentSectionIndex 
                 ? "w-10 h-2 bg-primary shadow-lg shadow-primary/50" 
                 : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
@@ -628,19 +752,21 @@ export const PresentScreen = () => {
       </div>
 
       {/* Transition indicator */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {isTransitioning && (
           <motion.div
+            key="transition-indicator"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: shouldSimplifyAnimations ? 0.1 : 0.2 }}
             className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20"
           >
             <div className="px-5 py-2.5 rounded-full bg-card/90 backdrop-blur-md border border-border/50 shadow-lg">
               <span className="text-xs text-muted-foreground flex items-center gap-2">
                 <motion.span
                   className="w-2 h-2 rounded-full bg-primary"
-                  animate={{ scale: [1, 1.3, 1] }}
+                  animate={reducedMotion ? {} : { scale: [1, 1.3, 1] }}
                   transition={{ duration: 0.6, repeat: Infinity }}
                 />
                 Flying to section {currentSectionIndex + 1}

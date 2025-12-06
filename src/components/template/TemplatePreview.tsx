@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import { TemplateName } from "@/lib/types";
 import { getTemplate } from "@/lib/templates";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface TemplatePreviewProps {
   templateName: TemplateName;
@@ -9,6 +11,9 @@ interface TemplatePreviewProps {
 
 export const TemplatePreview = ({ templateName, mini = false }: TemplatePreviewProps) => {
   const template = getTemplate(templateName);
+  const isMobile = useIsMobile();
+  const reducedMotion = useReducedMotion();
+  const shouldSimplifyAnimations = reducedMotion || isMobile;
   
   const nodeSize = mini ? 4 : 8;
   const lineWidth = mini ? 1 : 1.5;
@@ -53,9 +58,12 @@ export const TemplatePreview = ({ templateName, mini = false }: TemplatePreviewP
           return (
             <motion.line
               key={`line-${i}`}
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 0.5 }}
-              transition={{ delay: i * 0.1, duration: 0.3 }}
+              initial={reducedMotion ? { opacity: 0.5 } : { pathLength: 0, opacity: 0 }}
+              animate={reducedMotion ? { opacity: 0.5 } : { pathLength: 1, opacity: 0.5 }}
+              transition={{ 
+                delay: shouldSimplifyAnimations ? i * 0.03 : i * 0.1, 
+                duration: shouldSimplifyAnimations ? 0.15 : 0.3 
+              }}
               x1={`${section.normalizedPos.x}%`}
               y1={`${section.normalizedPos.y}%`}
               x2={`${next.normalizedPos.x}%`}
@@ -71,14 +79,24 @@ export const TemplatePreview = ({ templateName, mini = false }: TemplatePreviewP
       {normalizedSections.map((section, i) => (
         <motion.div
           key={section.id}
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: i * 0.08, type: "spring", stiffness: 400, damping: 15 }}
-          className="absolute transform -translate-x-1/2 -translate-y-1/2"
+          initial={reducedMotion ? { opacity: 0 } : { scale: 0, opacity: 0 }}
+          animate={reducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
+          transition={shouldSimplifyAnimations ? { 
+            delay: i * 0.03, 
+            duration: 0.15,
+            ease: "easeOut"
+          } : { 
+            delay: i * 0.08, 
+            type: "spring", 
+            stiffness: 400, 
+            damping: 15 
+          }}
+          className="absolute transform -translate-x-1/2 -translate-y-1/2 will-change-transform"
           style={{
             left: `${section.normalizedPos.x}%`,
             top: `${section.normalizedPos.y}%`,
             zIndex: 1,
+            backfaceVisibility: "hidden",
           }}
         >
           <div

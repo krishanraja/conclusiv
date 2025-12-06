@@ -2,6 +2,8 @@ import { motion } from "framer-motion";
 import { NarrativeSchema } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { getIcon } from "@/lib/icons";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface NarrativeCanvasProps {
   narrative: NarrativeSchema;
@@ -14,6 +16,10 @@ export const NarrativeCanvas = ({
   selectedSectionId, 
   onSelectSection 
 }: NarrativeCanvasProps) => {
+  const isMobile = useIsMobile();
+  const reducedMotion = useReducedMotion();
+  const shouldSimplifyAnimations = reducedMotion || isMobile;
+
   const positions = narrative.sections.map(s => s.position);
   const minX = Math.min(...positions.map(p => p.x));
   const maxX = Math.max(...positions.map(p => p.x));
@@ -56,9 +62,12 @@ export const NarrativeCanvas = ({
           return (
             <motion.line
               key={`line-${i}`}
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 1 }}
-              transition={{ delay: i * 0.1 + 0.3, duration: 0.5 }}
+              initial={reducedMotion ? { opacity: 1 } : { pathLength: 0, opacity: 0 }}
+              animate={reducedMotion ? { opacity: 1 } : { pathLength: 1, opacity: 1 }}
+              transition={{ 
+                delay: shouldSimplifyAnimations ? i * 0.03 : i * 0.1 + 0.3, 
+                duration: shouldSimplifyAnimations ? 0.2 : 0.5 
+              }}
               x1={`${section.normalizedPos.x}%`}
               y1={`${section.normalizedPos.y}%`}
               x2={`${next.normalizedPos.x}%`}
@@ -79,29 +88,35 @@ export const NarrativeCanvas = ({
         return (
           <motion.button
             key={section.id}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ 
+            initial={reducedMotion ? { opacity: 0 } : { scale: 0, opacity: 0 }}
+            animate={reducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
+            transition={shouldSimplifyAnimations ? { 
+              delay: section.index * 0.03, 
+              duration: 0.15,
+              ease: "easeOut"
+            } : { 
               delay: section.index * 0.08, 
               type: "spring", 
               stiffness: 300,
               damping: 20
             }}
             onClick={() => onSelectSection(section.id)}
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer will-change-transform"
             style={{
               left: `${section.normalizedPos.x}%`,
               top: `${section.normalizedPos.y}%`,
               zIndex: isSelected ? 10 : 1,
+              backfaceVisibility: "hidden",
             }}
           >
             <motion.div
               animate={{
                 scale: isSelected ? 1.05 : 1,
               }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: shouldSimplifyAnimations ? 0.1 : 0.2 }}
               className={cn(
-                "relative p-3 rounded-lg border transition-all duration-200",
+                "relative p-3 rounded-lg border transition-all",
+                shouldSimplifyAnimations ? "duration-100" : "duration-200",
                 isSelected 
                   ? "border-primary/50 bg-card/80 shimmer-border-subtle" 
                   : "border-border/40 bg-card/50 hover:border-border/60"
