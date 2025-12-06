@@ -78,6 +78,21 @@
     z-index: 0;
   }
 
+  /* Disable body animation on mobile for performance */
+  @media (max-width: 768px) {
+    body::before {
+      animation: none;
+      opacity: 0.5;
+    }
+  }
+
+  /* Respect reduced motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    body::before {
+      animation: none;
+    }
+  }
+
   /* Subtle grid pattern overlay */
   body::after {
     content: '';
@@ -113,6 +128,23 @@
 }
 
 @layer utilities {
+  /* Hardware acceleration hints for animated elements */
+  .will-change-transform {
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  .will-change-opacity {
+    will-change: opacity;
+  }
+
+  .gpu-accelerated {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+
   .glass {
     @apply bg-card/60 backdrop-blur-md border border-border/40;
   }
@@ -151,6 +183,21 @@
     pointer-events: none;
   }
 
+  /* Simplified shimmer on mobile */
+  @media (max-width: 768px) {
+    .shimmer-border::before {
+      animation: shimmer 4s ease-in-out infinite;
+    }
+  }
+
+  /* Disable shimmer animation for reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .shimmer-border::before {
+      animation: none;
+      background-position: 0% 50%;
+    }
+  }
+
   .shimmer-border-subtle::before {
     opacity: 0.6;
   }
@@ -176,6 +223,24 @@
 
   .animate-scale-in {
     animation: scale-in 0.3s ease-out;
+  }
+
+  /* Disable float animation for reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-float {
+      animation: none;
+    }
+    
+    .animate-fade-in {
+      animation: none;
+      opacity: 1;
+    }
+    
+    .animate-scale-in {
+      animation: none;
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 }
 
