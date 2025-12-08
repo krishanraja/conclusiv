@@ -7,7 +7,7 @@ import { BusinessContextInput } from "./BusinessContextInput";
 import { DocumentUploadInput } from "./DocumentUploadInput";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, AlertCircle } from "lucide-react";
+import { Sparkles, AlertCircle, Crown } from "lucide-react";
 import { useFeatureGate } from "@/components/subscription/FeatureGate";
 import { useSubscription } from "@/hooks/useSubscription";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
@@ -313,8 +313,8 @@ export const InputScreen = () => {
               </div>
               <div className="flex items-center gap-3">
                 {!isPro && (
-                  <span className="text-muted-foreground">
-                    {buildsRemaining} build{buildsRemaining !== 1 ? 's' : ''} left this week
+                  <span className={!canBuild ? "text-amber-500 font-medium" : "text-muted-foreground"}>
+                    {!canBuild ? "Build limit reached" : `${buildsRemaining} build${buildsRemaining !== 1 ? 's' : ''} left this week`}
                   </span>
                 )}
                 {isLongInput && (
@@ -362,11 +362,20 @@ export const InputScreen = () => {
             variant="shimmer"
             size="xl"
             onClick={handleContinue}
-            disabled={!rawText.trim() || isTooShort || isParsingDocument || !canBuild}
+            disabled={!rawText.trim() || isTooShort || isParsingDocument}
             className="min-w-[200px] shadow-lg shadow-primary/20"
           >
-            <Sparkles className="w-4 h-4 mr-2" />
-            Continue
+            {!canBuild ? (
+              <>
+                <Crown className="w-4 h-4 mr-2" />
+                Upgrade to Continue
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Continue
+              </>
+            )}
           </Button>
         </motion.div>
       </motion.div>
