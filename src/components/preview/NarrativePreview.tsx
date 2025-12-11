@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { ImagePicker, ImagePickerTrigger } from "@/components/editor/ImagePicker";
+import { useBrandLogo } from "@/hooks/useBrandLogo";
 
 export const NarrativePreview = () => {
   const { 
@@ -15,12 +16,13 @@ export const NarrativePreview = () => {
     setCurrentSectionIndex,
     updateSectionImage,
     presentationStyle,
-    businessContext,
-    userUploadedLogoUrl,
   } = useNarrativeStore();
   const isMobile = useIsMobile();
   const reducedMotion = useReducedMotion();
   const [imagePickerOpen, setImagePickerOpen] = useState(false);
+  
+  // Use brand logo hook for dark mode detection
+  const { logoUrl, showLogo, logoPosition, logoSize } = useBrandLogo();
 
   if (!narrative) return null;
 
@@ -46,10 +48,6 @@ export const NarrativePreview = () => {
     : null;
 
   const shouldSimplifyAnimations = reducedMotion || isMobile;
-
-  // Logo URL (user uploaded takes priority)
-  const logoUrl = userUploadedLogoUrl || businessContext?.logoUrl;
-  const showLogo = presentationStyle?.showLogo && logoUrl;
   
   // Logo positioning
   const logoPositionClasses: Record<string, string> = {
@@ -74,17 +72,17 @@ export const NarrativePreview = () => {
   return (
     <div className="relative h-full flex flex-col" style={brandStyles}>
       {/* Logo overlay */}
-      {showLogo && (
+      {showLogo && logoUrl && (
         <div className={cn(
           "absolute z-10 opacity-60 hover:opacity-100 transition-opacity",
-          logoPositionClasses[presentationStyle?.logoPosition || 'top-right']
+          logoPositionClasses[logoPosition]
         )}>
           <img 
             src={logoUrl} 
             alt="Logo" 
             className={cn(
               "w-auto object-contain",
-              logoSizeClasses[presentationStyle?.logoSize || 'md']
+              logoSizeClasses[logoSize]
             )}
           />
         </div>
