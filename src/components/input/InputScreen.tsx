@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, DragEvent } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef, useCallback, DragEvent } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
 import { scrapeBusinessContext, parseDocument } from "@/lib/api";
@@ -9,7 +9,7 @@ import { ArchetypeSelector } from "./ArchetypeSelector";
 import { AmbientDemo } from "./AmbientDemo";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, AlertCircle, Crown } from "lucide-react";
+import { Sparkles, AlertCircle, Crown, Check } from "lucide-react";
 import { useFeatureGate } from "@/components/subscription/FeatureGate";
 import { useSubscription } from "@/hooks/useSubscription";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
@@ -52,14 +52,19 @@ export const InputScreen = () => {
   const [isDocumentExpanded, setIsDocumentExpanded] = useState(false);
   const [isContextExpanded, setIsContextExpanded] = useState(false);
   const [isDraggingOnTextarea, setIsDraggingOnTextarea] = useState(false);
+  const [showSuccessFlash, setShowSuccessFlash] = useState(false);
   
   const [pendingUrl, setPendingUrl] = useState("");
   const lastScrapedUrl = useRef("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-collapse document section after successful upload
+  // Auto-collapse document section after successful upload + show success flash
   useEffect(() => {
     if (uploadedFileName && rawText.trim()) {
       setIsDocumentExpanded(false);
+      setShowSuccessFlash(true);
+      const timer = setTimeout(() => setShowSuccessFlash(false), 2000);
+      return () => clearTimeout(timer);
     }
   }, [uploadedFileName, rawText]);
 
@@ -69,6 +74,27 @@ export const InputScreen = () => {
       setIsContextExpanded(false);
     }
   }, [businessContext]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + Enter to Continue
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (rawText.trim() && rawText.trim().length >= MIN_CHARS && !isParsingDocument && canBuild) {
+          handleContinue();
+        }
+      }
+      // Ctrl/Cmd + U to Upload
+      if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+        e.preventDefault();
+        fileInputRef.current?.click();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [rawText, isParsingDocument, canBuild]);
 
   useEffect(() => {
     if (!pendingUrl || !pendingUrl.includes(".") || pendingUrl === lastScrapedUrl.current) {
@@ -190,7 +216,7 @@ export const InputScreen = () => {
     }
   };
 
-  const handleContinue = async () => {
+  const handleContinue = useCallback(async () => {
     const trimmedText = rawText.trim();
     
     if (!trimmedText) {
@@ -220,7 +246,7 @@ export const InputScreen = () => {
     await incrementBuildCount();
     
     setCurrentStep("refine");
-  };
+  }, [rawText, toast, requireFeature, incrementBuildCount, setCurrentStep]);
 
   const charCount = rawText.length;
   const hasContent = charCount > 0;
@@ -234,6 +260,19 @@ export const InputScreen = () => {
   return (
     <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-4 md:py-6 relative z-10">
       {UpgradePromptComponent}
+      
+      {/* Hidden file input for keyboard shortcut */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.docx,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFileSelect(file);
+          e.target.value = '';
+        }}
+        className="hidden"
+      />
       
       {/* Decorative background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -266,23 +305,41 @@ export const InputScreen = () => {
 
         {/* Hero Section - Condensed when content exists */}
         <div className="text-center">
-          <motion.p 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className={`font-semibold text-foreground/90 max-w-2xl mx-auto leading-relaxed transition-all ${
-              hasContent ? 'text-base md:text-lg' : 'text-lg md:text-xl lg:text-2xl'
-            }`}
-          >
-            {hasContent ? (
-              <>Content loaded — customize below or <span className="gradient-text">continue</span></>
-            ) : (
-              <>
-                Load your business plan, AI research output or strategy document below - and watch it become a{" "}
-                <span className="gradient-text">stunning, clear interactive</span> and shareable demo that turns hours of pitching into minutes.
-              </>
-            )}
-          </motion.p>
+          <AnimatePresence mode="wait">
+            <motion.p 
+              key={hasContent ? 'loaded' : 'empty'}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className={`font-semibold text-foreground/90 max-w-2xl mx-auto leading-relaxed transition-all ${
+                hasContent ? 'text-base md:text-lg' : 'text-lg md:text-xl lg:text-2xl'
+              }`}
+            >
+              {hasContent ? (
+                <span className="flex items-center justify-center gap-2">
+                  <AnimatePresence>
+                    {showSuccessFlash && (
+                      <motion.span
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-shimmer-start/20"
+                      >
+                        <Check className="w-3 h-3 text-shimmer-start" />
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                  Content loaded — customize below or <span className="gradient-text ml-1">continue</span>
+                </span>
+              ) : (
+                <>
+                  Load your business plan, AI research output or strategy document below - and watch it become a{" "}
+                  <span className="gradient-text">stunning, clear interactive</span> and shareable demo that turns hours of pitching into minutes.
+                </>
+              )}
+            </motion.p>
+          </AnimatePresence>
         </div>
 
         {/* Main Input Card with glassmorphism */}
@@ -290,7 +347,9 @@ export const InputScreen = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="glass-strong rounded-xl p-4 space-y-3"
+          className={`glass-strong rounded-xl p-4 space-y-3 transition-all duration-500 ${
+            showSuccessFlash ? 'ring-2 ring-shimmer-start/30' : ''
+          }`}
         >
           {/* Text Input with drag & drop support */}
           <div className="space-y-1">
@@ -387,7 +446,7 @@ export const InputScreen = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="flex justify-center"
+          className="flex flex-col items-center gap-2"
         >
           <Button
             variant="shimmer"
@@ -408,6 +467,18 @@ export const InputScreen = () => {
               </>
             )}
           </Button>
+          {/* Keyboard shortcuts hint */}
+          <p className="text-[10px] text-muted-foreground/50 hidden md:block">
+            <kbd className="px-1 py-0.5 rounded bg-muted/30 text-muted-foreground/70 font-mono">⌘</kbd>
+            <span className="mx-0.5">+</span>
+            <kbd className="px-1 py-0.5 rounded bg-muted/30 text-muted-foreground/70 font-mono">Enter</kbd>
+            <span className="mx-1.5">to continue</span>
+            <span className="text-muted-foreground/30 mx-1">|</span>
+            <kbd className="px-1 py-0.5 rounded bg-muted/30 text-muted-foreground/70 font-mono">⌘</kbd>
+            <span className="mx-0.5">+</span>
+            <kbd className="px-1 py-0.5 rounded bg-muted/30 text-muted-foreground/70 font-mono">U</kbd>
+            <span className="mx-1.5">to upload</span>
+          </p>
         </motion.div>
       </motion.div>
       
