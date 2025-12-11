@@ -328,7 +328,7 @@ export const InputScreen = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-3xl space-y-4 relative"
+        className="w-full max-w-3xl space-y-4 relative pt-4 md:pt-6"
       >
         {/* Brand Logo with glow effect */}
         <motion.div 
