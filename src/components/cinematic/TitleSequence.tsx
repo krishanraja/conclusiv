@@ -6,19 +6,33 @@ import conclusivLogo from "@/assets/conclusiv-logo.png";
 interface TitleSequenceProps {
   onComplete: () => void;
   tagline?: string;
+  companyLogoUrl?: string;
+  brandColors?: {
+    primary: string;
+    secondary: string;
+  };
 }
 
-export const TitleSequence = ({ onComplete, tagline }: TitleSequenceProps) => {
+export const TitleSequence = ({ 
+  onComplete, 
+  tagline,
+  companyLogoUrl,
+  brandColors,
+}: TitleSequenceProps) => {
   const { businessContext, selectedArchetype, narrative } = useNarrativeStore();
   const [phase, setPhase] = useState<"logo" | "company" | "tagline" | "complete">("logo");
 
   const companyName = businessContext?.companyName || "Your Story";
+  const logoUrl = companyLogoUrl || businessContext?.logoUrl;
   const generatedTagline = tagline || narrative?.sections[0]?.title || "A Strategic Narrative";
   const date = new Date().toLocaleDateString("en-US", { 
     year: "numeric", 
     month: "long", 
     day: "numeric" 
   });
+
+  // Use brand colors if provided
+  const accentColor = brandColors?.primary || businessContext?.brandColors?.primary;
 
   useEffect(() => {
     const timeline = [
@@ -71,11 +85,13 @@ export const TitleSequence = ({ onComplete, tagline }: TitleSequenceProps) => {
             ))}
           </div>
 
-          {/* Radial glow */}
+          {/* Radial glow - use brand color if available */}
           <motion.div
             className="absolute w-[600px] h-[600px] rounded-full"
             style={{
-              background: "radial-gradient(circle, hsl(var(--shimmer-start) / 0.15) 0%, transparent 70%)",
+              background: accentColor 
+                ? `radial-gradient(circle, ${accentColor}26 0%, transparent 70%)`
+                : "radial-gradient(circle, hsl(var(--shimmer-start) / 0.15) 0%, transparent 70%)",
             }}
             animate={{
               scale: [1, 1.2, 1],
@@ -97,9 +113,21 @@ export const TitleSequence = ({ onComplete, tagline }: TitleSequenceProps) => {
                   transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                   className="flex flex-col items-center"
                 >
-                  <img src={conclusivLogo} alt="conclusiv" className="w-16 h-16 mb-4 opacity-60" />
+                  {logoUrl ? (
+                    <img 
+                      src={logoUrl} 
+                      alt={companyName} 
+                      className="w-24 h-24 mb-4 object-contain"
+                      onError={(e) => {
+                        // Fallback to conclusiv logo if company logo fails
+                        (e.target as HTMLImageElement).src = conclusivLogo;
+                      }}
+                    />
+                  ) : (
+                    <img src={conclusivLogo} alt="conclusiv" className="w-16 h-16 mb-4 opacity-60" />
+                  )}
                   <span className="text-xs text-muted-foreground tracking-[0.3em] uppercase">
-                    Presents
+                    {logoUrl ? companyName : "Presents"}
                   </span>
                 </motion.div>
               )}

@@ -90,6 +90,23 @@ export interface BusinessContext {
   products: string[];
   valuePropositions: string[];
   brandVoice: string;
+  // Brand enrichment from Brandfetch
+  logoUrl?: string;
+  brandColors?: {
+    primary: string;
+    secondary: string;
+    accent: string;
+  };
+  brandFonts?: {
+    primary: string;
+    secondary: string;
+  };
+  firmographics?: {
+    employeeCount: number | null;
+    foundedYear: number | null;
+    location: string | null;
+    companyKind: "public" | "private" | null;
+  };
 }
 
 export interface BuildNarrativeResponse {

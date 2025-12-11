@@ -44,6 +44,55 @@ export interface BuildNarrativeOptions {
   includeTensionSlide?: boolean;
 }
 
+// Brand data from Brandfetch
+export interface BrandData {
+  companyName?: string;
+  logo?: {
+    url: string;
+    type: string;
+    theme: string;
+  };
+  colors?: {
+    primary: string;
+    secondary: string;
+    accent: string;
+  };
+  fonts?: {
+    primary: string;
+    secondary: string;
+  };
+  firmographics?: {
+    employeeCount: number | null;
+    foundedYear: number | null;
+    location: string | null;
+    companyKind: "public" | "private" | null;
+  };
+}
+
+export interface FetchBrandDataResponse {
+  data?: BrandData;
+  error?: string;
+}
+
+// Guided research types
+export interface GuidedResearchFormulateResponse {
+  suggestedQuery?: string;
+  followUpQuestions?: {
+    id: string;
+    question: string;
+    options?: string[];
+  }[];
+  error?: string;
+}
+
+export interface GuidedResearchResponse {
+  summary?: string;
+  keyFindings?: string[];
+  citations?: { url: string; title: string }[];
+  rawContent?: string;
+  error?: string;
+}
+
 export const extractThemesFromAI = async (text: string): Promise<ExtractThemesResponse> => {
   try {
     const { data, error } = await supabase.functions.invoke('extract-themes', {
@@ -254,5 +303,79 @@ export const normalizeClaim = async (title: string, text: string): Promise<Norma
     return { title: data.title, text: data.text, normalized: data.normalized };
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Failed to normalize claim' };
+  }
+};
+
+// Fetch brand data from Brandfetch
+export const fetchBrandData = async (domain: string): Promise<FetchBrandDataResponse> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('fetch-brand-data', {
+      body: { domain }
+    });
+
+    if (error) throw new Error(error.message);
+    if (data.error) throw new Error(data.error);
+
+    return { data };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to fetch brand data' };
+  }
+};
+
+// Guided research - formulate query
+export const formulateResearchQuery = async (
+  topic: string,
+  context?: string,
+  audience?: string,
+  specificQuestions?: string[]
+): Promise<GuidedResearchFormulateResponse> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('guided-research', {
+      body: { 
+        phase: 'formulate',
+        topic,
+        context,
+        audience,
+        specificQuestions,
+      }
+    });
+
+    if (error) throw new Error(error.message);
+    if (data.error) throw new Error(data.error);
+
+    return {
+      suggestedQuery: data.suggestedQuery,
+      followUpQuestions: data.followUpQuestions,
+    };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to formulate query' };
+  }
+};
+
+// Guided research - execute research
+export const executeResearch = async (
+  query: string,
+  depth: 'quick' | 'deep' = 'deep'
+): Promise<GuidedResearchResponse> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('guided-research', {
+      body: { 
+        phase: 'research',
+        query,
+        depth,
+      }
+    });
+
+    if (error) throw new Error(error.message);
+    if (data.error) throw new Error(data.error);
+
+    return {
+      summary: data.summary,
+      keyFindings: data.keyFindings,
+      citations: data.citations,
+      rawContent: data.rawContent,
+    };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to execute research' };
   }
 };

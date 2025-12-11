@@ -35,3 +35,9 @@ verify_jwt = false
 
 [functions.normalize-claim]
 verify_jwt = false
+
+[functions.fetch-brand-data]
+verify_jwt = false
+
+[functions.guided-research]
+verify_jwt = false
