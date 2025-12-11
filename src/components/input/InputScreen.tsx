@@ -424,18 +424,27 @@ export const InputScreen = () => {
               )}
             </div>
             
-            {/* Research Assistant Link - shown when no content */}
+            {/* Research Assistant Trigger - green left arrow */}
             {!hasContent && (
-              <button
+              <motion.button
                 type="button"
                 onClick={() => setShowResearchAssistant(true)}
-                className="flex items-center gap-1.5 text-xs text-primary/70 hover:text-primary transition-colors mt-1"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                whileHover={{ x: 4 }}
+                className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors mt-2 group"
                 data-onboarding="research-assistant"
               >
-                <Search className="w-3 h-3" />
-                <span className="hidden md:inline">Need research first? Try our AI Research Assistant</span>
-                <span className="md:hidden">AI Research Assistant</span>
-              </button>
+                <motion.div 
+                  className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors"
+                  animate={{ x: [0, 3, 0] }}
+                  transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                >
+                  <Search className="w-4 h-4" />
+                </motion.div>
+                <span>Need research first?</span>
+                <Sparkles className="w-3.5 h-3.5 opacity-60" />
+              </motion.button>
             )}
             <div className="flex justify-between items-center text-xs px-1">
               <div className="flex items-center gap-2">

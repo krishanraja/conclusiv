@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Play, BookOpen, Share2, Download, FileText, Presentation, Lock, Copy, Check, Sparkles, ExternalLink, Film } from "lucide-react";
+import { ArrowLeft, Play, BookOpen, Share2, Download, FileText, Presentation, Lock, Copy, Check, Sparkles, ExternalLink, Film, ChevronLeft, ChevronRight, BarChart3 } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
 import { buildNarrative, extractTensions, generateAlternatives } from "@/lib/api";
@@ -86,6 +86,7 @@ export const PreviewScreen = () => {
   const [copied, setCopied] = useState(false);
   const [alternativesPanelOpen, setAlternativesPanelOpen] = useState(false);
   const [makingOfOpen, setMakingOfOpen] = useState(false);
+  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
 
   // Build narrative on mount if not already built
   useEffect(() => {
@@ -457,6 +458,68 @@ export const PreviewScreen = () => {
 
         {/* Main Content */}
         <div className="flex-1 flex">
+          {/* Left Panel - Narrative Score (collapsible) */}
+          <AnimatePresence mode="wait">
+            {leftPanelOpen ? (
+              <motion.div
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 280, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="border-r border-border/50 hidden lg:flex flex-col overflow-hidden"
+              >
+                <div className="p-4 overflow-y-auto flex-1">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                      <BarChart3 className="w-3.5 h-3.5" />
+                      Narrative Score
+                    </h3>
+                    <button
+                      onClick={() => setLeftPanelOpen(false)}
+                      className="p-1 rounded hover:bg-muted transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                  </div>
+                  
+                  {/* Quality Score */}
+                  {narrative && (
+                    <div className="mb-6">
+                      <NarrativeQualityScore />
+                    </div>
+                  )}
+                  
+                  {/* Executive Summary */}
+                  {narrative && (
+                    <ExecutiveSummary />
+                  )}
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="hidden lg:flex flex-col items-center py-4 px-2 border-r border-border/50"
+              >
+                <button
+                  onClick={() => setLeftPanelOpen(true)}
+                  className="p-2 rounded-lg hover:bg-muted transition-colors group"
+                  title="Show narrative score"
+                >
+                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
+                </button>
+                {narrative && (
+                  <div className="mt-4 writing-mode-vertical text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <BarChart3 className="w-3 h-3" />
+                      Score
+                    </span>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Preview Area */}
           <div className="flex-1 flex flex-col">
             {/* Mode Toggle */}
@@ -507,28 +570,14 @@ export const PreviewScreen = () => {
             </div>
           </div>
 
-          {/* Sidebar */}
+          {/* Right Sidebar - Editing Features Only */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="w-80 border-l border-border/50 p-4 hidden lg:block overflow-y-auto max-h-[calc(100vh-10rem)]"
+            className="w-72 border-l border-border/50 p-4 hidden lg:block overflow-y-auto max-h-[calc(100vh-10rem)]"
           >
-            {/* Quality Score */}
-            {narrative && (
-              <div className="mb-6">
-                <NarrativeQualityScore />
-              </div>
-            )}
-            
-            {/* Executive Summary */}
-            {narrative && (
-              <div className="mb-6">
-                <ExecutiveSummary />
-              </div>
-            )}
-            
             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">
-              Adjustments
+              Quick Adjustments
             </h3>
             <QuickAdjustments />
           </motion.div>
