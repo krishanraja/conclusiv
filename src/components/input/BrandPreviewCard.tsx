@@ -15,6 +15,7 @@ export const BrandPreviewCard = ({
 }: BrandPreviewCardProps) => {
   const logoUrl = userLogoUrl || context.logoUrl;
   const colors = context.brandColors;
+  const initials = context.companyName?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 
   return (
     <motion.div
@@ -23,16 +24,27 @@ export const BrandPreviewCard = ({
       className="p-3 bg-card/30 rounded-lg border border-border/30"
     >
       <div className="flex items-start gap-3">
-        {/* Logo preview */}
-        {logoUrl && (
-          <div className="w-12 h-12 rounded-lg border border-border/50 bg-background flex items-center justify-center overflow-hidden flex-shrink-0">
+        {/* Logo preview - show initials as fallback */}
+        <div className="w-12 h-12 rounded-lg border border-border/50 bg-background flex items-center justify-center overflow-hidden flex-shrink-0">
+          {logoUrl ? (
             <img
               src={logoUrl}
               alt={context.companyName}
               className="w-full h-full object-contain p-1"
+              onError={(e) => {
+                // Hide image on error to show fallback
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
             />
-          </div>
-        )}
+          ) : null}
+          {/* Fallback initials - always rendered but may be covered by image */}
+          <span 
+            className="text-sm font-semibold text-primary absolute"
+            style={{ display: logoUrl ? 'none' : 'block' }}
+          >
+            {initials}
+          </span>
+        </div>
 
         <div className="flex-1 min-w-0">
           {/* Company name */}

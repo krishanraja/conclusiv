@@ -294,7 +294,7 @@ export const InputScreen = () => {
   const buildsRemaining = isPro ? '∞' : (isFirstBuild ? 1 : Math.max(0, limits.buildsPerWeek - usage.buildsThisWeek));
 
   return (
-    <div className="min-h-[100dvh] md:min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-4 md:py-6 relative z-10 pb-20 md:pb-6" data-onboarding="welcome">
+    <div className="min-h-[100dvh] md:min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-4 md:py-6 relative z-10 pb-28 md:pb-8" data-onboarding="welcome">
       {UpgradePromptComponent}
       
       {/* Research Assistant */}
