@@ -3,8 +3,8 @@ import { OnboardingSpotlight } from "./OnboardingSpotlight";
 import { OnboardingProgress } from "./OnboardingProgress";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Sparkles } from "lucide-react";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
+import faviconIcon from "/favicon.png";
 
 interface OnboardingStep {
   targetSelector: string;
@@ -83,7 +83,7 @@ export const OnboardingManager = () => {
             className="bg-card border border-border rounded-2xl p-8 max-w-md w-full text-center shadow-2xl"
           >
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
-              <Sparkles className="w-8 h-8 text-primary" />
+              <img src={faviconIcon} alt="" className="w-8 h-8" />
             </div>
             
             <h2 className="text-2xl font-bold text-foreground mb-2">
