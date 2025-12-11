@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Sparkles, ArrowRightLeft, Eye } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
-import { alternativeGoalDescriptions } from "@/lib/types";
+import { alternativeGoalDescriptions, NarrativeAlternative } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { AlternativePreviewModal } from "./AlternativePreviewModal";
 
 interface AlternativesPanelProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface AlternativesPanelProps {
 
 export const AlternativesPanel = ({ isOpen, onClose }: AlternativesPanelProps) => {
   const { alternatives, swapWithAlternative, isGeneratingAlternatives } = useNarrativeStore();
+  const [previewAlt, setPreviewAlt] = useState<NarrativeAlternative | null>(null);
 
   return (
     <AnimatePresence>
@@ -98,9 +100,7 @@ export const AlternativesPanel = ({ isOpen, onClose }: AlternativesPanelProps) =
                             variant="ghost"
                             size="sm"
                             className="flex-1 text-xs h-8"
-                            onClick={() => {
-                              // Could add preview modal here
-                            }}
+                            onClick={() => setPreviewAlt(alt)}
                           >
                             <Eye className="w-3 h-3 mr-1" />
                             Preview
@@ -125,6 +125,20 @@ export const AlternativesPanel = ({ isOpen, onClose }: AlternativesPanelProps) =
               )}
             </div>
           </motion.div>
+
+          {/* Preview Modal */}
+          <AlternativePreviewModal
+            alternative={previewAlt}
+            isOpen={!!previewAlt}
+            onClose={() => setPreviewAlt(null)}
+            onUse={() => {
+              if (previewAlt) {
+                swapWithAlternative(previewAlt.id);
+                setPreviewAlt(null);
+                onClose();
+              }
+            }}
+          />
         </>
       )}
     </AnimatePresence>

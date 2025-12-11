@@ -16,7 +16,11 @@ const iconMap: Record<string, React.ElementType> = {
 
 const audiences: AudienceMode[] = ["exec", "product", "investors", "clients", "ops", "briefing"];
 
-export const AudienceSelector = () => {
+interface AudienceSelectorProps {
+  onSelect?: () => void;
+}
+
+export const AudienceSelector = ({ onSelect }: AudienceSelectorProps) => {
   const { audienceMode, setAudienceMode } = useNarrativeStore();
 
   return (
@@ -31,7 +35,10 @@ export const AudienceSelector = () => {
             <Tooltip key={mode}>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => setAudienceMode(isSelected ? null : mode)}
+                  onClick={() => {
+                    setAudienceMode(isSelected ? null : mode);
+                    onSelect?.();
+                  }}
                   className={cn(
                     "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-all",
                     isSelected

@@ -356,8 +356,7 @@ export const InputScreen = () => {
           </div>
         </motion.div>
 
-        {/* Ambient Demo - Show don't tell */}
-        <AmbientDemo />
+        {/* Ambient Demo moved to fixed position for better visibility */}
 
         {/* Continue Button with enhanced styling */}
         <motion.div 
@@ -387,6 +386,8 @@ export const InputScreen = () => {
           </Button>
         </motion.div>
       </motion.div>
+      {/* Ambient Demo - fixed position outside main content */}
+      <AmbientDemo />
     </div>
   );
 };

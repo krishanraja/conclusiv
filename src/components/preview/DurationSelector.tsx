@@ -4,7 +4,11 @@ import { cn } from "@/lib/utils";
 
 const durations: NarrativeDuration[] = ["10s", "1min", "5min", "full"];
 
-export const DurationSelector = () => {
+interface DurationSelectorProps {
+  onSelect?: () => void;
+}
+
+export const DurationSelector = ({ onSelect }: DurationSelectorProps) => {
   const { duration, setDuration } = useNarrativeStore();
 
   return (
@@ -16,7 +20,10 @@ export const DurationSelector = () => {
         return (
           <button
             key={d}
-            onClick={() => setDuration(d)}
+            onClick={() => {
+              setDuration(d);
+              onSelect?.();
+            }}
             className={cn(
               "px-2.5 py-1 rounded-md text-xs transition-all",
               isSelected

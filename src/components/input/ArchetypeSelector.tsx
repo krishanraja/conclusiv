@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Target, FileCheck, TrendingUp, Rocket, Search, GitBranch, Users, Shield } from "lucide-react";
+import { ChevronDown, Target, FileCheck, TrendingUp, Rocket, Search, GitBranch, Users, Shield, Info } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { NarrativeArchetype } from "@/lib/types";
 import { archetypeList } from "@/lib/archetypes";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const iconMap: Record<string, React.ElementType> = {
   Target,
@@ -81,28 +82,49 @@ export const ArchetypeSelector = () => {
                 const isSelected = selectedArchetype === archetype.key;
 
                 return (
-                  <button
-                    key={archetype.key}
-                    onClick={() => {
-                      setSelectedArchetype(archetype.key);
-                      setIsExpanded(false);
-                    }}
-                    className={cn(
-                      "p-3 rounded-lg border text-left transition-all",
-                      isSelected
-                        ? "bg-shimmer-start/10 border-shimmer-start/30 text-shimmer-start"
-                        : "bg-card/50 border-border/50 text-muted-foreground hover:text-foreground hover:bg-card"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-8 h-8 rounded-lg flex items-center justify-center mb-2",
-                      isSelected ? "bg-shimmer-start/20" : "bg-background/50"
-                    )}>
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <h4 className="text-xs font-medium">{archetype.name}</h4>
-                    <p className="text-[10px] opacity-70 mt-0.5 line-clamp-1">{archetype.bestFor}</p>
-                  </button>
+                  <TooltipProvider key={archetype.key}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => {
+                            setSelectedArchetype(archetype.key);
+                            setIsExpanded(false);
+                          }}
+                          className={cn(
+                            "p-3 rounded-lg border text-left transition-all relative group",
+                            isSelected
+                              ? "bg-shimmer-start/10 border-shimmer-start/30 text-shimmer-start"
+                              : "bg-card/50 border-border/50 text-muted-foreground hover:text-foreground hover:bg-card"
+                          )}
+                        >
+                          <div className={cn(
+                            "w-8 h-8 rounded-lg flex items-center justify-center mb-2",
+                            isSelected ? "bg-shimmer-start/20" : "bg-background/50"
+                          )}>
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <h4 className="text-xs font-medium">{archetype.name}</h4>
+                          <p className="text-[10px] opacity-70 mt-0.5 line-clamp-1">{archetype.bestFor}</p>
+                          
+                          {/* Preview indicator */}
+                          <Info className="absolute top-2 right-2 w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-xs p-3">
+                        <p className="font-medium text-xs mb-2">{archetype.name} structure:</p>
+                        <ol className="text-[10px] space-y-0.5 text-muted-foreground">
+                          {archetype.sectionStructure.map((section, i) => (
+                            <li key={i} className="flex items-center gap-1.5">
+                              <span className="w-4 h-4 rounded-full bg-shimmer-start/20 text-shimmer-start flex items-center justify-center text-[8px] flex-shrink-0">
+                                {i + 1}
+                              </span>
+                              {section}
+                            </li>
+                          ))}
+                        </ol>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 );
               })}
             </div>

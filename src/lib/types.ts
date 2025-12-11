@@ -182,7 +182,13 @@ export const durationDescriptions: Record<NarrativeDuration, { label: string; se
 };
 
 // ===== PHASE 5: View Modes =====
-export type ViewMode = "present" | "reader" | "share";
+export type ViewMode = "present" | "reader" | "external";
+
+export const viewModeDescriptions: Record<ViewMode, { label: string; description: string }> = {
+  present: { label: "Present", description: "Animated presentation mode" },
+  reader: { label: "Reader", description: "Scrollable document view" },
+  external: { label: "External View", description: "Clean view for sharing" },
+};
 
 // ===== PHASE 6: Company Brain =====
 export interface CompanyBrain {
