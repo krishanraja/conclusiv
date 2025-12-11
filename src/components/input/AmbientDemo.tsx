@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lightbulb, TrendingUp, Target, Shield } from "lucide-react";
+import { useNarrativeStore } from "@/store/narrativeStore";
 
 const demoSections = [
   { title: "Market Opportunity", icon: TrendingUp, color: "text-emerald-400" },
@@ -11,6 +12,8 @@ const demoSections = [
 
 export const AmbientDemo = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const { rawText } = useNarrativeStore();
+  const hasContent = rawText.length > 0;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -22,14 +25,17 @@ export const AmbientDemo = () => {
   const currentSection = demoSections[currentIndex];
   const Icon = currentSection.icon;
 
+  // Hide when user has content
+  if (hasContent) return null;
+
   return (
-    <div className="fixed bottom-8 right-8 hidden md:block z-10">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1 }}
-        className="relative"
-      >
+    <motion.div 
+      className="fixed bottom-8 right-8 hidden md:block z-10"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 1 }}
+    >
+      <div className="relative">
         {/* Glow effect */}
         <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full scale-150" />
         
@@ -79,7 +85,7 @@ export const AmbientDemo = () => {
             ))}
           </div>
         </div>
-      </motion.div>
-    </div>
+      </div>
+    </motion.div>
   );
 };
