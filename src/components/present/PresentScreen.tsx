@@ -12,6 +12,7 @@ import { UpgradePrompt } from "@/components/subscription/UpgradePrompt";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { TitleSequence } from "@/components/cinematic/TitleSequence";
+import { useBrandLogo } from "@/hooks/useBrandLogo";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 // Canvas size for infinite canvas
@@ -206,11 +207,16 @@ export const PresentScreen = () => {
     setCurrentSectionIndex,
     setCurrentStep,
     businessContext,
+    presentationStyle,
   } = useNarrativeStore();
 
   const { isPro, limits } = useSubscription();
   const isMobile = useIsMobile();
   const reducedMotion = useReducedMotion();
+  
+  // Brand logo with dark mode detection
+  const { logoUrl, showLogo, logoPosition, logoSize } = useBrandLogo();
+  
   const [showMinimap, setShowMinimap] = useState(!isMobile);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [prevIndex, setPrevIndex] = useState(0);
@@ -221,6 +227,35 @@ export const PresentScreen = () => {
     return skipIntro !== 'true';
   });
   const showWatermark = limits.hasWatermark;
+  
+  // Logo positioning classes
+  const logoPositionClasses: Record<string, string> = {
+    'top-left': 'top-20 left-6',
+    'top-right': 'top-20 right-6',
+    'bottom-left': 'bottom-20 left-6',
+    'bottom-right': 'bottom-20 right-6',
+  };
+  
+  const logoSizeClasses: Record<string, string> = {
+    'sm': 'h-6',
+    'md': 'h-8',
+    'lg': 'h-12',
+  };
+  
+  // Brand color styling
+  const brandColorStyles = useMemo(() => {
+    const styles: React.CSSProperties & Record<string, string> = {};
+    if (presentationStyle?.primaryColor) {
+      styles['--brand-primary'] = presentationStyle.primaryColor;
+    }
+    if (presentationStyle?.secondaryColor) {
+      styles['--brand-secondary'] = presentationStyle.secondaryColor;
+    }
+    if (presentationStyle?.accentColor) {
+      styles['--brand-accent'] = presentationStyle.accentColor;
+    }
+    return styles;
+  }, [presentationStyle]);
 
   // Reduce particles and effects on mobile
   const particleCount = isMobile ? 15 : 80;
@@ -348,14 +383,36 @@ export const PresentScreen = () => {
       {showTitleSequence && (
         <TitleSequence 
           onComplete={() => setShowTitleSequence(false)}
-          companyLogoUrl={businessContext?.logoUrl}
+          companyLogoUrl={logoUrl}
           brandColors={businessContext?.brandColors}
         />
       )}
       
       {showWatermark && <Watermark onUpgrade={() => setShowUpgrade(true)} />}
       <UpgradePrompt trigger="presentation" isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} />
-      <div className="fixed inset-0 bg-background z-50 overflow-hidden">
+      <div className="fixed inset-0 bg-background z-50 overflow-hidden" style={brandColorStyles}>
+      
+      {/* Brand Logo Overlay */}
+      {showLogo && logoUrl && logoPosition !== 'none' && (
+        <motion.div 
+          className={cn(
+            "absolute z-30 opacity-70 hover:opacity-100 transition-opacity",
+            logoPositionClasses[logoPosition]
+          )}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.7 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+        >
+          <img 
+            src={logoUrl} 
+            alt="Logo" 
+            className={cn(
+              "w-auto object-contain",
+              logoSizeClasses[logoSize]
+            )}
+          />
+        </motion.div>
+      )}
       {/* Infinite Canvas Container */}
       <motion.div
         className="absolute inset-0"
