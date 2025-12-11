@@ -44,14 +44,19 @@ export interface BuildNarrativeOptions {
   includeTensionSlide?: boolean;
 }
 
+// Logo variant from Brandfetch
+export interface LogoVariant {
+  url: string;
+  type: 'logo' | 'icon' | 'symbol';
+  theme: 'light' | 'dark';
+  format: 'svg' | 'png' | 'jpeg';
+}
+
 // Brand data from Brandfetch
 export interface BrandData {
   companyName?: string;
-  logo?: {
-    url: string;
-    type: string;
-    theme: string;
-  };
+  logo?: LogoVariant;
+  logos?: LogoVariant[];
   colors?: {
     primary: string;
     secondary: string;

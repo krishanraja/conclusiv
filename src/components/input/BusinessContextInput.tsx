@@ -18,6 +18,7 @@ interface BusinessContextInputProps {
   userLogoUrl?: string;
   onLogoUpload?: (url: string) => void;
   onLogoRemove?: () => void;
+  onLogoSelect?: (url: string) => void;
   suggestExpand?: boolean;
 }
 
@@ -32,6 +33,7 @@ export const BusinessContextInput = ({
   userLogoUrl,
   onLogoUpload,
   onLogoRemove,
+  onLogoSelect,
   suggestExpand,
 }: BusinessContextInputProps) => {
   const [showLogoUpload, setShowLogoUpload] = useState(false);
@@ -76,6 +78,7 @@ export const BusinessContextInput = ({
         <BrandPreviewCard
           context={context}
           userLogoUrl={userLogoUrl}
+          onLogoSelect={onLogoSelect}
         />
         
         {/* Expanded edit mode */}
