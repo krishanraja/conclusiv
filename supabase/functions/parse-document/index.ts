@@ -200,13 +200,21 @@ serve(async (req) => {
         
         if (response.status === 429) {
           return new Response(
-            JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
+            JSON.stringify({ 
+              error: 'PDF processing is temporarily limited due to high demand.',
+              suggestion: 'Try uploading as a Word document (.docx) or paste text directly - these process instantly without limits.',
+              code: 'RATE_LIMITED'
+            }),
             { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
         if (response.status === 402) {
           return new Response(
-            JSON.stringify({ error: 'API credits exhausted. Please try again later.' }),
+            JSON.stringify({ 
+              error: 'PDF processing limit reached.',
+              suggestion: 'Upload as Word document (.docx) or PowerPoint (.pptx) instead - these are processed locally with no limits.',
+              code: 'CREDITS_EXHAUSTED'
+            }),
             { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
