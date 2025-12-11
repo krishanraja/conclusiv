@@ -241,24 +241,33 @@ export type Database = {
       }
       profiles: {
         Row: {
+          company_logo_url: string | null
           created_at: string | null
           display_name: string | null
           email: string | null
           id: string
+          onboarding_completed: boolean | null
+          onboarding_step: number | null
           updated_at: string | null
         }
         Insert: {
+          company_logo_url?: string | null
           created_at?: string | null
           display_name?: string | null
           email?: string | null
           id: string
+          onboarding_completed?: boolean | null
+          onboarding_step?: number | null
           updated_at?: string | null
         }
         Update: {
+          company_logo_url?: string | null
           created_at?: string | null
           display_name?: string | null
           email?: string | null
           id?: string
+          onboarding_completed?: boolean | null
+          onboarding_step?: number | null
           updated_at?: string | null
         }
         Relationships: []

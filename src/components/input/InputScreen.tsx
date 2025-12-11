@@ -42,6 +42,8 @@ export const InputScreen = () => {
     businessContext,
     setBusinessContext,
     setCurrentStep,
+    userUploadedLogoUrl,
+    setUserUploadedLogoUrl,
   } = useNarrativeStore();
 
   const { requireFeature, UpgradePromptComponent } = useFeatureGate();
@@ -283,7 +285,7 @@ export const InputScreen = () => {
   const buildsRemaining = isPro ? '∞' : (isFirstBuild ? 1 : Math.max(0, limits.buildsPerWeek - usage.buildsThisWeek));
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-4 md:py-6 relative z-10">
+    <div className="min-h-[100dvh] md:min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-4 md:py-6 relative z-10 pb-20 md:pb-6" data-onboarding="welcome">
       {UpgradePromptComponent}
       
       {/* Research Assistant */}
@@ -419,9 +421,11 @@ export const InputScreen = () => {
                 type="button"
                 onClick={() => setShowResearchAssistant(true)}
                 className="flex items-center gap-1.5 text-xs text-primary/70 hover:text-primary transition-colors mt-1"
+                data-onboarding="research-assistant"
               >
                 <Search className="w-3 h-3" />
-                <span>Need research first? Try our AI Research Assistant</span>
+                <span className="hidden md:inline">Need research first? Try our AI Research Assistant</span>
+                <span className="md:hidden">AI Research Assistant</span>
               </button>
             )}
             <div className="flex justify-between items-center text-xs px-1">
@@ -461,15 +465,17 @@ export const InputScreen = () => {
 
           {/* Optional Features - Unified Compact Style */}
           <div className="space-y-2 pt-1 border-t border-border/30">
-            <DocumentUploadInput
-              isExpanded={isDocumentExpanded}
-              onToggle={() => setIsDocumentExpanded(!isDocumentExpanded)}
-              isLoading={isParsingDocument}
-              fileName={uploadedFileName}
-              onFileSelect={handleFileSelect}
-              onClear={handleClearDocument}
-              hasContent={hasContent}
-            />
+            <div data-onboarding="document-upload">
+              <DocumentUploadInput
+                isExpanded={isDocumentExpanded}
+                onToggle={() => setIsDocumentExpanded(!isDocumentExpanded)}
+                isLoading={isParsingDocument}
+                fileName={uploadedFileName}
+                onFileSelect={handleFileSelect}
+                onClear={handleClearDocument}
+                hasContent={hasContent}
+              />
+            </div>
 
             <BusinessContextInput
               value={businessWebsite}
@@ -479,6 +485,9 @@ export const InputScreen = () => {
               onClear={handleClearContext}
               isExpanded={isContextExpanded}
               onToggle={() => setIsContextExpanded(!isContextExpanded)}
+              userLogoUrl={userUploadedLogoUrl || undefined}
+              onLogoUpload={setUserUploadedLogoUrl}
+              onLogoRemove={() => setUserUploadedLogoUrl(null)}
             />
 
             <ArchetypeSelector />
@@ -498,6 +507,7 @@ export const InputScreen = () => {
             onClick={handleContinue}
             disabled={!rawText.trim() || isTooShort || isParsingDocument}
             className="min-w-[200px] shadow-lg shadow-primary/20"
+            data-onboarding="continue-button"
           >
             {!canBuild ? (
               <>

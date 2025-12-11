@@ -31,6 +31,10 @@ interface NarrativeState {
   businessContext: BusinessContext | null;
   setBusinessContext: (context: BusinessContext | null) => void;
   
+  // User uploaded logo (separate from brandfetch)
+  userUploadedLogoUrl: string | null;
+  setUserUploadedLogoUrl: (url: string | null) => void;
+  
   // Themes
   themes: Theme[];
   setThemes: (themes: Theme[]) => void;
@@ -121,6 +125,7 @@ const initialState = {
   isRecording: false,
   businessWebsite: "",
   businessContext: null,
+  userUploadedLogoUrl: null,
   themes: [],
   selectedTemplate: null,
   narrative: null,
@@ -160,6 +165,8 @@ export const useNarrativeStore = create<NarrativeState>((set, get) => ({
   setBusinessWebsite: (url) => set({ businessWebsite: url }),
   
   setBusinessContext: (context) => set({ businessContext: context }),
+  
+  setUserUploadedLogoUrl: (url) => set({ userUploadedLogoUrl: url }),
   
   setThemes: (themes) => set({ themes }),
   

@@ -13,6 +13,7 @@ import { PreviewScreen } from "@/components/preview/PreviewScreen";
 import { PresentScreen } from "@/components/present/PresentScreen";
 import { LoadingOverlay } from "@/components/ui/loading";
 import { FeedbackWidget } from "@/components/feedback/FeedbackWidget";
+import { OnboardingManager } from "@/components/onboarding/OnboardingManager";
 import { AnimatePresence, motion } from "framer-motion";
 
 const Index = () => {
@@ -107,9 +108,17 @@ const Index = () => {
         </motion.main>
       </AnimatePresence>
       
-      {currentStep === "input" && <Footer />}
+      {/* Footer only on desktop for input step */}
+      {currentStep === "input" && (
+        <div className="hidden md:block">
+          <Footer />
+        </div>
+      )}
       
       <FeedbackWidget currentStep={currentStep} />
+      
+      {/* Onboarding for first-time users */}
+      {currentStep === "input" && <OnboardingManager />}
     </div>
   );
 };
