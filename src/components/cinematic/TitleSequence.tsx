@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNarrativeStore } from "@/store/narrativeStore";
-import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 interface TitleSequenceProps {
   onComplete: () => void;
@@ -119,15 +118,20 @@ export const TitleSequence = ({
                       alt={companyName} 
                       className="w-24 h-24 mb-4 object-contain"
                       onError={(e) => {
-                        // Fallback to conclusiv logo if company logo fails
-                        (e.target as HTMLImageElement).src = conclusivLogo;
+                        // Hide the image if it fails to load
+                        (e.target as HTMLImageElement).style.display = 'none';
                       }}
                     />
                   ) : (
-                    <img src={conclusivLogo} alt="conclusiv" className="w-16 h-16 mb-4 opacity-60" />
+                    // Show company initials as fallback instead of Conclusiv logo
+                    <div className="w-24 h-24 mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
+                      <span className="text-4xl font-bold text-primary">
+                        {companyName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                      </span>
+                    </div>
                   )}
                   <span className="text-xs text-muted-foreground tracking-[0.3em] uppercase">
-                    {logoUrl ? companyName : "Presents"}
+                    {companyName}
                   </span>
                 </motion.div>
               )}

@@ -73,19 +73,19 @@ const getTransitionConfig = (type: TransitionType, fromIdx: number, toIdx: numbe
   const mobileMultiplier = isMobile ? 0.6 : 1;
   
   const configs: Record<TransitionType, { duration: number; ease: number[]; zoomOut: number; rotationDelta: number }> = {
-    zoom_in: { duration: 1.8, ease: [0.16, 1, 0.3, 1], zoomOut: 0.35, rotationDelta: 0 },
-    zoom_out: { duration: 1.5, ease: [0.22, 1, 0.36, 1], zoomOut: 0.5, rotationDelta: 0 },
-    pan: { duration: 1.2, ease: [0.33, 1, 0.68, 1], zoomOut: 0.2, rotationDelta: 0 },
-    slide_left: { duration: 1.4, ease: [0.16, 1, 0.3, 1], zoomOut: 0.25, rotationDelta: isForward ? 4 : -4 },
-    fade: { duration: 1.0, ease: [0.4, 0, 0.2, 1], zoomOut: 0.15, rotationDelta: 0 },
-    card_expand: { duration: 1.6, ease: [0.16, 1, 0.3, 1], zoomOut: 0.4, rotationDelta: 0 },
-    pan_to_node: { duration: 2.0, ease: [0.12, 0.8, 0.25, 1], zoomOut: 0.45, rotationDelta: isForward ? 6 : -6 },
-    orbit: { duration: 2.2, ease: [0.16, 1, 0.3, 1], zoomOut: 0.5, rotationDelta: isForward ? 18 : -18 },
-    tilt: { duration: 1.6, ease: [0.22, 1, 0.36, 1], zoomOut: 0.3, rotationDelta: isForward ? 10 : -10 },
-    split_reveal: { duration: 1.4, ease: [0.33, 1, 0.68, 1], zoomOut: 0.25, rotationDelta: 0 },
-    side_flip: { duration: 1.8, ease: [0.16, 1, 0.3, 1], zoomOut: 0.35, rotationDelta: 0 },
-    step_up: { duration: 1.3, ease: [0.22, 1, 0.36, 1], zoomOut: 0.25, rotationDelta: 0 },
-    highlight: { duration: 1.2, ease: [0.33, 1, 0.68, 1], zoomOut: 0.2, rotationDelta: 0 },
+    zoom_in: { duration: 1.4, ease: [0.16, 1, 0.3, 1], zoomOut: 0.15, rotationDelta: 0 },
+    zoom_out: { duration: 1.2, ease: [0.22, 1, 0.36, 1], zoomOut: 0.2, rotationDelta: 0 },
+    pan: { duration: 1.0, ease: [0.33, 1, 0.68, 1], zoomOut: 0.08, rotationDelta: 0 },
+    slide_left: { duration: 1.2, ease: [0.16, 1, 0.3, 1], zoomOut: 0.12, rotationDelta: 0 },
+    fade: { duration: 0.8, ease: [0.4, 0, 0.2, 1], zoomOut: 0.05, rotationDelta: 0 },
+    card_expand: { duration: 1.4, ease: [0.16, 1, 0.3, 1], zoomOut: 0.18, rotationDelta: 0 },
+    pan_to_node: { duration: 1.4, ease: [0.12, 0.8, 0.25, 1], zoomOut: 0.15, rotationDelta: 0 },
+    orbit: { duration: 1.6, ease: [0.16, 1, 0.3, 1], zoomOut: 0.2, rotationDelta: 0 },
+    tilt: { duration: 1.2, ease: [0.22, 1, 0.36, 1], zoomOut: 0.12, rotationDelta: 0 },
+    split_reveal: { duration: 1.2, ease: [0.33, 1, 0.68, 1], zoomOut: 0.12, rotationDelta: 0 },
+    side_flip: { duration: 1.4, ease: [0.16, 1, 0.3, 1], zoomOut: 0.15, rotationDelta: 0 },
+    step_up: { duration: 1.0, ease: [0.22, 1, 0.36, 1], zoomOut: 0.1, rotationDelta: 0 },
+    highlight: { duration: 1.0, ease: [0.33, 1, 0.68, 1], zoomOut: 0.08, rotationDelta: 0 },
   };
   
   const config = configs[type] || configs.fade;

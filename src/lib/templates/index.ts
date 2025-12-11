@@ -17,19 +17,19 @@ export const ZoomRevealTemplate: TemplateConfig = {
   bestFor: ["SWOT analysis", "Multi-factor analysis", "Strategic reviews"],
   sections: [
     { id: "big_idea", title: "The Big Idea", position: { x: 0, y: 0 }, icon: "lightbulb" },
-    { id: "drivers", title: "Key Drivers", position: { x: 1, y: 0.5 }, icon: "trending-up" },
-    { id: "constraints", title: "Constraints", position: { x: -1, y: 0.5 }, icon: "shield-alert" },
-    { id: "implications", title: "Implications", position: { x: 0, y: 1 }, icon: "git-branch" },
-    { id: "recommendation", title: "Recommendation", position: { x: 0, y: 1.5 }, icon: "target" },
+    { id: "drivers", title: "Key Drivers", position: { x: 0, y: 0.6 }, icon: "trending-up" },
+    { id: "constraints", title: "Constraints", position: { x: 0, y: 1.2 }, icon: "shield-alert" },
+    { id: "implications", title: "Implications", position: { x: 0, y: 1.8 }, icon: "git-branch" },
+    { id: "recommendation", title: "Recommendation", position: { x: 0, y: 2.4 }, icon: "target" },
   ],
   transitions: [
-    { type: "zoom_in", target: "big_idea" },
+    { type: "fade", target: "big_idea" },
     { type: "pan", target: "drivers" },
     { type: "pan", target: "constraints" },
-    { type: "zoom_out", target: "implications" },
-    { type: "zoom_in", target: "recommendation" },
+    { type: "pan", target: "implications" },
+    { type: "fade", target: "recommendation" },
   ],
-  defaultTransition: "zoom_in",
+  defaultTransition: "pan",
 };
 
 export const LinearStoryboardTemplate: TemplateConfig = {
