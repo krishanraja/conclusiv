@@ -120,7 +120,7 @@ export const PreviewScreen = () => {
         highlights: highlights.map(h => h.text),
         approvedClaims: keyClaims.filter(c => c.approved === true).map(c => c.text),
         rejectedClaims: keyClaims.filter(c => c.approved === false).map(c => c.text),
-        flaggedMisleading: keyClaims.filter(c => c.flaggedMisleading).map(c => c.text),
+        editedClaims: keyClaims.filter(c => c.edited).map(c => ({ title: c.title, text: c.text })),
         voiceFeedback,
       };
 

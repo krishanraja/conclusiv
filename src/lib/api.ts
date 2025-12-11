@@ -234,3 +234,25 @@ export const extractKeyClaims = async (text: string): Promise<ExtractClaimsRespo
     return { error: err instanceof Error ? err.message : 'Failed' };
   }
 };
+
+export interface NormalizeClaimResponse {
+  title?: string;
+  text?: string;
+  normalized?: boolean;
+  error?: string;
+}
+
+export const normalizeClaim = async (title: string, text: string): Promise<NormalizeClaimResponse> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('normalize-claim', {
+      body: { title, text }
+    });
+
+    if (error) throw new Error(error.message);
+    if (data.error) throw new Error(data.error);
+
+    return { title: data.title, text: data.text, normalized: data.normalized };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to normalize claim' };
+  }
+};
