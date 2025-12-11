@@ -65,6 +65,23 @@ export const useSubscription = () => {
   });
 
   const [hasEverBuilt, setHasEverBuilt] = useState(() => {
+    // Clean up stale localStorage data on init
+    const storedUsage = localStorage.getItem('conclusiv_usage');
+    const currentWeek = getWeekStart();
+    
+    if (storedUsage) {
+      try {
+        const parsed = JSON.parse(storedUsage);
+        if (parsed.weekStart !== currentWeek) {
+          // New week - reset usage data
+          localStorage.removeItem('conclusiv_usage');
+          console.log('[useSubscription] Reset usage for new week');
+        }
+      } catch {
+        localStorage.removeItem('conclusiv_usage');
+      }
+    }
+    
     return localStorage.getItem('conclusiv_first_build_completed') === 'true';
   });
 

@@ -131,6 +131,7 @@ export const InputScreen = () => {
           const enrichedContext = {
             ...scrapeResult.context,
             logoUrl: brandResult.data?.logo?.url,
+            logoVariants: brandResult.data?.logos || [],
             brandColors: brandResult.data?.colors,
             brandFonts: brandResult.data?.fonts,
             firmographics: brandResult.data?.firmographics,
@@ -465,7 +466,7 @@ export const InputScreen = () => {
                 )}
               </div>
               <div className="flex items-center gap-3">
-                {!isPro && !isFirstBuild && (
+                {!isPro && usage.buildsThisWeek > 0 && (
                   <span className={!canBuild ? "text-amber-500 font-medium" : "text-muted-foreground"}>
                     {!canBuild ? "Build limit reached" : `${buildsRemaining} build${buildsRemaining !== 1 ? 's' : ''} left`}
                   </span>
@@ -509,6 +510,12 @@ export const InputScreen = () => {
               userLogoUrl={userUploadedLogoUrl || undefined}
               onLogoUpload={setUserUploadedLogoUrl}
               onLogoRemove={() => setUserUploadedLogoUrl(null)}
+              onLogoSelect={(url) => {
+                // Update the logoUrl in businessContext when user selects a variant
+                if (businessContext) {
+                  setBusinessContext({ ...businessContext, logoUrl: url });
+                }
+              }}
               suggestExpand={suggestBusinessContext && !businessContext}
             />
 

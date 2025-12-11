@@ -84,6 +84,14 @@ export interface ExtractionResult {
   recommendations: TemplateRecommendation[];
 }
 
+// Logo variant type for brand logo selection
+export interface LogoVariant {
+  url: string;
+  type: 'logo' | 'icon' | 'symbol';
+  theme: 'light' | 'dark';
+  format: 'svg' | 'png' | 'jpeg';
+}
+
 export interface BusinessContext {
   companyName: string;
   industry: string;
@@ -92,6 +100,8 @@ export interface BusinessContext {
   brandVoice: string;
   // Brand enrichment from Brandfetch
   logoUrl?: string;
+  // All available logo variants from Brandfetch
+  logoVariants?: LogoVariant[];
   // User-uploaded logo takes priority
   userUploadedLogoUrl?: string;
   brandColors?: {

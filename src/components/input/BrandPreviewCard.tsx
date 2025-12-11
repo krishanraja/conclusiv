@@ -1,21 +1,31 @@
 import { motion } from "framer-motion";
 import { Play } from "lucide-react";
 import type { BusinessContext } from "@/lib/types";
+import { LogoVariantSelector } from "./LogoVariantSelector";
 
 interface BrandPreviewCardProps {
   context: BusinessContext;
   userLogoUrl?: string;
   onPreviewClick?: () => void;
+  onLogoSelect?: (url: string) => void;
 }
 
 export const BrandPreviewCard = ({
   context,
   userLogoUrl,
   onPreviewClick,
+  onLogoSelect,
 }: BrandPreviewCardProps) => {
   const logoUrl = userLogoUrl || context.logoUrl;
   const colors = context.brandColors;
   const initials = context.companyName?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
+  const hasLogoVariants = context.logoVariants && context.logoVariants.length > 1;
+
+  const handleLogoVariantSelect = (url: string) => {
+    if (onLogoSelect) {
+      onLogoSelect(url);
+    }
+  };
 
   return (
     <motion.div
@@ -25,25 +35,36 @@ export const BrandPreviewCard = ({
     >
       <div className="flex items-start gap-3">
         {/* Logo preview - show initials as fallback */}
-        <div className="w-12 h-12 rounded-lg border border-border/50 bg-background flex items-center justify-center overflow-hidden flex-shrink-0">
-          {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt={context.companyName}
-              className="w-full h-full object-contain p-1"
-              onError={(e) => {
-                // Hide image on error to show fallback
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
+        <div className="flex flex-col items-center gap-1">
+          <div className="w-12 h-12 rounded-lg border border-border/50 bg-background flex items-center justify-center overflow-hidden flex-shrink-0 relative">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={context.companyName}
+                className="w-full h-full object-contain p-1"
+                onError={(e) => {
+                  // Hide image on error to show fallback
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            ) : null}
+            {/* Fallback initials - always rendered but may be covered by image */}
+            <span 
+              className="text-sm font-semibold text-primary absolute"
+              style={{ display: logoUrl ? 'none' : 'block' }}
+            >
+              {initials}
+            </span>
+          </div>
+          
+          {/* Logo variant selector */}
+          {hasLogoVariants && !userLogoUrl && (
+            <LogoVariantSelector
+              variants={context.logoVariants!}
+              selectedUrl={context.logoUrl}
+              onSelect={handleLogoVariantSelect}
             />
-          ) : null}
-          {/* Fallback initials - always rendered but may be covered by image */}
-          <span 
-            className="text-sm font-semibold text-primary absolute"
-            style={{ display: logoUrl ? 'none' : 'block' }}
-          >
-            {initials}
-          </span>
+          )}
         </div>
 
         <div className="flex-1 min-w-0">
