@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Layers, Layout, List, Lock, Users, AlertTriangle, Clock } from "lucide-react";
+import { ChevronRight, Layers, Layout, List, Lock, Users, AlertTriangle, Clock, RefreshCw } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { TemplateName } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { useFeatureGate } from "@/components/subscription/FeatureGate";
 import { AudienceSelector } from "./AudienceSelector";
 import { TensionCard } from "./TensionCard";
 import { DurationSelector } from "./DurationSelector";
+import { useToast } from "@/hooks/use-toast";
 
 const templates: { name: TemplateName; label: string; proOnly: boolean }[] = [
   { name: "LinearStoryboard", label: "Linear", proOnly: false },
@@ -19,6 +20,8 @@ const templates: { name: TemplateName; label: string; proOnly: boolean }[] = [
 
 export const QuickAdjustments = () => {
   const [expandedPanel, setExpandedPanel] = useState<string | null>(null);
+  const [settingsChanged, setSettingsChanged] = useState(false);
+  const { toast } = useToast();
   const { 
     themes, 
     toggleThemeKeep, 
@@ -35,12 +38,26 @@ export const QuickAdjustments = () => {
     setExpandedPanel(expandedPanel === panel ? null : panel);
   };
 
+  const handleSettingChange = (setting: string) => {
+    setSettingsChanged(true);
+    toast({
+      title: "Setting updated",
+      description: (
+        <span className="flex items-center gap-2">
+          <RefreshCw className="w-3 h-3" />
+          Click "Rebuild" to apply {setting.toLowerCase()} changes
+        </span>
+      ),
+    });
+  };
+
   const handleTemplateSelect = (template: TemplateName, proOnly: boolean) => {
     if (proOnly && !isPro) {
       requireFeature('template');
       return;
     }
     setSelectedTemplate(template);
+    handleSettingChange("Template");
   };
 
   const keptThemesCount = themes.filter((t) => t.keep).length;
@@ -81,8 +98,8 @@ export const QuickAdjustments = () => {
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <div className="p-3 pt-0">
-                  <AudienceSelector />
+              <div className="p-3 pt-0">
+                  <AudienceSelector onSelect={() => handleSettingChange("Audience")} />
                 </div>
               </motion.div>
             )}
@@ -117,7 +134,7 @@ export const QuickAdjustments = () => {
                 className="overflow-hidden"
               >
                 <div className="p-3 pt-0">
-                  <DurationSelector />
+                  <DurationSelector onSelect={() => handleSettingChange("Duration")} />
                 </div>
               </motion.div>
             )}

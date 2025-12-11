@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Sparkles, Zap } from "lucide-react";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 import { AccountMenu } from "./AccountMenu";
+import { CompanyBrainIndicator } from "./CompanyBrainIndicator";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,9 @@ export const Header = () => {
                 Upgrade to Pro
               </Button>
             )}
+
+            {/* Company Brain indicator - only for authenticated users */}
+            {user && <CompanyBrainIndicator />}
 
             <AccountMenu />
           </div>

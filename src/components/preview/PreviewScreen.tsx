@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { NarrativePreview } from "./NarrativePreview";
 import { QuickAdjustments } from "./QuickAdjustments";
 import { AlternativesPanel } from "./AlternativesPanel";
+import { MobileQuickSettings } from "./MobileQuickSettings";
 import { ErrorRecovery, parseAPIError } from "@/components/ui/error-recovery";
 import type { ErrorCode } from "@/components/ui/error-recovery";
 import { cn } from "@/lib/utils";
@@ -155,8 +156,14 @@ export const PreviewScreen = () => {
 
       // Extract tensions in parallel (non-blocking)
       extractTensions(rawText).then((tensionResult) => {
-        if (tensionResult.tensions) {
+        if (tensionResult.tensions && tensionResult.tensions.length > 0) {
           setTensions(tensionResult.tensions);
+          toast({
+            title: `${tensionResult.tensions.length} insight${tensionResult.tensions.length > 1 ? 's' : ''} detected`,
+            description: "Review tensions and blind spots in the sidebar.",
+          });
+        } else if (tensionResult.error) {
+          console.warn('[PreviewScreen] Failed to extract tensions:', tensionResult.error);
         }
       }).catch(console.error);
 
@@ -336,6 +343,9 @@ export const PreviewScreen = () => {
         onClose={() => setAlternativesPanelOpen(false)} 
       />
 
+      {/* Mobile Quick Settings */}
+      <MobileQuickSettings />
+
       {/* Error Recovery Modal */}
       <AnimatePresence>
         {error && (
@@ -447,16 +457,16 @@ export const PreviewScreen = () => {
                   Read
                 </button>
                 <button
-                  onClick={() => setViewMode("share")}
+                  onClick={() => setViewMode("external")}
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors",
-                    viewMode === "share"
+                    viewMode === "external"
                       ? "bg-shimmer-start/20 text-shimmer-start"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <ExternalLink className="w-3 h-3" />
-                  Share
+                  External
                 </button>
               </div>
             </div>
