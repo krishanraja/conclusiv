@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
@@ -5,11 +6,21 @@ import { iconMap } from "@/lib/icons.js";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { ImagePicker, ImagePickerTrigger } from "@/components/editor/ImagePicker";
 
 export const NarrativePreview = () => {
-  const { narrative, currentSectionIndex, setCurrentSectionIndex } = useNarrativeStore();
+  const { 
+    narrative, 
+    currentSectionIndex, 
+    setCurrentSectionIndex,
+    updateSectionImage,
+    presentationStyle,
+    businessContext,
+    userUploadedLogoUrl,
+  } = useNarrativeStore();
   const isMobile = useIsMobile();
   const reducedMotion = useReducedMotion();
+  const [imagePickerOpen, setImagePickerOpen] = useState(false);
 
   if (!narrative) return null;
 
@@ -19,12 +30,14 @@ export const NarrativePreview = () => {
   const handlePrev = () => {
     if (currentSectionIndex > 0) {
       setCurrentSectionIndex(currentSectionIndex - 1);
+      setImagePickerOpen(false);
     }
   };
 
   const handleNext = () => {
     if (currentSectionIndex < sections.length - 1) {
       setCurrentSectionIndex(currentSectionIndex + 1);
+      setImagePickerOpen(false);
     }
   };
 
@@ -34,8 +47,49 @@ export const NarrativePreview = () => {
 
   const shouldSimplifyAnimations = reducedMotion || isMobile;
 
+  // Logo URL (user uploaded takes priority)
+  const logoUrl = userUploadedLogoUrl || businessContext?.logoUrl;
+  const showLogo = presentationStyle?.showLogo && logoUrl;
+  
+  // Logo positioning
+  const logoPositionClasses: Record<string, string> = {
+    'top-left': 'top-4 left-4',
+    'top-right': 'top-4 right-4',
+    'bottom-left': 'bottom-4 left-4',
+    'bottom-right': 'bottom-4 right-4',
+  };
+  
+  const logoSizeClasses: Record<string, string> = {
+    'sm': 'h-6',
+    'md': 'h-8',
+    'lg': 'h-10',
+  };
+
+  // Apply brand colors if set
+  const brandStyles: React.CSSProperties = {};
+  if (presentationStyle?.primaryColor) {
+    brandStyles['--brand-primary' as string] = presentationStyle.primaryColor;
+  }
+
   return (
-    <div className="relative h-full flex flex-col">
+    <div className="relative h-full flex flex-col" style={brandStyles}>
+      {/* Logo overlay */}
+      {showLogo && (
+        <div className={cn(
+          "absolute z-10 opacity-60 hover:opacity-100 transition-opacity",
+          logoPositionClasses[presentationStyle?.logoPosition || 'top-right']
+        )}>
+          <img 
+            src={logoUrl} 
+            alt="Logo" 
+            className={cn(
+              "w-auto object-contain",
+              logoSizeClasses[presentationStyle?.logoSize || 'md']
+            )}
+          />
+        </div>
+      )}
+
       {/* Preview Area */}
       <div className="flex-1 flex items-center justify-center p-8 overflow-hidden">
         <AnimatePresence mode="wait">
@@ -48,7 +102,23 @@ export const NarrativePreview = () => {
             className="text-center max-w-lg will-change-transform"
             style={{ backfaceVisibility: "hidden" }}
           >
-            {IconComponent && (
+            {/* Section Image */}
+            {currentSection?.image && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.05, duration: 0.2 }}
+                className="mb-6 rounded-lg overflow-hidden"
+              >
+                <img
+                  src={currentSection.image}
+                  alt={currentSection.title}
+                  className="w-full h-40 object-cover"
+                />
+              </motion.div>
+            )}
+
+            {IconComponent && !currentSection?.image && (
               <motion.div
                 initial={reducedMotion ? { opacity: 0 } : { scale: 0 }}
                 animate={reducedMotion ? { opacity: 1 } : { scale: 1 }}
@@ -64,6 +134,7 @@ export const NarrativePreview = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: shouldSimplifyAnimations ? 0.05 : 0.15, duration: shouldSimplifyAnimations ? 0.1 : 0.2 }}
               className="text-2xl font-semibold mb-4"
+              style={presentationStyle?.primaryFont ? { fontFamily: presentationStyle.primaryFont } : undefined}
             >
               {currentSection?.title}
             </motion.h2>
@@ -94,6 +165,28 @@ export const NarrativePreview = () => {
                 ))}
               </motion.ul>
             )}
+
+            {/* Image Picker - Minimal trigger */}
+            <div className="mt-4 flex justify-center">
+              <ImagePickerTrigger
+                hasImage={!!currentSection?.image}
+                onClick={() => setImagePickerOpen(!imagePickerOpen)}
+              />
+            </div>
+
+            {/* Image Picker Panel */}
+            <ImagePicker
+              sectionTitle={currentSection?.title || ""}
+              sectionContent={currentSection?.content}
+              currentImage={currentSection?.image}
+              onSelect={(url) => {
+                if (currentSection) {
+                  updateSectionImage(currentSection.id, url);
+                }
+              }}
+              isOpen={imagePickerOpen}
+              onOpenChange={setImagePickerOpen}
+            />
           </motion.div>
         </AnimatePresence>
       </div>
@@ -118,7 +211,10 @@ export const NarrativePreview = () => {
           {sections.map((_, i) => (
             <button
               key={i}
-              onClick={() => setCurrentSectionIndex(i)}
+              onClick={() => {
+                setCurrentSectionIndex(i);
+                setImagePickerOpen(false);
+              }}
               className={cn(
                 "w-2 h-2 rounded-full transition-all",
                 shouldSimplifyAnimations ? "duration-150" : "duration-300",

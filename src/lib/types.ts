@@ -254,3 +254,30 @@ export const alternativeGoalDescriptions: Record<AlternativeGoal, { label: strin
   optimistic: { label: "Optimistic Projection", description: "Best-case scenario framing" },
   risk_focused: { label: "Risk-Aware", description: "Conservative with mitigation strategies" },
 };
+
+// ===== Presentation Styling =====
+export type LogoPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'none';
+export type LogoSize = 'sm' | 'md' | 'lg';
+
+export interface PresentationStyle {
+  primaryColor?: string;
+  secondaryColor?: string;
+  accentColor?: string;
+  primaryFont?: string;
+  secondaryFont?: string;
+  logoPosition: LogoPosition;
+  logoSize: LogoSize;
+  showLogo: boolean;
+}
+
+// ===== Pexels Image =====
+export interface PexelsImage {
+  id: string;
+  url: string;
+  thumbnailUrl: string;
+  photographer: string;
+  photographerUrl: string;
+  alt: string;
+  width: number;
+  height: number;
+}
