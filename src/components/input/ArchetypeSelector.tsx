@@ -2,7 +2,6 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Target, FileCheck, TrendingUp, Rocket, Search, GitBranch, Users, Shield, Info } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
-import { NarrativeArchetype } from "@/lib/types";
 import { archetypeList } from "@/lib/archetypes";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -27,22 +26,22 @@ export const ArchetypeSelector = () => {
     : null;
 
   return (
-    <div className="space-y-2">
+    <div className="w-full">
       <button
+        type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/70 transition-colors"
+        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Story type:</span>
-          <span className="text-foreground font-medium">
-            {selectedConfig?.name || "Auto-detect"}
-          </span>
-        </div>
+        <Target className="w-4 h-4" />
+        <span>Story type:</span>
+        <span className="text-foreground font-medium">
+          {selectedConfig?.name || "Auto-detect"}
+        </span>
         <motion.div
           animate={{ rotate: isExpanded ? 180 : 0 }}
           transition={{ duration: 0.2 }}
         >
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          <ChevronDown className="w-4 h-4" />
         </motion.div>
       </button>
 
@@ -55,7 +54,7 @@ export const ArchetypeSelector = () => {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-3">
               {/* Auto-detect option */}
               <button
                 onClick={() => {
@@ -63,14 +62,14 @@ export const ArchetypeSelector = () => {
                   setIsExpanded(false);
                 }}
                 className={cn(
-                  "p-3 rounded-lg border text-left transition-all",
+                  "p-2.5 rounded-lg border text-left transition-all",
                   !selectedArchetype
                     ? "bg-shimmer-start/10 border-shimmer-start/30 text-shimmer-start"
-                    : "bg-card/50 border-border/50 text-muted-foreground hover:text-foreground hover:bg-card"
+                    : "bg-card/30 border-border/50 text-muted-foreground hover:text-foreground hover:bg-card/50"
                 )}
               >
-                <div className="w-8 h-8 rounded-lg bg-background/50 flex items-center justify-center mb-2">
-                  <span className="text-lg">✨</span>
+                <div className="w-7 h-7 rounded-lg bg-background/50 flex items-center justify-center mb-1.5">
+                  <span className="text-base">✨</span>
                 </div>
                 <h4 className="text-xs font-medium">Auto-detect</h4>
                 <p className="text-[10px] opacity-70 mt-0.5">Let AI choose</p>
@@ -91,17 +90,17 @@ export const ArchetypeSelector = () => {
                             setIsExpanded(false);
                           }}
                           className={cn(
-                            "p-3 rounded-lg border text-left transition-all relative group",
+                            "p-2.5 rounded-lg border text-left transition-all relative group",
                             isSelected
                               ? "bg-shimmer-start/10 border-shimmer-start/30 text-shimmer-start"
-                              : "bg-card/50 border-border/50 text-muted-foreground hover:text-foreground hover:bg-card"
+                              : "bg-card/30 border-border/50 text-muted-foreground hover:text-foreground hover:bg-card/50"
                           )}
                         >
                           <div className={cn(
-                            "w-8 h-8 rounded-lg flex items-center justify-center mb-2",
+                            "w-7 h-7 rounded-lg flex items-center justify-center mb-1.5",
                             isSelected ? "bg-shimmer-start/20" : "bg-background/50"
                           )}>
-                            <Icon className="w-4 h-4" />
+                            <Icon className="w-3.5 h-3.5" />
                           </div>
                           <h4 className="text-xs font-medium">{archetype.name}</h4>
                           <p className="text-[10px] opacity-70 mt-0.5 line-clamp-1">{archetype.bestFor}</p>

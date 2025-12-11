@@ -10,6 +10,7 @@ interface DocumentUploadInputProps {
   fileName: string | null;
   onFileSelect: (file: File) => void;
   onClear: () => void;
+  hasContent?: boolean;
 }
 
 export const DocumentUploadInput = ({
@@ -19,6 +20,7 @@ export const DocumentUploadInput = ({
   fileName,
   onFileSelect,
   onClear,
+  hasContent = false,
 }: DocumentUploadInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -28,7 +30,6 @@ export const DocumentUploadInput = ({
     if (file) {
       onFileSelect(file);
     }
-    // Reset input so same file can be selected again
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -49,7 +50,6 @@ export const DocumentUploadInput = ({
   const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    // Only set dragging false if we're leaving the container entirely
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX;
     const y = e.clientY;
@@ -69,8 +69,68 @@ export const DocumentUploadInput = ({
     }
   };
 
+  // Hidden file input
+  const fileInput = (
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept=".pdf,.docx,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+      onChange={handleFileChange}
+      className="hidden"
+      id="document-upload"
+    />
+  );
+
+  // Compact inline success view when file is loaded
+  if (fileName && !isLoading) {
+    return (
+      <div className="w-full">
+        {fileInput}
+        <div className="flex items-center gap-2 text-sm py-1">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Check className="w-4 h-4 text-shimmer-start flex-shrink-0" />
+            <span className="text-foreground truncate">{fileName}</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClear();
+              }}
+              className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <span className="text-muted-foreground/50 text-xs">|</span>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="text-muted-foreground hover:text-foreground text-xs transition-colors whitespace-nowrap"
+          >
+            Upload different
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="w-full">
+        {fileInput}
+        <div className="flex items-center gap-2 text-sm py-1">
+          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+          <span className="text-muted-foreground">Parsing document...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Default expandable view - no file loaded
   return (
     <div className="w-full">
+      {fileInput}
       <button
         type="button"
         onClick={onToggle}
@@ -96,31 +156,20 @@ export const DocumentUploadInput = ({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="pt-3 space-y-3">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.docx,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                onChange={handleFileChange}
-                className="hidden"
-                id="document-upload"
-              />
-              
+            <div className="pt-3">
               {/* Drag & Drop Zone */}
               <div
                 onDragEnter={handleDragEnter}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                onClick={() => !isLoading && fileInputRef.current?.click()}
+                onClick={() => fileInputRef.current?.click()}
                 className={cn(
-                  "relative w-full flex flex-col items-center justify-center gap-2 px-4 py-6 rounded-lg cursor-pointer",
+                  "relative w-full flex flex-col items-center justify-center gap-2 px-4 py-5 rounded-lg cursor-pointer",
                   "border-2 border-dashed transition-all duration-300",
                   isDragging 
                     ? "border-shimmer-start bg-shimmer-start/10 scale-[1.02]" 
-                    : "border-border/50 bg-card hover:bg-card/80 hover:border-border",
-                  isLoading && "opacity-50 cursor-not-allowed",
-                  fileName && "border-shimmer-start/50"
+                    : "border-border/50 bg-card/30 hover:bg-card/50 hover:border-border"
                 )}
               >
                 {/* Drag overlay */}
@@ -137,14 +186,9 @@ export const DocumentUploadInput = ({
                   )}
                 </AnimatePresence>
 
-                {isLoading ? (
+                {!isDragging && (
                   <>
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Parsing document...</span>
-                  </>
-                ) : !isDragging && (
-                  <>
-                    <Upload className="w-6 h-6 text-muted-foreground" />
+                    <Upload className="w-5 h-5 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
                       Drag & drop or click to upload
                     </span>
@@ -154,40 +198,6 @@ export const DocumentUploadInput = ({
                   </>
                 )}
               </div>
-
-              {/* File Preview */}
-              <AnimatePresence>
-                {fileName && !isLoading && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="p-3 rounded-lg bg-shimmer-start/5 border border-shimmer-start/20"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-shimmer-start" />
-                        <p className="text-sm font-medium text-foreground truncate max-w-[250px]">
-                          {fileName}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onClear();
-                        }}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Document text extracted successfully
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
           </motion.div>
         )}

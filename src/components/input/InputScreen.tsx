@@ -56,6 +56,20 @@ export const InputScreen = () => {
   const [pendingUrl, setPendingUrl] = useState("");
   const lastScrapedUrl = useRef("");
 
+  // Auto-collapse document section after successful upload
+  useEffect(() => {
+    if (uploadedFileName && rawText.trim()) {
+      setIsDocumentExpanded(false);
+    }
+  }, [uploadedFileName, rawText]);
+
+  // Auto-collapse context section after successful scrape
+  useEffect(() => {
+    if (businessContext) {
+      setIsContextExpanded(false);
+    }
+  }, [businessContext]);
+
   useEffect(() => {
     if (!pendingUrl || !pendingUrl.includes(".") || pendingUrl === lastScrapedUrl.current) {
       return;
@@ -209,6 +223,7 @@ export const InputScreen = () => {
   };
 
   const charCount = rawText.length;
+  const hasContent = charCount > 0;
   const isLongInput = charCount > 15000;
   const isVeryLongInput = charCount > MAX_CHARS_WARNING;
   const isTooShort = charCount > 0 && charCount < MIN_CHARS;
@@ -230,7 +245,7 @@ export const InputScreen = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-3xl space-y-4 md:space-y-5 relative"
+        className="w-full max-w-3xl space-y-4 relative"
       >
         {/* Brand Logo with glow effect */}
         <motion.div 
@@ -249,16 +264,24 @@ export const InputScreen = () => {
           />
         </motion.div>
 
-        {/* Hero Section */}
+        {/* Hero Section - Condensed when content exists */}
         <div className="text-center">
           <motion.p 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-lg md:text-xl lg:text-2xl font-semibold text-foreground/90 max-w-2xl mx-auto leading-relaxed"
+            className={`font-semibold text-foreground/90 max-w-2xl mx-auto leading-relaxed transition-all ${
+              hasContent ? 'text-base md:text-lg' : 'text-lg md:text-xl lg:text-2xl'
+            }`}
           >
-            Load your business plan, AI research output or strategy document below - and watch it become a{" "}
-            <span className="gradient-text">stunning, clear interactive</span> and shareable demo that turns hours of pitching into minutes.
+            {hasContent ? (
+              <>Content loaded — customize below or <span className="gradient-text">continue</span></>
+            ) : (
+              <>
+                Load your business plan, AI research output or strategy document below - and watch it become a{" "}
+                <span className="gradient-text">stunning, clear interactive</span> and shareable demo that turns hours of pitching into minutes.
+              </>
+            )}
           </motion.p>
         </div>
 
@@ -267,7 +290,7 @@ export const InputScreen = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="glass-strong rounded-xl p-4 md:p-5 space-y-3"
+          className="glass-strong rounded-xl p-4 space-y-3"
         >
           {/* Text Input with drag & drop support */}
           <div className="space-y-1">
@@ -287,7 +310,9 @@ export const InputScreen = () => {
                   if (uploadedFileName) setUploadedFileName(null);
                 }}
                 placeholder="Paste your research, strategy document, or business plan... or drag & drop a file"
-                className="min-h-[100px] md:min-h-[120px] bg-background/50 border-0 resize-none text-sm rounded-lg focus:ring-primary/50"
+                className={`bg-background/50 border-0 resize-none text-sm rounded-lg focus:ring-primary/50 transition-all ${
+                  hasContent ? 'min-h-[80px]' : 'min-h-[100px] md:min-h-[120px]'
+                }`}
                 disabled={isParsingDocument}
               />
               {isDraggingOnTextarea && (
@@ -331,8 +356,8 @@ export const InputScreen = () => {
             </div>
           </div>
 
-          {/* Optional Features - Compact */}
-          <div className="space-y-2 pt-1">
+          {/* Optional Features - Unified Compact Style */}
+          <div className="space-y-2 pt-1 border-t border-border/30">
             <DocumentUploadInput
               isExpanded={isDocumentExpanded}
               onToggle={() => setIsDocumentExpanded(!isDocumentExpanded)}
@@ -340,6 +365,7 @@ export const InputScreen = () => {
               fileName={uploadedFileName}
               onFileSelect={handleFileSelect}
               onClear={handleClearDocument}
+              hasContent={hasContent}
             />
 
             <BusinessContextInput
@@ -352,19 +378,16 @@ export const InputScreen = () => {
               onToggle={() => setIsContextExpanded(!isContextExpanded)}
             />
 
-            {/* Archetype Selector */}
             <ArchetypeSelector />
           </div>
         </motion.div>
 
-        {/* Ambient Demo moved to fixed position for better visibility */}
-
-        {/* Continue Button with enhanced styling */}
+        {/* Continue Button - Always visible */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="flex justify-center pt-1"
+          className="flex justify-center"
         >
           <Button
             variant="shimmer"
@@ -387,6 +410,7 @@ export const InputScreen = () => {
           </Button>
         </motion.div>
       </motion.div>
+      
       {/* Ambient Demo - fixed position outside main content */}
       <AmbientDemo />
     </div>
