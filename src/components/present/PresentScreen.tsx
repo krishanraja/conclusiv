@@ -11,6 +11,7 @@ import { Watermark } from "@/components/subscription/Watermark";
 import { UpgradePrompt } from "@/components/subscription/UpgradePrompt";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { TitleSequence } from "@/components/cinematic/TitleSequence";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 // Canvas size for infinite canvas
@@ -204,6 +205,7 @@ export const PresentScreen = () => {
     prevSection,
     setCurrentSectionIndex,
     setCurrentStep,
+    businessContext,
   } = useNarrativeStore();
 
   const { isPro, limits } = useSubscription();
@@ -213,6 +215,11 @@ export const PresentScreen = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [prevIndex, setPrevIndex] = useState(0);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [showTitleSequence, setShowTitleSequence] = useState(() => {
+    // Check localStorage to see if user prefers to skip
+    const skipIntro = localStorage.getItem('conclusiv_skip_intro');
+    return skipIntro !== 'true';
+  });
   const showWatermark = limits.hasWatermark;
 
   // Reduce particles and effects on mobile
@@ -337,6 +344,15 @@ export const PresentScreen = () => {
 
   return (
     <>
+      {/* Title Sequence */}
+      {showTitleSequence && (
+        <TitleSequence 
+          onComplete={() => setShowTitleSequence(false)}
+          companyLogoUrl={businessContext?.logoUrl}
+          brandColors={businessContext?.brandColors}
+        />
+      )}
+      
       {showWatermark && <Watermark onUpgrade={() => setShowUpgrade(true)} />}
       <UpgradePrompt trigger="presentation" isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} />
       <div className="fixed inset-0 bg-background z-50 overflow-hidden">

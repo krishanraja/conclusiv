@@ -2,14 +2,15 @@ import { useState, useEffect, useRef, useCallback, DragEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
-import { scrapeBusinessContext, parseDocument } from "@/lib/api";
+import { scrapeBusinessContext, parseDocument, fetchBrandData } from "@/lib/api";
 import { BusinessContextInput } from "./BusinessContextInput";
 import { DocumentUploadInput } from "./DocumentUploadInput";
 import { ArchetypeSelector } from "./ArchetypeSelector";
 import { AmbientDemo } from "./AmbientDemo";
+import { ResearchAssistant } from "./ResearchAssistant";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, AlertCircle, Crown, Check } from "lucide-react";
+import { Sparkles, AlertCircle, Crown, Check, Search } from "lucide-react";
 import { useFeatureGate } from "@/components/subscription/FeatureGate";
 import { useSubscription } from "@/hooks/useSubscription";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
@@ -53,6 +54,7 @@ export const InputScreen = () => {
   const [isContextExpanded, setIsContextExpanded] = useState(false);
   const [isDraggingOnTextarea, setIsDraggingOnTextarea] = useState(false);
   const [showSuccessFlash, setShowSuccessFlash] = useState(false);
+  const [showResearchAssistant, setShowResearchAssistant] = useState(false);
   
   const [pendingUrl, setPendingUrl] = useState("");
   const lastScrapedUrl = useRef("");
@@ -107,9 +109,24 @@ export const InputScreen = () => {
       lastScrapedUrl.current = pendingUrl;
       setIsScrapingContext(true);
       try {
-        const result = await scrapeBusinessContext(pendingUrl);
-        if (result.context) {
-          setBusinessContext(result.context);
+        // Fetch both business context and brand data in parallel
+        const [scrapeResult, brandResult] = await Promise.all([
+          scrapeBusinessContext(pendingUrl),
+          fetchBrandData(pendingUrl),
+        ]);
+        
+        if (scrapeResult.context) {
+          // Merge brand data into business context
+          const enrichedContext = {
+            ...scrapeResult.context,
+            logoUrl: brandResult.data?.logo?.url,
+            brandColors: brandResult.data?.colors,
+            brandFonts: brandResult.data?.fonts,
+            firmographics: brandResult.data?.firmographics,
+            // Use Brandfetch company name if scrape didn't get it
+            companyName: scrapeResult.context.companyName || brandResult.data?.companyName || '',
+          };
+          setBusinessContext(enrichedContext);
         }
       } catch (err) {
         console.error("Failed to scrape context:", err);
@@ -120,6 +137,14 @@ export const InputScreen = () => {
 
     return () => clearTimeout(timer);
   }, [pendingUrl, isScrapingContext, setBusinessContext]);
+
+  const handleResearchComplete = (content: string) => {
+    setRawText(content);
+    toast({
+      title: "Research loaded",
+      description: "Your research has been added to the input",
+    });
+  };
 
   const handleWebsiteChange = (url: string) => {
     setBusinessWebsite(url);
@@ -261,6 +286,13 @@ export const InputScreen = () => {
     <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-4 md:py-6 relative z-10">
       {UpgradePromptComponent}
       
+      {/* Research Assistant */}
+      <ResearchAssistant
+        isOpen={showResearchAssistant}
+        onClose={() => setShowResearchAssistant(false)}
+        onComplete={handleResearchComplete}
+      />
+      
       {/* Hidden file input for keyboard shortcut */}
       <input
         ref={fileInputRef}
@@ -380,6 +412,18 @@ export const InputScreen = () => {
                 </div>
               )}
             </div>
+            
+            {/* Research Assistant Link - shown when no content */}
+            {!hasContent && (
+              <button
+                type="button"
+                onClick={() => setShowResearchAssistant(true)}
+                className="flex items-center gap-1.5 text-xs text-primary/70 hover:text-primary transition-colors mt-1"
+              >
+                <Search className="w-3 h-3" />
+                <span>Need research first? Try our AI Research Assistant</span>
+              </button>
+            )}
             <div className="flex justify-between items-center text-xs px-1">
               <div className="flex items-center gap-2">
                 <span className={isTooShort ? "text-amber-500" : "text-muted-foreground"}>
