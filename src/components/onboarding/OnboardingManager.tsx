@@ -91,7 +91,8 @@ export const OnboardingManager = () => {
               <img 
                 src={conclusivLogo} 
                 alt="Conclusiv" 
-                className="h-6 w-auto inline align-middle" 
+                className="h-6 w-auto inline" 
+                style={{ verticalAlign: '-2px' }}
               />
             </h2>
             <p className="text-muted-foreground mb-6">
