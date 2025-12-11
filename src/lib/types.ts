@@ -116,6 +116,7 @@ export interface RefinementHighlight {
 
 export interface KeyClaim {
   id: string;
+  title: string;
   text: string;
   source?: string;
   approved: boolean | null;

@@ -143,10 +143,12 @@ export const RefineScreen = () => {
                   </div>
                 </div>
                 <div className="space-y-3">
-                  {keyClaims.map((claim) => (
+                  {keyClaims.map((claim, index) => (
                     <ClaimCard
                       key={claim.id}
                       claim={claim}
+                      index={index}
+                      total={keyClaims.length}
                       onApprove={() => approveClaim(claim.id)}
                       onReject={() => rejectClaim(claim.id)}
                       onFlagMisleading={() => flagClaimMisleading(claim.id)}

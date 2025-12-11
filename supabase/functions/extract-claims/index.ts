@@ -33,20 +33,27 @@ serve(async (req) => {
 Your task is to identify 8-10 of the most important claims, facts, or assertions from the provided text.
 
 For each claim:
-1. Extract the core assertion as a clear, concise statement
-2. If possible, identify what part of the text it came from (optional source field)
-3. Focus on claims that are substantive and would impact business decisions
+1. Create a SHORT, scannable title (5-8 words max) that captures the insight
+2. Extract the core assertion as a clear, concise statement
+3. If possible, identify what part of the text it came from (optional source field)
+4. Focus on claims that are substantive and would impact business decisions
+
+The title should be:
+- Action-oriented or insight-focused
+- Easy to scan quickly
+- Never start with "The" or "A"
 
 Return a JSON object with a "claims" array containing objects with:
 - id: unique string (e.g., "claim_1", "claim_2", etc.)
-- text: the claim as a clear statement (max 200 chars)
+- title: short scannable headline (5-8 words max)
+- text: the full claim as a clear statement (max 200 chars)
 - source: optional brief reference to where in the text this came from
 
 Example output:
 {
   "claims": [
-    { "id": "claim_1", "text": "Market growth is projected at 15% annually through 2028", "source": "Market analysis section" },
-    { "id": "claim_2", "text": "Customer acquisition costs have decreased 30% year-over-year" }
+    { "id": "claim_1", "title": "15% Annual Market Growth Through 2028", "text": "Market growth is projected at 15% annually through 2028, driven by increased adoption in emerging markets.", "source": "Market analysis section" },
+    { "id": "claim_2", "title": "Customer Acquisition Costs Down 30%", "text": "Customer acquisition costs have decreased 30% year-over-year due to improved targeting and organic growth." }
   ]
 }`;
 
@@ -111,6 +118,7 @@ Example output:
     // Add default fields to claims
     const normalizedClaims = claims.map((claim: any, index: number) => ({
       id: claim.id || `claim_${index + 1}`,
+      title: claim.title || `Claim ${index + 1}`,
       text: claim.text || "",
       source: claim.source || undefined,
       approved: null,
