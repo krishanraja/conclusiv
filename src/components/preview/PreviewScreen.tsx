@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Play, BookOpen, Share2, Download, FileText, Presentation, Lock, Copy, Check } from "lucide-react";
+import { ArrowLeft, Play, BookOpen, Share2, Download, FileText, Presentation, Lock, Copy, Check, Sparkles, ExternalLink } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
-import { buildNarrative } from "@/lib/api";
+import { buildNarrative, extractTensions, generateAlternatives } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { NarrativePreview } from "./NarrativePreview";
 import { QuickAdjustments } from "./QuickAdjustments";
+import { AlternativesPanel } from "./AlternativesPanel";
 import { ErrorRecovery, parseAPIError } from "@/components/ui/error-recovery";
 import type { ErrorCode } from "@/components/ui/error-recovery";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { exportToPDF } from "@/lib/exports/pdfExport";
 import { exportToPPTX } from "@/lib/exports/pptxExport";
+import { ViewMode } from "@/lib/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +54,16 @@ export const PreviewScreen = () => {
     highlights,
     keyClaims,
     voiceFeedback,
+    // New state
+    audienceMode,
+    selectedArchetype,
+    duration,
+    includeTensionSlide,
+    setTensions,
+    setAlternatives,
+    alternatives,
+    isGeneratingAlternatives,
+    setIsGeneratingAlternatives,
   } = useNarrativeStore();
 
   const { requireFeature, UpgradePromptComponent, isPro, limits } = useFeatureGate();
@@ -62,6 +74,7 @@ export const PreviewScreen = () => {
   const [shareUrl, setShareUrl] = useState("");
   const [isSharing, setIsSharing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [alternativesPanelOpen, setAlternativesPanelOpen] = useState(false);
 
   // Build narrative on mount if not already built
   useEffect(() => {
@@ -100,7 +113,18 @@ export const PreviewScreen = () => {
         voiceFeedback,
       };
 
-      const result = await buildNarrative(rawText, businessContext, handleProgress);
+      // Build narrative with new parameters
+      const result = await buildNarrative(
+        rawText, 
+        businessContext, 
+        handleProgress,
+        {
+          audienceMode,
+          archetype: selectedArchetype,
+          duration,
+          includeTensionSlide,
+        }
+      );
 
       if (result.error) {
         const apiError = parseAPIError({ 
@@ -128,6 +152,14 @@ export const PreviewScreen = () => {
         }
         setNarrative(result.narrative);
       }
+
+      // Extract tensions in parallel (non-blocking)
+      extractTensions(rawText).then((tensionResult) => {
+        if (tensionResult.tensions) {
+          setTensions(tensionResult.tensions);
+        }
+      }).catch(console.error);
+
     } catch (err) {
       const apiError = parseAPIError(err);
       setError(apiError);
@@ -254,6 +286,28 @@ export const PreviewScreen = () => {
     });
   };
 
+  const handleGenerateAlternatives = async () => {
+    if (!narrative) return;
+    
+    setIsGeneratingAlternatives(true);
+    setAlternativesPanelOpen(true);
+    
+    try {
+      const result = await generateAlternatives(rawText, narrative, businessContext);
+      if (result.alternatives) {
+        setAlternatives(result.alternatives);
+      }
+    } catch (err) {
+      toast({
+        title: "Failed to generate alternatives",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingAlternatives(false);
+    }
+  };
+
   return (
     <>
       {UpgradePromptComponent}
@@ -275,6 +329,12 @@ export const PreviewScreen = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Alternatives Panel */}
+      <AlternativesPanel 
+        isOpen={alternativesPanelOpen} 
+        onClose={() => setAlternativesPanelOpen(false)} 
+      />
 
       {/* Error Recovery Modal */}
       <AnimatePresence>
@@ -306,6 +366,18 @@ export const PreviewScreen = () => {
           )}
 
           <div className="flex items-center gap-2">
+            {/* Alternatives button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={handleGenerateAlternatives}
+              disabled={!narrative || isGeneratingAlternatives}
+            >
+              <Sparkles className="w-4 h-4 mr-1" />
+              {alternatives.length > 0 ? `Alternatives (${alternatives.length})` : "Alternatives"}
+            </Button>
+
             {/* Export dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -373,6 +445,18 @@ export const PreviewScreen = () => {
                 >
                   <BookOpen className="w-3 h-3" />
                   Read
+                </button>
+                <button
+                  onClick={() => setViewMode("share")}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors",
+                    viewMode === "share"
+                      ? "bg-shimmer-start/20 text-shimmer-start"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  Share
                 </button>
               </div>
             </div>

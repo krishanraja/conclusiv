@@ -1,5 +1,20 @@
 import { create } from "zustand";
-import type { Theme, TemplateName, NarrativeSchema, Priority, BusinessContext, RefinementHighlight, KeyClaim } from "@/lib/types";
+import type { 
+  Theme, 
+  TemplateName, 
+  NarrativeSchema, 
+  Priority, 
+  BusinessContext, 
+  RefinementHighlight, 
+  KeyClaim,
+  AudienceMode,
+  NarrativeArchetype,
+  NarrativeDuration,
+  ViewMode,
+  Tension,
+  NarrativeAlternative,
+  CompanyBrain
+} from "@/lib/types";
 
 interface NarrativeState {
   // Input
@@ -64,9 +79,38 @@ interface NarrativeState {
   nextSection: () => void;
   prevSection: () => void;
   
-  // View mode
-  viewMode: "present" | "reader";
-  setViewMode: (mode: "present" | "reader") => void;
+  // View mode (Phase 5 - extended)
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
+  
+  // ===== PHASE 1: Audience Mode =====
+  audienceMode: AudienceMode | null;
+  setAudienceMode: (mode: AudienceMode | null) => void;
+  
+  // ===== PHASE 2: Tensions =====
+  tensions: Tension[];
+  setTensions: (tensions: Tension[]) => void;
+  includeTensionSlide: boolean;
+  setIncludeTensionSlide: (include: boolean) => void;
+  
+  // ===== PHASE 3: Archetypes =====
+  selectedArchetype: NarrativeArchetype | null;
+  setSelectedArchetype: (archetype: NarrativeArchetype | null) => void;
+  
+  // ===== PHASE 4: Duration =====
+  duration: NarrativeDuration;
+  setDuration: (duration: NarrativeDuration) => void;
+  
+  // ===== PHASE 6: Company Brain =====
+  companyBrain: CompanyBrain | null;
+  setCompanyBrain: (brain: CompanyBrain | null) => void;
+  
+  // ===== PHASE 7: Alternatives =====
+  alternatives: NarrativeAlternative[];
+  setAlternatives: (alternatives: NarrativeAlternative[]) => void;
+  swapWithAlternative: (alternativeId: string) => void;
+  isGeneratingAlternatives: boolean;
+  setIsGeneratingAlternatives: (generating: boolean) => void;
   
   // Reset
   reset: () => void;
@@ -89,7 +133,21 @@ const initialState = {
   loadingStage: 0,
   loadingProgress: 0,
   currentSectionIndex: 0,
-  viewMode: "present" as const,
+  viewMode: "present" as ViewMode,
+  // Phase 1
+  audienceMode: null as AudienceMode | null,
+  // Phase 2
+  tensions: [] as Tension[],
+  includeTensionSlide: false,
+  // Phase 3
+  selectedArchetype: null as NarrativeArchetype | null,
+  // Phase 4
+  duration: "full" as NarrativeDuration,
+  // Phase 6
+  companyBrain: null as CompanyBrain | null,
+  // Phase 7
+  alternatives: [] as NarrativeAlternative[],
+  isGeneratingAlternatives: false,
 };
 
 export const useNarrativeStore = create<NarrativeState>((set, get) => ({
@@ -202,6 +260,47 @@ export const useNarrativeStore = create<NarrativeState>((set, get) => ({
   })),
   
   setViewMode: (mode) => set({ viewMode: mode }),
+  
+  // Phase 1: Audience Mode
+  setAudienceMode: (mode) => set({ audienceMode: mode }),
+  
+  // Phase 2: Tensions
+  setTensions: (tensions) => set({ tensions }),
+  setIncludeTensionSlide: (include) => set({ includeTensionSlide: include }),
+  
+  // Phase 3: Archetypes
+  setSelectedArchetype: (archetype) => set({ selectedArchetype: archetype }),
+  
+  // Phase 4: Duration
+  setDuration: (duration) => set({ duration }),
+  
+  // Phase 6: Company Brain
+  setCompanyBrain: (brain) => set({ companyBrain: brain }),
+  
+  // Phase 7: Alternatives
+  setAlternatives: (alternatives) => set({ alternatives }),
+  swapWithAlternative: (alternativeId) => set((state) => {
+    const alternative = state.alternatives.find(a => a.id === alternativeId);
+    if (!alternative || !state.narrative) return state;
+    
+    // Store current narrative as an alternative
+    const currentAsAlternative: NarrativeAlternative = {
+      id: crypto.randomUUID(),
+      goal: "alignment",
+      goalLabel: "Previous Version",
+      rationale: "Your previous narrative",
+      narrative: state.narrative,
+    };
+    
+    return {
+      narrative: alternative.narrative,
+      alternatives: [
+        currentAsAlternative,
+        ...state.alternatives.filter(a => a.id !== alternativeId),
+      ],
+    };
+  }),
+  setIsGeneratingAlternatives: (generating) => set({ isGeneratingAlternatives: generating }),
   
   reset: () => set(initialState),
 }));

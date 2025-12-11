@@ -132,3 +132,87 @@ export interface ExtractClaimsResponse {
   claims?: KeyClaim[];
   error?: string;
 }
+
+// ===== PHASE 1: Audience Mode =====
+export type AudienceMode = "exec" | "product" | "investors" | "clients" | "ops" | "briefing";
+
+export const audienceDescriptions: Record<AudienceMode, { label: string; description: string; icon: string }> = {
+  exec: { label: "Executives", description: "High-level, decision-focused", icon: "Crown" },
+  product: { label: "Product Team", description: "Feature-centric, technical depth", icon: "Package" },
+  investors: { label: "Investors", description: "Growth metrics, market opportunity", icon: "TrendingUp" },
+  clients: { label: "Clients", description: "Value delivery, ROI focus", icon: "Users" },
+  ops: { label: "Operations", description: "Process clarity, dependencies", icon: "Settings" },
+  briefing: { label: "Briefing", description: "Military precision, crisp", icon: "Target" },
+};
+
+// ===== PHASE 2: Tension Detector =====
+export type TensionType = "contradiction" | "blind_spot" | "hidden_risk" | "strategic_option";
+export type TensionSeverity = "low" | "medium" | "high";
+
+export interface Tension {
+  id: string;
+  type: TensionType;
+  severity: TensionSeverity;
+  title: string;
+  description: string;
+  sourceA?: string;
+  sourceB?: string;
+  recommendation: string;
+}
+
+// ===== PHASE 3: Narrative Archetypes =====
+export type NarrativeArchetype = 
+  | "strategy_brief"
+  | "exec_decision_memo"
+  | "investor_pitch"
+  | "gtm_plan"
+  | "problem_framing"
+  | "root_cause"
+  | "workshop_outline"
+  | "competitive_teardown";
+
+// ===== PHASE 4: Adaptive Compression =====
+export type NarrativeDuration = "10s" | "1min" | "5min" | "full";
+
+export const durationDescriptions: Record<NarrativeDuration, { label: string; sections: string }> = {
+  "10s": { label: "10 seconds", sections: "3 slides" },
+  "1min": { label: "1 minute", sections: "4-5 slides" },
+  "5min": { label: "5 minutes", sections: "6-8 slides" },
+  "full": { label: "Full", sections: "All slides" },
+};
+
+// ===== PHASE 5: View Modes =====
+export type ViewMode = "present" | "reader" | "share";
+
+// ===== PHASE 6: Company Brain =====
+export interface CompanyBrain {
+  id: string;
+  user_id: string;
+  company_name: string;
+  historical_themes: string[];
+  tone_patterns: Record<string, string>;
+  strategic_guardrails: string[];
+  emphasized_topics: string[];
+  narrative_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// ===== PHASE 7: Alternative Narratives =====
+export type AlternativeGoal = "funding" | "alignment" | "adversarial" | "optimistic" | "risk_focused";
+
+export interface NarrativeAlternative {
+  id: string;
+  goal: AlternativeGoal;
+  goalLabel: string;
+  rationale: string;
+  narrative: NarrativeSchema;
+}
+
+export const alternativeGoalDescriptions: Record<AlternativeGoal, { label: string; description: string }> = {
+  funding: { label: "Optimized for Funding", description: "Emphasizes growth potential and market opportunity" },
+  alignment: { label: "Internal Alignment", description: "Focuses on shared goals and team coordination" },
+  adversarial: { label: "Devil's Advocate", description: "Highlights risks and challenges" },
+  optimistic: { label: "Optimistic Projection", description: "Best-case scenario framing" },
+  risk_focused: { label: "Risk-Aware", description: "Conservative with mitigation strategies" },
+};

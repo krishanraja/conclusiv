@@ -5,6 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { scrapeBusinessContext, parseDocument } from "@/lib/api";
 import { BusinessContextInput } from "./BusinessContextInput";
 import { DocumentUploadInput } from "./DocumentUploadInput";
+import { ArchetypeSelector } from "./ArchetypeSelector";
+import { AmbientDemo } from "./AmbientDemo";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, AlertCircle, Crown } from "lucide-react";
@@ -348,8 +350,14 @@ export const InputScreen = () => {
               isExpanded={isContextExpanded}
               onToggle={() => setIsContextExpanded(!isContextExpanded)}
             />
+
+            {/* Archetype Selector */}
+            <ArchetypeSelector />
           </div>
         </motion.div>
+
+        {/* Ambient Demo - Show don't tell */}
+        <AmbientDemo />
 
         {/* Continue Button with enhanced styling */}
         <motion.div 

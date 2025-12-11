@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Layers, Layout, List, Lock } from "lucide-react";
+import { ChevronRight, Layers, Layout, List, Lock, Users, AlertTriangle, Clock } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { TemplateName } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useFeatureGate } from "@/components/subscription/FeatureGate";
+import { AudienceSelector } from "./AudienceSelector";
+import { TensionCard } from "./TensionCard";
+import { DurationSelector } from "./DurationSelector";
 
 const templates: { name: TemplateName; label: string; proOnly: boolean }[] = [
   { name: "LinearStoryboard", label: "Linear", proOnly: false },
@@ -16,7 +19,16 @@ const templates: { name: TemplateName; label: string; proOnly: boolean }[] = [
 
 export const QuickAdjustments = () => {
   const [expandedPanel, setExpandedPanel] = useState<string | null>(null);
-  const { themes, toggleThemeKeep, selectedTemplate, setSelectedTemplate, narrative } = useNarrativeStore();
+  const { 
+    themes, 
+    toggleThemeKeep, 
+    selectedTemplate, 
+    setSelectedTemplate, 
+    narrative,
+    audienceMode,
+    tensions,
+    setIncludeTensionSlide,
+  } = useNarrativeStore();
   const { requireFeature, UpgradePromptComponent, isPro } = useFeatureGate();
 
   const togglePanel = (panel: string) => {
@@ -37,6 +49,127 @@ export const QuickAdjustments = () => {
     <>
       {UpgradePromptComponent}
       <div className="space-y-1">
+        {/* Audience Panel - NEW */}
+        <div className="rounded-lg border border-border/50 overflow-hidden">
+          <button
+            onClick={() => togglePanel("audience")}
+            className="w-full flex items-center justify-between p-3 hover:bg-card/50 transition-colors"
+          >
+            <div className="flex items-center gap-2 text-sm">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <span>Audience</span>
+              {audienceMode && (
+                <span className="text-xs text-shimmer-start capitalize">
+                  ({audienceMode})
+                </span>
+              )}
+            </div>
+            <motion.div
+              animate={{ rotate: expandedPanel === "audience" ? 90 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </motion.div>
+          </button>
+
+          <AnimatePresence>
+            {expandedPanel === "audience" && (
+              <motion.div
+                initial={{ height: 0 }}
+                animate={{ height: "auto" }}
+                exit={{ height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="p-3 pt-0">
+                  <AudienceSelector />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Duration Panel - NEW */}
+        <div className="rounded-lg border border-border/50 overflow-hidden">
+          <button
+            onClick={() => togglePanel("duration")}
+            className="w-full flex items-center justify-between p-3 hover:bg-card/50 transition-colors"
+          >
+            <div className="flex items-center gap-2 text-sm">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <span>Duration</span>
+            </div>
+            <motion.div
+              animate={{ rotate: expandedPanel === "duration" ? 90 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </motion.div>
+          </button>
+
+          <AnimatePresence>
+            {expandedPanel === "duration" && (
+              <motion.div
+                initial={{ height: 0 }}
+                animate={{ height: "auto" }}
+                exit={{ height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="p-3 pt-0">
+                  <DurationSelector />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Tensions Panel - NEW */}
+        {tensions.length > 0 && (
+          <div className="rounded-lg border border-border/50 overflow-hidden">
+            <button
+              onClick={() => togglePanel("tensions")}
+              className="w-full flex items-center justify-between p-3 hover:bg-card/50 transition-colors"
+            >
+              <div className="flex items-center gap-2 text-sm">
+                <AlertTriangle className="w-4 h-4 text-amber-400" />
+                <span>Tensions</span>
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-400/20 text-amber-400">
+                  {tensions.length}
+                </span>
+              </div>
+              <motion.div
+                animate={{ rotate: expandedPanel === "tensions" ? 90 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </motion.div>
+            </button>
+
+            <AnimatePresence>
+              {expandedPanel === "tensions" && (
+                <motion.div
+                  initial={{ height: 0 }}
+                  animate={{ height: "auto" }}
+                  exit={{ height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="p-3 pt-0 space-y-2 max-h-64 overflow-y-auto">
+                    {tensions.map((tension) => (
+                      <TensionCard 
+                        key={tension.id} 
+                        tension={tension}
+                        onAddToNarrative={() => setIncludeTensionSlide(true)}
+                      />
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
         {/* Themes Panel */}
         <div className="rounded-lg border border-border/50 overflow-hidden">
           <button
