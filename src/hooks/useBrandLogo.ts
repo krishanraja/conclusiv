@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import type { LogoVariant } from "@/lib/types";
 
@@ -7,15 +7,35 @@ import type { LogoVariant } from "@/lib/types";
  * 1. User-uploaded logo (highest priority)
  * 2. Dark mode preference (auto-detect from system/app theme)
  * 3. Available logo variants from Brandfetch
+ * 
+ * @param themeOverride - Optional theme override ('light' | 'dark') to force a specific theme
  */
-export const useBrandLogo = () => {
+export const useBrandLogo = (themeOverride?: 'light' | 'dark') => {
   const { businessContext, userUploadedLogoUrl, presentationStyle } = useNarrativeStore();
   
-  // Detect if we're in dark mode
-  const isDarkMode = useMemo(() => {
+  // Reactive dark mode detection with MutationObserver
+  const [systemIsDark, setSystemIsDark] = useState(() => {
     if (typeof window === 'undefined') return false;
     return document.documentElement.classList.contains('dark');
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const observer = new MutationObserver(() => {
+      setSystemIsDark(document.documentElement.classList.contains('dark'));
+    });
+    
+    observer.observe(document.documentElement, { 
+      attributes: true, 
+      attributeFilter: ['class'] 
+    });
+    
+    return () => observer.disconnect();
   }, []);
+
+  // Use override if provided, otherwise use system detection
+  const isDarkMode = themeOverride ? themeOverride === 'dark' : systemIsDark;
 
   // Get the best logo URL based on context
   const logoUrl = useMemo(() => {

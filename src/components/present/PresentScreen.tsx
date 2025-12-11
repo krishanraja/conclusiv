@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState, useMemo } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { X, ChevronLeft, ChevronRight, Map } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Map, Sun, Moon, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
@@ -214,8 +214,13 @@ export const PresentScreen = () => {
   const isMobile = useIsMobile();
   const reducedMotion = useReducedMotion();
   
-  // Brand logo with dark mode detection
-  const { logoUrl, showLogo, logoPosition, logoSize } = useBrandLogo();
+  // Theme toggle state for presentation mode
+  const [presentationTheme, setPresentationTheme] = useState<'auto' | 'light' | 'dark'>('auto');
+  
+  // Brand logo with theme override support
+  const { logoUrl, showLogo, logoPosition, logoSize, isDarkMode } = useBrandLogo(
+    presentationTheme === 'auto' ? undefined : presentationTheme
+  );
   
   const [showMinimap, setShowMinimap] = useState(!isMobile);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -228,19 +233,46 @@ export const PresentScreen = () => {
   });
   const showWatermark = limits.hasWatermark;
   
-  // Logo positioning classes
+  // Load brand font dynamically
+  useEffect(() => {
+    if (presentationStyle?.primaryFont) {
+      const fontName = presentationStyle.primaryFont.replace(/ /g, '+');
+      const linkId = `brand-font-${fontName}`;
+      
+      // Check if already loaded
+      if (document.getElementById(linkId)) return;
+      
+      const link = document.createElement('link');
+      link.id = linkId;
+      link.href = `https://fonts.googleapis.com/css2?family=${fontName}:wght@400;500;600;700&display=swap`;
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    }
+  }, [presentationStyle?.primaryFont]);
+  
+  // Logo positioning classes - adjusted to avoid header overlap
   const logoPositionClasses: Record<string, string> = {
-    'top-left': 'top-20 left-6',
-    'top-right': 'top-20 right-6',
-    'bottom-left': 'bottom-20 left-6',
-    'bottom-right': 'bottom-20 right-6',
+    'top-left': 'top-16 left-6',
+    'top-right': 'top-16 right-6',
+    'bottom-left': 'bottom-16 left-6',
+    'bottom-right': 'bottom-16 right-6',
   };
   
   const logoSizeClasses: Record<string, string> = {
-    'sm': 'h-6',
-    'md': 'h-8',
-    'lg': 'h-12',
+    'sm': 'h-6 max-w-[100px]',
+    'md': 'h-8 max-w-[120px]',
+    'lg': 'h-12 max-w-[160px]',
   };
+  
+  // Cycle through theme options
+  const cycleTheme = () => {
+    setPresentationTheme(prev => 
+      prev === 'auto' ? 'light' : prev === 'light' ? 'dark' : 'auto'
+    );
+  };
+  
+  // Get theme icon based on current state
+  const ThemeIcon = presentationTheme === 'light' ? Sun : presentationTheme === 'dark' ? Moon : Monitor;
   
   // Brand color styling
   const brandColorStyles = useMemo(() => {
@@ -390,7 +422,13 @@ export const PresentScreen = () => {
       
       {showWatermark && <Watermark onUpgrade={() => setShowUpgrade(true)} />}
       <UpgradePrompt trigger="presentation" isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} />
-      <div className="fixed inset-0 bg-background z-50 overflow-hidden" style={brandColorStyles}>
+      <div 
+        className={cn(
+          "fixed inset-0 z-50 overflow-hidden transition-colors duration-300",
+          presentationTheme === 'light' ? 'bg-white' : presentationTheme === 'dark' ? 'bg-zinc-950' : 'bg-background'
+        )} 
+        style={brandColorStyles}
+      >
       
       {/* Brand Logo Overlay */}
       {showLogo && logoUrl && logoPosition !== 'none' && (
@@ -608,10 +646,13 @@ export const PresentScreen = () => {
                   </motion.div>
 
                   {/* Title */}
-                  <h2 className={cn(
-                    "text-2xl font-semibold mb-3 tracking-tight transition-colors duration-300",
-                    isActive ? "text-foreground" : "text-muted-foreground"
-                  )}>
+                  <h2 
+                    className={cn(
+                      "text-2xl font-semibold mb-3 tracking-tight transition-colors duration-300",
+                      isActive ? "text-foreground" : "text-muted-foreground"
+                    )}
+                    style={presentationStyle?.primaryFont ? { fontFamily: presentationStyle.primaryFont } : undefined}
+                  >
                     {section.title}
                   </h2>
 
@@ -706,6 +747,16 @@ export const PresentScreen = () => {
         </Button>
 
         <div className="flex items-center gap-4">
+          {/* Theme Toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={cycleTheme}
+            className="text-muted-foreground hover:text-foreground"
+            title={`Theme: ${presentationTheme}`}
+          >
+            <ThemeIcon className="w-4 h-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"

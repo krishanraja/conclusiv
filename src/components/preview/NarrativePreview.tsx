@@ -49,18 +49,18 @@ export const NarrativePreview = () => {
 
   const shouldSimplifyAnimations = reducedMotion || isMobile;
   
-  // Logo positioning
+  // Logo positioning - adjusted for preview container
   const logoPositionClasses: Record<string, string> = {
-    'top-left': 'top-4 left-4',
-    'top-right': 'top-4 right-4',
-    'bottom-left': 'bottom-4 left-4',
-    'bottom-right': 'bottom-4 right-4',
+    'top-left': 'top-2 left-2',
+    'top-right': 'top-2 right-2',
+    'bottom-left': 'bottom-12 left-2',
+    'bottom-right': 'bottom-12 right-2',
   };
   
   const logoSizeClasses: Record<string, string> = {
-    'sm': 'h-6',
-    'md': 'h-8',
-    'lg': 'h-10',
+    'sm': 'h-5 max-w-[80px]',
+    'md': 'h-6 max-w-[100px]',
+    'lg': 'h-8 max-w-[120px]',
   };
 
   // Apply brand colors if set
