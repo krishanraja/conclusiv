@@ -92,6 +92,8 @@ export interface BusinessContext {
   brandVoice: string;
   // Brand enrichment from Brandfetch
   logoUrl?: string;
+  // User-uploaded logo takes priority
+  userUploadedLogoUrl?: string;
   brandColors?: {
     primary: string;
     secondary: string;
