@@ -4,6 +4,7 @@ import { OnboardingProgress } from "./OnboardingProgress";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
+import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 interface OnboardingStep {
   targetSelector: string;
@@ -86,7 +87,12 @@ export const OnboardingManager = () => {
             </div>
             
             <h2 className="text-2xl font-bold text-foreground mb-2">
-              Welcome to Conclusiv
+              Welcome to{" "}
+              <img 
+                src={conclusivLogo} 
+                alt="Conclusiv" 
+                className="h-6 w-auto inline align-middle" 
+              />
             </h2>
             <p className="text-muted-foreground mb-6">
               Transform your research, strategy documents, and business plans into stunning interactive presentations.
