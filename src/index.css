@@ -335,3 +335,10 @@
 .z-bottom-bar { z-index: 40; }
 .z-modal { z-index: 50; }
 .z-onboarding { z-index: 100; }
+
+/* Vertical text for collapsed panels */
+.writing-mode-vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+}
