@@ -143,10 +143,10 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Send notification email to admin
-    console.log(`[send-contact-email][${requestId}] Sending admin notification email...`);
+    console.log(`[send-contact-email][${requestId}] Sending admin notification email to krish@themindmaker.ai...`);
     const adminEmailResponse = await resend.emails.send({
-      from: "Conclusiv <onboarding@resend.dev>",
-      to: ["hello@krishraja.com"],
+      from: "Conclusiv <hello@themindmaker.ai>",
+      to: ["krish@themindmaker.ai"],
       subject: `[Conclusiv Contact] ${category ? `[${sanitizedCategory}] ` : ""}${sanitizedSubject}`,
       html: `
         <!DOCTYPE html>
@@ -213,7 +213,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send confirmation email to user
     console.log(`[send-contact-email][${requestId}] Sending user confirmation email to ${email}...`);
     const userEmailResponse = await resend.emails.send({
-      from: "Conclusiv <onboarding@resend.dev>",
+      from: "Conclusiv <hello@themindmaker.ai>",
       to: [email],
       subject: `We received your message - ${sanitizedSubject}`,
       html: `

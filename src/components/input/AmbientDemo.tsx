@@ -30,7 +30,7 @@ export const AmbientDemo = () => {
 
   return (
     <motion.div 
-      className="fixed bottom-8 right-8 hidden md:block z-10"
+      className="fixed bottom-24 right-8 hidden md:block z-10"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 1 }}

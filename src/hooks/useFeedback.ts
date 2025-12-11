@@ -70,18 +70,22 @@ export const useFeedback = () => {
       
       const sessionId = sessionStorage.getItem(SESSION_KEY);
       const sentiment = calculateSentiment(rating, message);
+      const page = window.location.pathname;
       
       // Enrich context with device info
       const enrichedContext: FeedbackContext = {
         ...context,
         browser: navigator.userAgent,
         device: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? "mobile" : "desktop",
-        url: window.location.pathname,
+        url: page,
         timestamp: new Date().toISOString(),
       };
 
+      console.log("[useFeedback] Submitting feedback:", { type, rating, sentiment, page });
+
       try {
-        const { error } = await supabase.from("feedback").insert({
+        // 1. Insert into database
+        const { error: dbError } = await supabase.from("feedback").insert({
           user_id: user?.id || null,
           session_id: sessionId,
           feedback_type: type,
@@ -89,10 +93,40 @@ export const useFeedback = () => {
           message,
           context: enrichedContext as Json,
           sentiment,
-          page: window.location.pathname,
+          page,
         } as any);
 
-        if (error) throw error;
+        if (dbError) {
+          console.error("[useFeedback] Database insert failed:", dbError);
+          throw dbError;
+        }
+
+        console.log("[useFeedback] Database insert successful");
+
+        // 2. Send email notification (fire-and-forget, don't block on it)
+        supabase.functions
+          .invoke("send-feedback-email", {
+            body: {
+              feedbackType: type,
+              rating,
+              message,
+              sentiment,
+              userId: user?.id || null,
+              sessionId,
+              page,
+              context: enrichedContext,
+            },
+          })
+          .then(({ data, error }) => {
+            if (error) {
+              console.error("[useFeedback] Email notification failed:", error);
+            } else {
+              console.log("[useFeedback] Email notification sent:", data);
+            }
+          })
+          .catch((err) => {
+            console.error("[useFeedback] Email notification exception:", err);
+          });
 
         // Track feedback count
         const count = parseInt(localStorage.getItem(FEEDBACK_COUNT_KEY) || "0", 10);
@@ -105,7 +139,7 @@ export const useFeedback = () => {
 
         return true;
       } catch (error) {
-        console.error("Failed to submit feedback:", error);
+        console.error("[useFeedback] Failed to submit feedback:", error);
         toast({
           title: "Failed to submit feedback",
           description: "Please try again later.",

@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.guided-research]
 verify_jwt = false
+
+[functions.send-feedback-email]
+verify_jwt = false

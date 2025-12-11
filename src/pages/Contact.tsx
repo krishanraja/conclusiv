@@ -79,7 +79,7 @@ const Contact = () => {
       console.error("Failed to send message:", error);
       toast({
         title: "Failed to send message",
-        description: "Please try again or email us directly at hello@krishraja.com",
+        description: "Please try again or email us directly at krish@themindmaker.ai",
         variant: "destructive",
       });
     } finally {
@@ -265,10 +265,10 @@ const Contact = () => {
           >
             You can also email us directly at{" "}
             <a
-              href="mailto:hello@krishraja.com"
+              href="mailto:krish@themindmaker.ai"
               className="text-primary hover:underline"
             >
-              hello@krishraja.com
+              krish@themindmaker.ai
             </a>
           </motion.p>
         </div>
