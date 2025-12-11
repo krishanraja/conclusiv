@@ -26,3 +26,9 @@ verify_jwt = true
 
 [functions.send-contact-email]
 verify_jwt = false
+
+[functions.extract-tensions]
+verify_jwt = false
+
+[functions.generate-alternatives]
+verify_jwt = false
