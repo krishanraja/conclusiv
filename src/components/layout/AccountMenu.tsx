@@ -39,11 +39,10 @@ export const AccountMenu = () => {
       const { data, error } = await supabase.functions.invoke('customer-portal');
       if (error) throw error;
       if (data?.url) {
-        window.open(data.url, '_blank');
+        window.location.href = data.url;
       }
     } catch (err) {
       console.error('Failed to open billing portal:', err);
-    } finally {
       setIsLoading(false);
       setIsOpen(false);
     }
@@ -55,11 +54,10 @@ export const AccountMenu = () => {
       const { data, error } = await supabase.functions.invoke('create-checkout');
       if (error) throw error;
       if (data?.url) {
-        window.open(data.url, '_blank');
+        window.location.href = data.url;
       }
     } catch (err) {
       console.error('Failed to create checkout:', err);
-    } finally {
       setIsLoading(false);
       setIsOpen(false);
     }
