@@ -92,6 +92,45 @@ export type Database = {
         }
         Relationships: []
       }
+      company_brain: {
+        Row: {
+          company_name: string | null
+          created_at: string | null
+          emphasized_topics: string[] | null
+          historical_themes: Json | null
+          id: string
+          narratives_count: number | null
+          strategic_guardrails: string[] | null
+          tone_patterns: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string | null
+          emphasized_topics?: string[] | null
+          historical_themes?: Json | null
+          id?: string
+          narratives_count?: number | null
+          strategic_guardrails?: string[] | null
+          tone_patterns?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string | null
+          emphasized_topics?: string[] | null
+          historical_themes?: Json | null
+          id?: string
+          narratives_count?: number | null
+          strategic_guardrails?: string[] | null
+          tone_patterns?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       contact_inquiries: {
         Row: {
           category: string | null
