@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Play, BookOpen, Share2, Download, FileText, Presentation, Lock, Copy, Check, Sparkles, ExternalLink } from "lucide-react";
+import { ArrowLeft, Play, BookOpen, Share2, Download, FileText, Presentation, Lock, Copy, Check, Sparkles, ExternalLink, Film } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
 import { buildNarrative, extractTensions, generateAlternatives } from "@/lib/api";
@@ -33,6 +33,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+// New gamification imports
+import { NarrativeQualityScore } from "@/components/intelligence/NarrativeQualityScore";
+import { ExecutiveSummary } from "@/components/intelligence/ExecutiveSummary";
+import { Confetti, MiniCelebration } from "@/components/celebration/Confetti";
+import { AchievementToast } from "@/components/celebration/AchievementToast";
+import { NarrativeRemix } from "@/components/power-user/NarrativeRemix";
+import { MakingOfView, MakingOfTrigger } from "@/components/power-user/MakingOfView";
+import { useCelebration } from "@/hooks/useCelebration";
 
 export const PreviewScreen = () => {
   const { toast } = useToast();
@@ -68,6 +76,7 @@ export const PreviewScreen = () => {
   } = useNarrativeStore();
 
   const { requireFeature, UpgradePromptComponent, isPro, limits } = useFeatureGate();
+  const celebration = useCelebration();
 
   const [error, setError] = useState<{ code: ErrorCode; message: string; retryable: boolean } | null>(null);
   const [hasBuilt, setHasBuilt] = useState(false);
@@ -76,6 +85,7 @@ export const PreviewScreen = () => {
   const [isSharing, setIsSharing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [alternativesPanelOpen, setAlternativesPanelOpen] = useState(false);
+  const [makingOfOpen, setMakingOfOpen] = useState(false);
 
   // Build narrative on mount if not already built
   useEffect(() => {
@@ -152,6 +162,10 @@ export const PreviewScreen = () => {
           });
         }
         setNarrative(result.narrative);
+        
+        // Trigger celebration on successful build
+        celebration.triggerConfetti();
+        celebration.triggerAchievement("Narrative created!", "star");
       }
 
       // Extract tensions in parallel (non-blocking)
@@ -319,6 +333,18 @@ export const PreviewScreen = () => {
     <>
       {UpgradePromptComponent}
       
+      {/* Celebration components */}
+      <Confetti isActive={celebration.confetti} />
+      <MiniCelebration isActive={celebration.mini} />
+      <AchievementToast 
+        isVisible={celebration.achievement.show} 
+        message={celebration.achievement.message}
+        icon={celebration.achievement.icon}
+      />
+      
+      {/* Making Of View */}
+      <MakingOfView isOpen={makingOfOpen} onClose={() => setMakingOfOpen(false)} />
+      
       {/* Share Dialog */}
       <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
         <DialogContent>
@@ -376,6 +402,10 @@ export const PreviewScreen = () => {
           )}
 
           <div className="flex items-center gap-2">
+            {/* Power user features */}
+            <NarrativeRemix onRemixComplete={() => celebration.triggerMini()} />
+            <MakingOfTrigger onClick={() => setMakingOfOpen(true)} />
+            
             {/* Alternatives button */}
             <Button
               variant="ghost"
@@ -481,8 +511,22 @@ export const PreviewScreen = () => {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="w-72 border-l border-border/50 p-4 hidden lg:block"
+            className="w-80 border-l border-border/50 p-4 hidden lg:block overflow-y-auto max-h-[calc(100vh-10rem)]"
           >
+            {/* Quality Score */}
+            {narrative && (
+              <div className="mb-6">
+                <NarrativeQualityScore />
+              </div>
+            )}
+            
+            {/* Executive Summary */}
+            {narrative && (
+              <div className="mb-6">
+                <ExecutiveSummary />
+              </div>
+            )}
+            
             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">
               Adjustments
             </h3>
