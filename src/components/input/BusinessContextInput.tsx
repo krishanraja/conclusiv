@@ -23,6 +23,80 @@ export const BusinessContextInput = ({
   isExpanded,
   onToggle,
 }: BusinessContextInputProps) => {
+  // Compact inline success view when context is loaded
+  if (context && !isLoading) {
+    return (
+      <div className="w-full">
+        <div className="flex items-center gap-2 text-sm py-1">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Check className="w-4 h-4 text-shimmer-start flex-shrink-0" />
+            <span className="text-foreground truncate">{context.companyName}</span>
+            {context.industry && (
+              <>
+                <span className="text-muted-foreground/50 text-xs">·</span>
+                <span className="text-muted-foreground text-xs truncate">{context.industry}</span>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClear();
+              }}
+              className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <span className="text-muted-foreground/50 text-xs">|</span>
+          <button
+            type="button"
+            onClick={onToggle}
+            className="text-muted-foreground hover:text-foreground text-xs transition-colors whitespace-nowrap"
+          >
+            Edit
+          </button>
+        </div>
+        
+        {/* Expanded edit mode */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="pt-2">
+                <Input
+                  type="url"
+                  placeholder="yourcompany.com"
+                  value={value}
+                  onChange={(e) => onChange(e.target.value)}
+                  className="bg-card/50 border-border/50 text-sm"
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="w-full">
+        <div className="flex items-center gap-2 text-sm py-1">
+          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+          <span className="text-muted-foreground">Loading business context...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Default expandable view - no context loaded
   return (
     <div className="w-full">
       <button
@@ -50,76 +124,14 @@ export const BusinessContextInput = ({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="pt-3 space-y-3">
-              <div className="relative">
-                <Input
-                  type="url"
-                  placeholder="yourcompany.com"
-                  value={value}
-                  onChange={(e) => onChange(e.target.value)}
-                  className={cn(
-                    "bg-card border-border/50 pr-10",
-                    context && "border-shimmer-start/50"
-                  )}
-                  disabled={isLoading}
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {isLoading && (
-                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                  )}
-                  {context && !isLoading && (
-                    <button
-                      type="button"
-                      onClick={onClear}
-                      className="text-shimmer-start hover:text-shimmer-end transition-colors"
-                    >
-                      <Check className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Context Preview */}
-              <AnimatePresence>
-                {context && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="p-3 rounded-lg bg-shimmer-start/5 border border-shimmer-start/20"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-foreground">
-                          {context.companyName}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {context.industry}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={onClear}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    {context.valuePropositions.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {context.valuePropositions.slice(0, 3).map((prop, i) => (
-                          <span
-                            key={i}
-                            className="text-xs px-2 py-0.5 rounded-full bg-shimmer-start/10 text-shimmer-start"
-                          >
-                            {prop}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            <div className="pt-3">
+              <Input
+                type="url"
+                placeholder="yourcompany.com"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="bg-card/50 border-border/50 text-sm"
+              />
             </div>
           </motion.div>
         )}
