@@ -18,6 +18,7 @@ interface BusinessContextInputProps {
   userLogoUrl?: string;
   onLogoUpload?: (url: string) => void;
   onLogoRemove?: () => void;
+  suggestExpand?: boolean;
 }
 
 export const BusinessContextInput = ({
@@ -31,6 +32,7 @@ export const BusinessContextInput = ({
   userLogoUrl,
   onLogoUpload,
   onLogoRemove,
+  suggestExpand,
 }: BusinessContextInputProps) => {
   const [showLogoUpload, setShowLogoUpload] = useState(false);
 
@@ -148,11 +150,20 @@ export const BusinessContextInput = ({
       <button
         type="button"
         onClick={onToggle}
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className={cn(
+          "flex items-center gap-2 text-sm transition-all rounded-lg",
+          suggestExpand && !context
+            ? "text-foreground ring-2 ring-shimmer-start/60 px-2 py-1.5 bg-shimmer-start/10 animate-pulse shadow-[0_0_15px_hsl(78_100%_83%/0.3)]"
+            : "text-muted-foreground hover:text-foreground"
+        )}
       >
-        <Globe className="w-4 h-4" />
+        <Globe className={cn("w-4 h-4", suggestExpand && !context && "text-shimmer-start")} />
         <span>Add business context</span>
-        <span className="text-xs opacity-50">(optional)</span>
+        {suggestExpand && !context ? (
+          <span className="text-xs text-shimmer-start font-medium">✨ Recommended</span>
+        ) : (
+          <span className="text-xs opacity-50">(optional)</span>
+        )}
         <motion.div
           animate={{ rotate: isExpanded ? 180 : 0 }}
           transition={{ duration: 0.2 }}
@@ -170,13 +181,13 @@ export const BusinessContextInput = ({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="pt-3 space-y-3">
+            <div className="pt-3 space-y-3 px-0.5">
               <Input
                 type="url"
                 placeholder="yourcompany.com"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                className="bg-card/50 border-border/50 text-sm"
+                className="bg-card/50 border-border/50 text-sm w-full max-w-full"
               />
               
               {/* Logo upload for users without context yet */}

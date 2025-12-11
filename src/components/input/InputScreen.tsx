@@ -57,20 +57,29 @@ export const InputScreen = () => {
   const [isDraggingOnTextarea, setIsDraggingOnTextarea] = useState(false);
   const [showSuccessFlash, setShowSuccessFlash] = useState(false);
   const [showResearchAssistant, setShowResearchAssistant] = useState(false);
+  const [suggestBusinessContext, setSuggestBusinessContext] = useState(false);
   
   const [pendingUrl, setPendingUrl] = useState("");
   const lastScrapedUrl = useRef("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-collapse document section after successful upload + show success flash
+  // Auto-collapse document section after successful upload + show success flash + suggest business context
   useEffect(() => {
     if (uploadedFileName && rawText.trim()) {
       setIsDocumentExpanded(false);
       setShowSuccessFlash(true);
+      
+      // Suggest adding business context after doc parse if not already loaded
+      if (!businessContext) {
+        setSuggestBusinessContext(true);
+        const dismissTimer = setTimeout(() => setSuggestBusinessContext(false), 8000);
+        return () => clearTimeout(dismissTimer);
+      }
+      
       const timer = setTimeout(() => setShowSuccessFlash(false), 2000);
       return () => clearTimeout(timer);
     }
-  }, [uploadedFileName, rawText]);
+  }, [uploadedFileName, rawText, businessContext]);
 
   // Auto-collapse context section after successful scrape
   useEffect(() => {
@@ -484,10 +493,14 @@ export const InputScreen = () => {
               isLoading={isScrapingContext}
               onClear={handleClearContext}
               isExpanded={isContextExpanded}
-              onToggle={() => setIsContextExpanded(!isContextExpanded)}
+              onToggle={() => {
+                setIsContextExpanded(!isContextExpanded);
+                setSuggestBusinessContext(false);
+              }}
               userLogoUrl={userUploadedLogoUrl || undefined}
               onLogoUpload={setUserUploadedLogoUrl}
               onLogoRemove={() => setUserUploadedLogoUrl(null)}
+              suggestExpand={suggestBusinessContext && !businessContext}
             />
 
             <ArchetypeSelector />
