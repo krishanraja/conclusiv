@@ -9,7 +9,11 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { ImagePicker, ImagePickerTrigger } from "@/components/editor/ImagePicker";
 import { useBrandLogo } from "@/hooks/useBrandLogo";
 
-export const NarrativePreview = () => {
+interface NarrativePreviewProps {
+  showLogo?: boolean;
+}
+
+export const NarrativePreview = ({ showLogo: showLogoProp = false }: NarrativePreviewProps) => {
   const { 
     narrative, 
     currentSectionIndex, 
@@ -71,8 +75,8 @@ export const NarrativePreview = () => {
 
   return (
     <div className="relative h-full flex flex-col" style={brandStyles}>
-      {/* Logo overlay */}
-      {showLogo && logoUrl && (
+      {/* Logo overlay - only render if explicitly enabled via prop */}
+      {showLogoProp && showLogo && logoUrl && (
         <div className={cn(
           "absolute z-10 opacity-60 hover:opacity-100 transition-opacity",
           logoPositionClasses[logoPosition]
