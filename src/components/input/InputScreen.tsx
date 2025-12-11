@@ -43,8 +43,8 @@ export const InputScreen = () => {
     setCurrentStep,
   } = useNarrativeStore();
 
-  const { requireFeature, UpgradePromptComponent, canBuild, isPro } = useFeatureGate();
-  const { incrementBuildCount, usage, limits } = useSubscription();
+  const { requireFeature, UpgradePromptComponent } = useFeatureGate();
+  const { incrementBuildCount, usage, limits, canBuild, isPro, isFirstBuild } = useSubscription();
 
   const [isScrapingContext, setIsScrapingContext] = useState(false);
   const [isParsingDocument, setIsParsingDocument] = useState(false);
@@ -212,8 +212,9 @@ export const InputScreen = () => {
   const isLongInput = charCount > 15000;
   const isVeryLongInput = charCount > MAX_CHARS_WARNING;
   const isTooShort = charCount > 0 && charCount < MIN_CHARS;
-  const exceedsFreeLimit = !isPro && charCount > FREE_MAX_CHARS;
-  const buildsRemaining = isPro ? '∞' : Math.max(0, limits.buildsPerWeek - usage.buildsThisWeek);
+  // Only show free limit warning after first build is completed
+  const showLargeDocWarning = !isPro && !isFirstBuild && charCount > FREE_MAX_CHARS;
+  const buildsRemaining = isPro ? '∞' : (isFirstBuild ? 1 : Math.max(0, limits.buildsPerWeek - usage.buildsThisWeek));
 
   return (
     <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-4 md:py-6 relative z-10">
@@ -306,24 +307,24 @@ export const InputScreen = () => {
                     Min {MIN_CHARS} required
                   </span>
                 )}
-                {exceedsFreeLimit && (
-                  <span className="text-amber-500 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    Exceeds free limit
+                {showLargeDocWarning && (
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Crown className="w-3 h-3 text-primary" />
+                    Upgrade for unlimited size
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-3">
-                {!isPro && (
+                {!isPro && !isFirstBuild && (
                   <span className={!canBuild ? "text-amber-500 font-medium" : "text-muted-foreground"}>
-                    {!canBuild ? "Build limit reached" : `${buildsRemaining} build${buildsRemaining !== 1 ? 's' : ''} left this week`}
+                    {!canBuild ? "Build limit reached" : `${buildsRemaining} build${buildsRemaining !== 1 ? 's' : ''} left`}
                   </span>
                 )}
                 {isLongInput && (
-                  <span className={isVeryLongInput ? "text-amber-500" : "text-shimmer-start"}>
+                  <span className={isVeryLongInput ? "text-muted-foreground" : "text-shimmer-start"}>
                     {isVeryLongInput 
-                      ? "Very large — may take longer" 
-                      : "Large document — will process in chunks"}
+                      ? "Large document — we'll extract key insights" 
+                      : "Processing in smart chunks"}
                   </span>
                 )}
               </div>

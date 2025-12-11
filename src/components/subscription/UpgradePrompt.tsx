@@ -89,13 +89,11 @@ export const UpgradePrompt = ({ trigger, isOpen, onClose }: UpgradePromptProps) 
       
       if (error) throw error;
       if (data?.url) {
-        window.open(data.url, '_blank');
+        window.location.href = data.url;
       }
     } catch (err) {
       console.error('Failed to create checkout:', err);
-    } finally {
       setIsLoading(false);
-      onClose();
     }
   };
 

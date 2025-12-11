@@ -64,6 +64,10 @@ export const useSubscription = () => {
     weekStart: getWeekStart(),
   });
 
+  const [hasEverBuilt, setHasEverBuilt] = useState(() => {
+    return localStorage.getItem('conclusiv_first_build_completed') === 'true';
+  });
+
   const checkSubscription = useCallback(async () => {
     if (!user) {
       setSubscription(prev => ({ ...prev, plan: 'free', status: 'free', isLoading: false }));
@@ -131,6 +135,11 @@ export const useSubscription = () => {
           lastBuildAt: data.last_build_at,
           weekStart,
         });
+        // If they have any builds in DB, they've built before
+        if (data.builds_count > 0) {
+          setHasEverBuilt(true);
+          localStorage.setItem('conclusiv_first_build_completed', 'true');
+        }
       }
     } catch (err) {
       console.error('Failed to fetch usage:', err);
@@ -141,6 +150,12 @@ export const useSubscription = () => {
     const weekStart = getWeekStart();
     const newCount = usage.buildsThisWeek + 1;
     const now = new Date().toISOString();
+
+    // Mark first build as completed
+    if (!hasEverBuilt) {
+      setHasEverBuilt(true);
+      localStorage.setItem('conclusiv_first_build_completed', 'true');
+    }
 
     if (!user) {
       // Store in localStorage for anonymous users
@@ -173,7 +188,7 @@ export const useSubscription = () => {
     } catch (err) {
       console.error('Failed to update usage:', err);
     }
-  }, [user, usage.buildsThisWeek]);
+  }, [user, usage.buildsThisWeek, hasEverBuilt]);
 
   // Initial load
   useEffect(() => {
@@ -194,7 +209,10 @@ export const useSubscription = () => {
   const isPro = subscription.plan === 'pro';
   const isTrial = subscription.status === 'trialing';
   const limits = isPro ? FEATURE_LIMITS.pro : FEATURE_LIMITS.free;
-  const canBuild = isPro || usage.buildsThisWeek < limits.buildsPerWeek;
+  
+  // First build is always free, then check weekly limits
+  const canBuild = isPro || !hasEverBuilt || usage.buildsThisWeek < limits.buildsPerWeek;
+  const isFirstBuild = !hasEverBuilt;
 
   const trialDaysRemaining = subscription.trialEnd 
     ? Math.max(0, Math.ceil((new Date(subscription.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
@@ -207,6 +225,8 @@ export const useSubscription = () => {
     isTrial,
     limits,
     canBuild,
+    isFirstBuild,
+    hasEverBuilt,
     trialDaysRemaining,
     checkSubscription,
     incrementBuildCount,
