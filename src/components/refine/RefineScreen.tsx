@@ -21,7 +21,7 @@ export const RefineScreen = () => {
     setKeyClaims,
     approveClaim,
     rejectClaim,
-    flagClaimMisleading,
+    updateClaim,
     voiceFeedback,
     setVoiceFeedback,
     setIsLoading,
@@ -75,7 +75,7 @@ export const RefineScreen = () => {
   // Stats
   const approvedCount = keyClaims.filter(c => c.approved === true).length;
   const rejectedCount = keyClaims.filter(c => c.approved === false).length;
-  const flaggedCount = keyClaims.filter(c => c.flaggedMisleading).length;
+  const editedCount = keyClaims.filter(c => c.edited).length;
 
   return (
     <div className="min-h-[calc(100vh-5rem)] flex flex-col p-6 pt-24">
@@ -137,8 +137,8 @@ export const RefineScreen = () => {
                   <div className="flex gap-4">
                     <span className="text-green-500">{approvedCount} approved</span>
                     <span className="text-red-500">{rejectedCount} rejected</span>
-                    {flaggedCount > 0 && (
-                      <span className="text-amber-500">{flaggedCount} flagged</span>
+                    {editedCount > 0 && (
+                      <span className="text-blue-500">{editedCount} edited</span>
                     )}
                   </div>
                 </div>
@@ -151,7 +151,7 @@ export const RefineScreen = () => {
                       total={keyClaims.length}
                       onApprove={() => approveClaim(claim.id)}
                       onReject={() => rejectClaim(claim.id)}
-                      onFlagMisleading={() => flagClaimMisleading(claim.id)}
+                      onUpdate={(updates) => updateClaim(claim.id, updates)}
                     />
                   ))}
                 </div>

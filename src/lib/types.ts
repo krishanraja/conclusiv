@@ -120,7 +120,9 @@ export interface KeyClaim {
   text: string;
   source?: string;
   approved: boolean | null;
-  flaggedMisleading: boolean;
+  edited?: boolean;
+  originalTitle?: string;
+  originalText?: string;
 }
 
 export interface RefinementState {

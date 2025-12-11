@@ -55,7 +55,7 @@ interface NarrativeState {
   setKeyClaims: (claims: KeyClaim[]) => void;
   approveClaim: (claimId: string) => void;
   rejectClaim: (claimId: string) => void;
-  flagClaimMisleading: (claimId: string) => void;
+  updateClaim: (claimId: string, updates: { title?: string; text?: string }) => void;
   voiceFeedback: string;
   setVoiceFeedback: (feedback: string) => void;
   
@@ -228,9 +228,15 @@ export const useNarrativeStore = create<NarrativeState>((set, get) => ({
     ),
   })),
   
-  flagClaimMisleading: (claimId) => set((state) => ({
+  updateClaim: (claimId, updates) => set((state) => ({
     keyClaims: state.keyClaims.map((c) =>
-      c.id === claimId ? { ...c, flaggedMisleading: !c.flaggedMisleading } : c
+      c.id === claimId ? { 
+        ...c, 
+        ...updates,
+        edited: true,
+        originalTitle: c.originalTitle ?? c.title,
+        originalText: c.originalText ?? c.text,
+      } : c
     ),
   })),
   
