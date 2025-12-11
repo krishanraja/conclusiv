@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Layers, Layout, List, Lock, Users, AlertTriangle, Clock, RefreshCw } from "lucide-react";
+import { ChevronRight, Layers, Layout, List, Lock, Users, AlertTriangle, Clock, RefreshCw, Paintbrush } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { TemplateName } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { useFeatureGate } from "@/components/subscription/FeatureGate";
 import { AudienceSelector } from "./AudienceSelector";
 import { TensionCard } from "./TensionCard";
 import { DurationSelector } from "./DurationSelector";
+import { BrandStyleEditor } from "@/components/editor/BrandStyleEditor";
 import { useToast } from "@/hooks/use-toast";
 
 const templates: { name: TemplateName; label: string; proOnly: boolean }[] = [
@@ -31,8 +32,13 @@ export const QuickAdjustments = () => {
     audienceMode,
     tensions,
     setIncludeTensionSlide,
+    businessContext,
+    presentationStyle,
   } = useNarrativeStore();
   const { requireFeature, UpgradePromptComponent, isPro } = useFeatureGate();
+
+  const hasLogo = !!(businessContext?.logoUrl || businessContext?.userUploadedLogoUrl);
+  const hasBrandData = !!(businessContext?.brandColors || businessContext?.brandFonts || hasLogo);
 
   const togglePanel = (panel: string) => {
     setExpandedPanel(expandedPanel === panel ? null : panel);
@@ -291,6 +297,44 @@ export const QuickAdjustments = () => {
                       {template.proOnly && !isPro && <Lock className="w-3 h-3 opacity-50" />}
                     </button>
                   ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Brand Style Panel - NEW */}
+        <div className="rounded-lg border border-border/50 overflow-hidden">
+          <button
+            onClick={() => togglePanel("brandStyle")}
+            className="w-full flex items-center justify-between p-3 hover:bg-card/50 transition-colors"
+          >
+            <div className="flex items-center gap-2 text-sm">
+              <Paintbrush className="w-4 h-4 text-muted-foreground" />
+              <span>Brand Style</span>
+              {hasBrandData && (
+                <span className="text-xs text-shimmer-start">customized</span>
+              )}
+            </div>
+            <motion.div
+              animate={{ rotate: expandedPanel === "brandStyle" ? 90 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </motion.div>
+          </button>
+
+          <AnimatePresence>
+            {expandedPanel === "brandStyle" && (
+              <motion.div
+                initial={{ height: 0 }}
+                animate={{ height: "auto" }}
+                exit={{ height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="p-3 pt-0">
+                  <BrandStyleEditor />
                 </div>
               </motion.div>
             )}

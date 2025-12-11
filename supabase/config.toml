@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.send-feedback-email]
 verify_jwt = false
+
+[functions.search-images]
+verify_jwt = false

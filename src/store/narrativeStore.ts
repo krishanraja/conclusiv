@@ -13,7 +13,8 @@ import type {
   ViewMode,
   Tension,
   NarrativeAlternative,
-  CompanyBrain
+  CompanyBrain,
+  PresentationStyle,
 } from "@/lib/types";
 
 interface NarrativeState {
@@ -116,6 +117,13 @@ interface NarrativeState {
   isGeneratingAlternatives: boolean;
   setIsGeneratingAlternatives: (generating: boolean) => void;
   
+  // ===== Presentation Styling =====
+  presentationStyle: PresentationStyle;
+  setPresentationStyle: (style: Partial<PresentationStyle>) => void;
+  
+  // ===== Section Images =====
+  updateSectionImage: (sectionId: string, imageUrl: string | undefined) => void;
+  
   // Reset
   reset: () => void;
 }
@@ -153,6 +161,12 @@ const initialState = {
   // Phase 7
   alternatives: [] as NarrativeAlternative[],
   isGeneratingAlternatives: false,
+  // Presentation styling
+  presentationStyle: {
+    logoPosition: 'top-right',
+    logoSize: 'md',
+    showLogo: true,
+  } as PresentationStyle,
 };
 
 export const useNarrativeStore = create<NarrativeState>((set, get) => ({
@@ -314,6 +328,23 @@ export const useNarrativeStore = create<NarrativeState>((set, get) => ({
     };
   }),
   setIsGeneratingAlternatives: (generating) => set({ isGeneratingAlternatives: generating }),
+  
+  // Presentation styling
+  setPresentationStyle: (style) => set((state) => ({
+    presentationStyle: { ...state.presentationStyle, ...style },
+  })),
+  
+  // Section images
+  updateSectionImage: (sectionId, imageUrl) => set((state) => ({
+    narrative: state.narrative
+      ? {
+          ...state.narrative,
+          sections: state.narrative.sections.map((s) =>
+            s.id === sectionId ? { ...s, image: imageUrl } : s
+          ),
+        }
+      : null,
+  })),
   
   reset: () => set(initialState),
 }));
