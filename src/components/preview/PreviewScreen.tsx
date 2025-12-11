@@ -41,6 +41,43 @@ import { AchievementToast } from "@/components/celebration/AchievementToast";
 import { NarrativeRemix } from "@/components/power-user/NarrativeRemix";
 import { MakingOfView, MakingOfTrigger } from "@/components/power-user/MakingOfView";
 import { useCelebration } from "@/hooks/useCelebration";
+import { useBrandLogo } from "@/hooks/useBrandLogo";
+
+// Brand Logo Overlay component - renders outside overflow-hidden containers
+const BrandLogoOverlay = () => {
+  const { logoUrl, showLogo, logoPosition, logoSize } = useBrandLogo();
+  
+  const logoPositionClasses: Record<string, string> = {
+    'top-left': 'top-4 left-4',
+    'top-right': 'top-4 right-4',
+    'bottom-left': 'bottom-14 left-4',
+    'bottom-right': 'bottom-14 right-4',
+  };
+  
+  const logoSizeClasses: Record<string, string> = {
+    'sm': 'h-5 max-w-[80px]',
+    'md': 'h-6 max-w-[100px]',
+    'lg': 'h-8 max-w-[120px]',
+  };
+  
+  if (!showLogo || !logoUrl || logoPosition === 'none') return null;
+  
+  return (
+    <div className={cn(
+      "absolute z-20 opacity-60 hover:opacity-100 transition-opacity pointer-events-auto",
+      logoPositionClasses[logoPosition]
+    )}>
+      <img 
+        src={logoUrl} 
+        alt="Logo" 
+        className={cn(
+          "w-auto object-contain",
+          logoSizeClasses[logoSize]
+        )}
+      />
+    </div>
+  );
+};
 
 export const PreviewScreen = () => {
   const { toast } = useToast();
@@ -564,9 +601,15 @@ export const PreviewScreen = () => {
               </div>
             </div>
 
-            {/* Preview Window */}
-            <div className="flex-1 mx-4 mb-4 rounded-xl border border-border/50 bg-card/30 overflow-hidden">
-              <NarrativePreview />
+            {/* Preview Window - Logo rendered outside overflow-hidden to prevent clipping */}
+            <div className="flex-1 mx-4 mb-4 relative">
+              {/* Brand Logo Overlay - positioned outside the clipped container */}
+              <BrandLogoOverlay />
+              
+              {/* Actual preview container with overflow hidden */}
+              <div className="h-full rounded-xl border border-border/50 bg-card/30 overflow-hidden">
+                <NarrativePreview showLogo={false} />
+              </div>
             </div>
           </div>
 
