@@ -221,7 +221,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); resetState(); } }}>
-      <SheetContent side="left" className="w-full sm:max-w-md overflow-y-auto border-r border-primary/20">
+      <SheetContent side="left" className="w-full sm:max-w-md h-[100dvh] flex flex-col overflow-hidden border-r border-primary/20">
         <SheetHeader className="mb-6">
           <SheetTitle className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-primary/10">
@@ -245,6 +245,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
           </div>
         </SheetHeader>
 
+        <div className="flex-1 overflow-y-auto">
         <AnimatePresence mode="wait">
           {/* Step 1: Decision Type */}
           {step === "decision" && (
@@ -530,9 +531,10 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
 
         {/* Navigation Footer */}
-        <div className="mt-8 pt-4 border-t border-border/50 flex gap-2">
+        <div className="flex-shrink-0 mt-4 pt-4 border-t border-border/50 flex gap-2" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
           {step !== "decision" && step !== "research" && (
             <Button variant="ghost" onClick={handleBack} disabled={isLoading}>
               <ArrowLeft className="w-4 h-4 mr-1" />

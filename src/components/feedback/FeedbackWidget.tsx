@@ -6,6 +6,7 @@ import { FeedbackDialog } from "./FeedbackDialog";
 import { QuickRating } from "./QuickRating";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomBar } from "@/components/layout/MobileBottomBar";
+import { useLocation } from "react-router-dom";
 
 type FeedbackMode = "quick" | "bug" | "feature" | "detailed" | null;
 
@@ -17,6 +18,10 @@ export const FeedbackWidget = ({ currentStep }: FeedbackWidgetProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<FeedbackMode>(null);
   const isMobile = useIsMobile();
+  const location = useLocation();
+  
+  // Hide MobileBottomBar on input screen - it has its own bottom bar
+  const isInputScreen = location.pathname === "/";
 
   const handleModeSelect = (selectedMode: FeedbackMode) => {
     setMode(selectedMode);
@@ -31,11 +36,11 @@ export const FeedbackWidget = ({ currentStep }: FeedbackWidgetProps) => {
     setMode(null);
   };
 
-  // Mobile: Show bottom bar instead of floating button
+  // Mobile: Show bottom bar instead of floating button (but not on input screen)
   if (isMobile) {
     return (
       <>
-        <MobileBottomBar onFeedbackClick={() => setIsOpen(true)} />
+        {!isInputScreen && <MobileBottomBar onFeedbackClick={() => setIsOpen(true)} />}
 
         {/* Mobile feedback menu - bottom sheet style */}
         <AnimatePresence>
