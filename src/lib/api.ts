@@ -403,12 +403,17 @@ export const structureVoiceInput = async (
   }
 };
 
-// Guided research - execute research
+// Guided research - execute research (synchronous, for quick scans)
 export const executeResearch = async (
   query: string,
-  depth: 'quick' | 'deep' = 'deep'
+  depth: 'quick' | 'deep' = 'quick'  // Default to quick now for faster response
 ): Promise<GuidedResearchResponse> => {
   try {
+    // Add a timeout for the request (45 seconds for quick, still use sync for deep but with warning)
+    const controller = new AbortController();
+    const timeoutMs = depth === 'quick' ? 45000 : 90000;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
     const { data, error } = await supabase.functions.invoke('guided-research', {
       body: { 
         phase: 'research',
@@ -417,7 +422,15 @@ export const executeResearch = async (
       }
     });
 
-    if (error) throw new Error(error.message);
+    clearTimeout(timeoutId);
+
+    if (error) {
+      // Check for timeout
+      if (error.message?.includes('abort') || error.message?.includes('timeout')) {
+        throw new Error('Research is taking longer than expected. Try using "Quick scan" for faster results.');
+      }
+      throw new Error(error.message);
+    }
     if (data.error) throw new Error(data.error);
 
     return {
@@ -427,6 +440,9 @@ export const executeResearch = async (
       rawContent: data.rawContent,
     };
   } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      return { error: 'Research timed out. Try using "Quick scan" for faster results.' };
+    }
     return { error: err instanceof Error ? err.message : 'Failed to execute research' };
   }
 };

@@ -438,6 +438,57 @@ export type Database = {
         }
         Relationships: []
       }
+      research_jobs: {
+        Row: {
+          audience: string | null
+          completed_at: string | null
+          created_at: string
+          decision_type: string | null
+          depth: string
+          email_sent: boolean | null
+          error: string | null
+          id: string
+          query: string
+          results: Json | null
+          started_at: string | null
+          status: string
+          subject: string | null
+          user_id: string
+        }
+        Insert: {
+          audience?: string | null
+          completed_at?: string | null
+          created_at?: string
+          decision_type?: string | null
+          depth?: string
+          email_sent?: boolean | null
+          error?: string | null
+          id?: string
+          query: string
+          results?: Json | null
+          started_at?: string | null
+          status?: string
+          subject?: string | null
+          user_id: string
+        }
+        Update: {
+          audience?: string | null
+          completed_at?: string | null
+          created_at?: string
+          decision_type?: string | null
+          depth?: string
+          email_sent?: boolean | null
+          error?: string | null
+          id?: string
+          query?: string
+          results?: Json | null
+          started_at?: string | null
+          status?: string
+          subject?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       research_templates: {
         Row: {
           audience: string | null

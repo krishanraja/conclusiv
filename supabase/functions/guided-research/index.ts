@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -77,18 +78,206 @@ function buildResearchQuery(input: StructuredInput): string {
   return parts.join('');
 }
 
+// Parse research response into structured format
+function parseResearchResponse(content: string) {
+  const lines = content.split('\n');
+  let summary = '';
+  const keyFindings: string[] = [];
+  let inFindings = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.toLowerCase().includes('executive summary') || trimmed.toLowerCase().includes('summary')) {
+      inFindings = false;
+      continue;
+    }
+    if (trimmed.toLowerCase().includes('key findings') || trimmed.toLowerCase().includes('key points')) {
+      inFindings = true;
+      continue;
+    }
+    if (trimmed.toLowerCase().includes('detailed analysis') || trimmed.toLowerCase().includes('analysis')) {
+      inFindings = false;
+    }
+    
+    if (inFindings && (trimmed.startsWith('-') || trimmed.startsWith('•') || /^\d+\./.test(trimmed))) {
+      keyFindings.push(trimmed.replace(/^[-•]\s*/, '').replace(/^\d+\.\s*/, ''));
+    } else if (!inFindings && !summary && trimmed.length > 50) {
+      summary = trimmed;
+    }
+  }
+
+  return { summary: summary || content.slice(0, 300), keyFindings: keyFindings.slice(0, 8) };
+}
+
+// Execute the actual Perplexity research
+async function executePerplexityResearch(query: string, depth: string, PERPLEXITY_API_KEY: string) {
+  // Phase 1 fix: Default to sonar-pro (faster, 10-30s) instead of sonar-deep-research (2-5 min)
+  // sonar-deep-research is only used for explicit "deep" research now
+  const model = depth === 'deep' ? 'sonar-pro' : 'sonar'; // Changed from sonar-deep-research
+  
+  console.log('[guided-research] Executing research with model:', model);
+
+  const response = await fetch('https://api.perplexity.ai/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { 
+          role: 'system', 
+          content: `You are a business research analyst conducting due diligence. Provide comprehensive, factual research with citations.
+Structure your response as:
+1. Executive Summary (2-3 sentences answering the primary question)
+2. Key Findings (bullet points with specific data points)
+3. Detailed Analysis (organized by topic)
+4. Risk Assessment (specific to the concerns raised)
+5. Sources and Citations
+
+Be specific, data-driven, and actionable. Include financial data, recent news, and market position where available.` 
+        },
+        { role: 'user', content: query }
+      ],
+      search_recency_filter: 'month',
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[guided-research] Research error:', response.status, errorText);
+    
+    if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again in a moment.');
+    }
+    
+    throw new Error('Research failed');
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content || '';
+  const citations = data.citations || [];
+
+  console.log('[guided-research] Research complete, citations:', citations.length);
+
+  const { summary, keyFindings } = parseResearchResponse(content);
+
+  return {
+    summary,
+    keyFindings,
+    citations: citations.map((url: string) => ({
+      url,
+      title: url.split('/').pop()?.replace(/-/g, ' ') || 'Source',
+    })),
+    rawContent: content,
+  };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { phase, structuredInput, query, depth, transcript, decisionType } = await req.json();
+    const { phase, structuredInput, query, depth, transcript, decisionType, jobId } = await req.json();
     
-    console.log('[guided-research] Request:', { phase, depth });
+    console.log('[guided-research] Request:', { phase, depth, jobId });
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const PERPLEXITY_API_KEY = Deno.env.get('PERPLEXITY_API_KEY');
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    // Phase: Process background job
+    if (phase === 'process-job' && jobId) {
+      if (!PERPLEXITY_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+        return new Response(
+          JSON.stringify({ error: 'Missing configuration' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+      // Get the job
+      const { data: job, error: jobError } = await supabase
+        .from('research_jobs')
+        .select('*')
+        .eq('id', jobId)
+        .single();
+
+      if (jobError || !job) {
+        console.error('[guided-research] Job not found:', jobId, jobError);
+        return new Response(
+          JSON.stringify({ error: 'Job not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Update job to processing
+      await supabase
+        .from('research_jobs')
+        .update({ status: 'processing', started_at: new Date().toISOString() })
+        .eq('id', jobId);
+
+      try {
+        // Execute the research
+        const results = await executePerplexityResearch(job.query, job.depth, PERPLEXITY_API_KEY);
+
+        // Update job with results
+        await supabase
+          .from('research_jobs')
+          .update({ 
+            status: 'completed', 
+            results,
+            completed_at: new Date().toISOString() 
+          })
+          .eq('id', jobId);
+
+        console.log('[guided-research] Job completed:', jobId);
+
+        return new Response(
+          JSON.stringify({ success: true, jobId }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (researchError) {
+        console.error('[guided-research] Job failed:', jobId, researchError);
+        
+        await supabase
+          .from('research_jobs')
+          .update({ 
+            status: 'failed', 
+            error: researchError instanceof Error ? researchError.message : 'Research failed',
+            completed_at: new Date().toISOString() 
+          })
+          .eq('id', jobId);
+
+        return new Response(
+          JSON.stringify({ error: 'Job failed' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Phase: Create a background job
+    if (phase === 'create-job') {
+      if (!query) {
+        return new Response(
+          JSON.stringify({ error: 'Query required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Return job creation info - the client will handle DB insert with their auth context
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Create job in client with auth context' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Phase: Structure Voice Input
     if (phase === 'structure-voice') {
@@ -226,7 +415,7 @@ Return only the refined query, no JSON or other formatting.`;
       );
     }
 
-    // Phase 2: Deep Research (uses Perplexity)
+    // Phase 2: Direct Research (synchronous - for quick scans)
     if (phase === 'research') {
       if (!PERPLEXITY_API_KEY) {
         return new Response(
@@ -242,104 +431,23 @@ Return only the refined query, no JSON or other formatting.`;
         );
       }
 
-      // Use sonar-deep-research for thorough research, sonar-pro for quick
-      const model = depth === 'deep' ? 'sonar-deep-research' : 'sonar-pro';
-      
-      console.log('[guided-research] Starting research with model:', model);
-
-      const response = await fetch('https://api.perplexity.ai/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { 
-              role: 'system', 
-              content: `You are a business research analyst conducting due diligence. Provide comprehensive, factual research with citations.
-Structure your response as:
-1. Executive Summary (2-3 sentences answering the primary question)
-2. Key Findings (bullet points with specific data points)
-3. Detailed Analysis (organized by topic)
-4. Risk Assessment (specific to the concerns raised)
-5. Sources and Citations
-
-Be specific, data-driven, and actionable. Include financial data, recent news, and market position where available.` 
-            },
-            { role: 'user', content: query }
-          ],
-          search_recency_filter: 'month',
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[guided-research] Research error:', response.status, errorText);
-        
-        if (response.status === 429) {
-          return new Response(
-            JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
-            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        
+      try {
+        const results = await executePerplexityResearch(query, depth || 'quick', PERPLEXITY_API_KEY);
         return new Response(
-          JSON.stringify({ error: 'Research failed' }),
+          JSON.stringify(results),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (error) {
+        console.error('[guided-research] Research error:', error);
+        return new Response(
+          JSON.stringify({ error: error instanceof Error ? error.message : 'Research failed' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || '';
-      const citations = data.citations || [];
-
-      console.log('[guided-research] Research complete, citations:', citations.length);
-
-      // Parse the response into structured format
-      const lines = content.split('\n');
-      let summary = '';
-      const keyFindings: string[] = [];
-      let inFindings = false;
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.toLowerCase().includes('executive summary') || trimmed.toLowerCase().includes('summary')) {
-          inFindings = false;
-          continue;
-        }
-        if (trimmed.toLowerCase().includes('key findings') || trimmed.toLowerCase().includes('key points')) {
-          inFindings = true;
-          continue;
-        }
-        if (trimmed.toLowerCase().includes('detailed analysis') || trimmed.toLowerCase().includes('analysis')) {
-          inFindings = false;
-        }
-        
-        if (inFindings && (trimmed.startsWith('-') || trimmed.startsWith('•') || /^\d+\./.test(trimmed))) {
-          keyFindings.push(trimmed.replace(/^[-•]\s*/, '').replace(/^\d+\.\s*/, ''));
-        } else if (!inFindings && !summary && trimmed.length > 50) {
-          summary = trimmed;
-        }
-      }
-
-      return new Response(
-        JSON.stringify({
-          summary: summary || content.slice(0, 300),
-          keyFindings: keyFindings.slice(0, 8),
-          citations: citations.map((url: string) => ({
-            url,
-            title: url.split('/').pop()?.replace(/-/g, ' ') || 'Source',
-          })),
-          rawContent: content,
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
 
     return new Response(
-      JSON.stringify({ error: 'Invalid phase. Use "formulate", "research", or "structure-voice".' }),
+      JSON.stringify({ error: 'Invalid phase. Use "formulate", "research", "structure-voice", "create-job", or "process-job".' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

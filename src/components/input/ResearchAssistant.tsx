@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Sparkles, ArrowRight, ArrowLeft, Loader2, ExternalLink, ChevronRight, Target, Globe, Swords, Lightbulb, Building2, TrendingUp, Mic, MicOff, Link2, HelpCircle, ShieldCheck, ShieldX, AlertTriangle, Globe2, CheckCircle2 } from "lucide-react";
+import { Search, Sparkles, ArrowRight, ArrowLeft, Loader2, ExternalLink, ChevronRight, Target, Globe, Swords, Lightbulb, Building2, TrendingUp, Mic, MicOff, Link2, HelpCircle, ShieldCheck, ShieldX, AlertTriangle, CheckCircle2, Clock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,6 +13,7 @@ import { useWhisperRecorder } from "@/hooks/useWhisperRecorder";
 import { useToast } from "@/hooks/use-toast";
 import { QuerySpecificityIndicator } from "./QuerySpecificityIndicator";
 import { ResearchTemplateManager } from "./ResearchTemplateManager";
+import { useResearchJob, ResearchJob } from "@/hooks/useResearchJob";
 
 interface ResearchAssistantProps {
   isOpen: boolean;
@@ -118,8 +119,9 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
   const [isStructuring, setIsStructuring] = useState(false);
   const [isFetchingBrand, setIsFetchingBrand] = useState(false);
   const [brandFetched, setBrandFetched] = useState(false);
-  const [researchDepth, setResearchDepth] = useState<"quick" | "deep">("deep");
+  const [researchDepth, setResearchDepth] = useState<"quick" | "deep">("quick"); // Default to quick now
   const [voiceTranscript, setVoiceTranscript] = useState("");
+  const [researchError, setResearchError] = useState<string | null>(null);
   
   // Results
   const [results, setResults] = useState<{
@@ -128,6 +130,67 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     citations: { url: string; title: string }[];
     rawContent: string;
   } | null>(null);
+
+  // Background job hook for deep research
+  const handleJobComplete = useCallback((job: ResearchJob) => {
+    if (job.results) {
+      setResults(job.results);
+      setStep("results");
+      setIsLoading(false);
+      
+      // Save to research history
+      if (user) {
+        supabase.from("research_history").insert({
+          user_id: user.id,
+          query: job.query,
+          subject: job.subject,
+          decision_type: job.decision_type,
+          audience: job.audience,
+          results: job.results,
+        }).then(({ error }) => {
+          if (error) console.error('Failed to save research history:', error);
+        });
+      }
+    }
+  }, [user]);
+
+  const handleJobError = useCallback((error: string) => {
+    setResearchError(error);
+    setIsLoading(false);
+    toast({
+      title: "Research failed",
+      description: error,
+      variant: "destructive",
+    });
+  }, [toast]);
+
+  const { 
+    currentJob, 
+    isPolling, 
+    formattedElapsedTime, 
+    createJob,
+    checkExistingJobs,
+    cancelPolling,
+  } = useResearchJob({
+    onComplete: handleJobComplete,
+    onError: handleJobError,
+  });
+
+  // Check for existing jobs when opening
+  useEffect(() => {
+    if (isOpen && user) {
+      checkExistingJobs().then((job) => {
+        if (job) {
+          setStep("research");
+          setIsLoading(true);
+          toast({
+            title: "Resuming research",
+            description: "Found an in-progress research job.",
+          });
+        }
+      });
+    }
+  }, [isOpen, user, checkExistingJobs, toast]);
 
   // Whisper voice recorder
   const handleTranscript = useCallback((transcript: string) => {
@@ -166,7 +229,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
       try {
         const result = await fetchBrandData(cleanUrl);
         if (result.data) {
-          const { companyName, firmographics } = result.data;
+          const { companyName } = result.data;
           
           if (!qualification.companyName && companyName) {
             setQualification(prev => ({ ...prev, companyName }));
@@ -186,7 +249,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     }, 800);
 
     return () => clearTimeout(timeoutId);
-  }, [qualification.websiteUrl, qualification.companyName, qualification.industry, brandFetched, toast]);
+  }, [qualification.websiteUrl, qualification.companyName, brandFetched, toast]);
 
   // Reset brand fetched flag when URL changes significantly
   useEffect(() => {
@@ -249,6 +312,12 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     }
   };
 
+  // Retry research
+  const handleRetry = async () => {
+    setResearchError(null);
+    handleNext();
+  };
+
   const handleNext = async () => {
     if (step === "decision") {
       setStep("qualify");
@@ -289,45 +358,70 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     } else if (step === "confirm") {
       setStep("research");
       setIsLoading(true);
-      try {
-        const result = await executeResearch(editedQuery || suggestedQuery, researchDepth);
-        if (result.error) {
-          console.error("Research error:", result.error);
-          toast({
-            title: "Research error",
-            description: result.error,
-            variant: "destructive",
-          });
+      setResearchError(null);
+
+      const query = editedQuery || suggestedQuery;
+
+      // Use background job for deep research, direct call for quick
+      if (researchDepth === "deep" && user) {
+        // Create a background job
+        const job = await createJob({
+          query,
+          depth: researchDepth,
+          subject: qualification.companyName,
+          decisionType: selectedDecision || undefined,
+          audience: audience || undefined,
+        });
+
+        if (!job) {
           setStep("confirm");
-        } else {
-          const researchResults = {
-            summary: result.summary || "",
-            keyFindings: result.keyFindings || [],
-            citations: result.citations || [],
-            rawContent: result.rawContent || "",
-          };
-          setResults(researchResults);
-          setStep("results");
-          
-          if (user) {
-            try {
-              await supabase.from("research_history").insert({
-                user_id: user.id,
-                query: editedQuery || suggestedQuery,
-                subject: qualification.companyName,
-                decision_type: selectedDecision,
-                audience,
-                results: researchResults,
-              });
-            } catch (err) {
-              console.error("Failed to save research history:", err);
+          setIsLoading(false);
+        }
+        // Job is now processing in background, polling will update status
+      } else {
+        // Direct synchronous call for quick research or unauthenticated users
+        try {
+          const result = await executeResearch(query, researchDepth);
+          if (result.error) {
+            console.error("Research error:", result.error);
+            setResearchError(result.error);
+            toast({
+              title: "Research error",
+              description: result.error,
+              variant: "destructive",
+            });
+            setStep("confirm");
+          } else {
+            const researchResults = {
+              summary: result.summary || "",
+              keyFindings: result.keyFindings || [],
+              citations: result.citations || [],
+              rawContent: result.rawContent || "",
+            };
+            setResults(researchResults);
+            setStep("results");
+            
+            if (user) {
+              try {
+                await supabase.from("research_history").insert({
+                  user_id: user.id,
+                  query,
+                  subject: qualification.companyName,
+                  decision_type: selectedDecision,
+                  audience,
+                  results: researchResults,
+                });
+              } catch (err) {
+                console.error("Failed to save research history:", err);
+              }
             }
           }
+        } catch (err) {
+          console.error("Research error:", err);
+          setResearchError(err instanceof Error ? err.message : "Research failed");
+        } finally {
+          setIsLoading(false);
         }
-      } catch (err) {
-        console.error("Research error:", err);
-      } finally {
-        setIsLoading(false);
       }
     }
   };
@@ -338,6 +432,12 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     else if (step === "audience") setStep("focus");
     else if (step === "confirm") setStep("audience");
     else if (step === "results") setStep("confirm");
+    else if (step === "research") {
+      // Cancel any ongoing job polling
+      cancelPolling();
+      setIsLoading(false);
+      setStep("confirm");
+    }
   };
 
   const handleUseResearch = () => {
@@ -353,6 +453,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
   };
 
   const resetState = () => {
+    cancelPolling();
     setStep("decision");
     setSelectedDecision(null);
     setQualification(initialQualificationData);
@@ -362,6 +463,8 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     setResults(null);
     setVoiceTranscript("");
     setBrandFetched(false);
+    setResearchError(null);
+    setIsLoading(false);
   };
 
   const canProceed = () => {
@@ -528,7 +631,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                     )}
                     {brandFetched && !isFetchingBrand && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        <CheckCircle2 className="w-4 h-4 text-success" />
+                        <CheckCircle2 className="w-4 h-4 text-green-500" />
                       </div>
                     )}
                   </div>
@@ -787,6 +890,23 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                 />
               </div>
 
+              {/* Error display with retry */}
+              {researchError && (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 space-y-2">
+                  <p className="text-sm text-destructive font-medium">Research failed</p>
+                  <p className="text-xs text-destructive/80">{researchError}</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleRetry}
+                    className="mt-2"
+                  >
+                    <RefreshCw className="w-3 h-3 mr-1" />
+                    Try again
+                  </Button>
+                </div>
+              )}
+
               {/* Summary of inputs */}
               <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2 text-xs">
                 <div className="flex items-center gap-2">
@@ -835,8 +955,11 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                         : "border-border hover:border-primary/50"
                     )}
                   >
-                    <div className="font-medium text-sm">Quick scan</div>
-                    <div className="text-xs text-muted-foreground">~30 seconds</div>
+                    <div className="font-medium text-sm flex items-center gap-1">
+                      Quick scan
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-600">Fast</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">~15-30 seconds</div>
                   </button>
                   <button
                     onClick={() => setResearchDepth("deep")}
@@ -847,13 +970,15 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                         : "border-border hover:border-primary/50"
                     )}
                   >
-                    <div className="font-medium text-sm flex items-center gap-1">
-                      Deep dive
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">Recommended</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">~2-3 minutes</div>
+                    <div className="font-medium text-sm">Deep dive</div>
+                    <div className="text-xs text-muted-foreground">~1-2 minutes</div>
                   </button>
                 </div>
+                {researchDepth === "deep" && !user && (
+                  <p className="text-xs text-amber-600">
+                    Sign in to use deep research with background processing
+                  </p>
+                )}
               </div>
             </motion.div>
           )}
@@ -872,14 +997,44 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                 <div className="absolute inset-0 w-20 h-20 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                 <Search className="absolute inset-0 m-auto w-8 h-8 text-primary" />
               </div>
-              <div className="text-center">
-                <h3 className="text-lg font-semibold mb-2">Researching {qualification.companyName}...</h3>
+              <div className="text-center space-y-2">
+                <h3 className="text-lg font-semibold">Researching {qualification.companyName}...</h3>
+                
+                {/* Job status */}
+                {currentJob && (
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="w-4 h-4" />
+                    <span>{formattedElapsedTime}</span>
+                    <span className="text-primary capitalize">{currentJob.status}</span>
+                  </div>
+                )}
+                
                 <p className="text-sm text-muted-foreground max-w-[280px]">
                   {researchDepth === "deep" 
-                    ? "Conducting deep analysis. This may take a few minutes."
+                    ? "Deep analysis in progress. You can close this and we'll save your results."
                     : "Quick scan in progress..."}
                 </p>
+
+                {/* Mobile-friendly notice */}
+                {researchDepth === "deep" && (
+                  <div className="mt-4 p-3 rounded-lg bg-primary/5 border border-primary/20 text-xs text-center">
+                    <p className="text-primary font-medium">✨ Results are auto-saved</p>
+                    <p className="text-muted-foreground mt-1">
+                      You can close this sheet and come back later
+                    </p>
+                  </div>
+                )}
               </div>
+
+              {/* Cancel button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleBack}
+                className="text-muted-foreground"
+              >
+                Cancel
+              </Button>
             </motion.div>
           )}
 
@@ -893,22 +1048,35 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
               className="space-y-4"
             >
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-                  <Sparkles className="w-4 h-4 text-primary" />
+                <div className="p-2 rounded-lg bg-green-500/10">
+                  <CheckCircle2 className="w-5 h-5 text-green-500" />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold">Research Complete</h3>
-                  <p className="text-sm text-muted-foreground">{results.summary}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {results.citations.length} sources analyzed
+                  </p>
                 </div>
               </div>
 
+              {/* Summary */}
+              <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-primary mb-2">
+                  Executive Summary
+                </h4>
+                <p className="text-sm">{results.summary}</p>
+              </div>
+
+              {/* Key Findings */}
               {results.keyFindings.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Key Findings</h4>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Key Findings
+                  </h4>
                   <ul className="space-y-2">
-                    {results.keyFindings.slice(0, 5).map((finding, i) => (
-                      <li key={i} className="text-sm text-foreground/90 flex items-start gap-2 p-2 rounded-lg bg-muted/30">
-                        <ChevronRight className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                    {results.keyFindings.map((finding, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <ChevronRight className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                         <span>{finding}</span>
                       </li>
                     ))}
@@ -916,20 +1084,23 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                 </div>
               )}
 
+              {/* Sources */}
               {results.citations.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Sources ({results.citations.length})</h4>
-                  <div className="space-y-1 max-h-[100px] overflow-y-auto">
-                    {results.citations.slice(0, 6).map((citation, i) => (
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Sources ({results.citations.length})
+                  </h4>
+                  <div className="max-h-[120px] overflow-y-auto space-y-1">
+                    {results.citations.slice(0, 10).map((citation, i) => (
                       <a
                         key={i}
                         href={citation.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-xs text-primary hover:underline truncate"
+                        className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors p-1.5 rounded hover:bg-muted/50"
                       >
                         <ExternalLink className="w-3 h-3 shrink-0" />
-                        <span className="truncate">{citation.title}</span>
+                        <span className="truncate">{citation.title || citation.url}</span>
                       </a>
                     ))}
                   </div>
@@ -940,47 +1111,57 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
         </AnimatePresence>
         </div>
 
-        {/* Navigation Footer */}
-        <div className="flex-shrink-0 mt-4 pt-4 border-t border-border/50 flex gap-2" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
-          {step !== "decision" && step !== "research" && (
-            <Button variant="ghost" onClick={handleBack} disabled={isLoading}>
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Back
-            </Button>
-          )}
+        {/* Navigation */}
+        <div className="pt-4 border-t border-border/50 mt-auto shrink-0">
+          <div className="flex gap-2">
+            {step !== "decision" && step !== "research" && (
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                className="flex-1"
+                disabled={isLoading}
+              >
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                Back
+              </Button>
+            )}
+            
+            {step === "results" ? (
+              <Button
+                onClick={handleUseResearch}
+                className="flex-1 bg-primary hover:bg-primary/90"
+              >
+                Use This Research
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            ) : step !== "research" ? (
+              <Button
+                onClick={handleNext}
+                disabled={!canProceed() || isLoading}
+                className="flex-1 bg-primary hover:bg-primary/90"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    {step === "audience" ? "Preparing..." : "Loading..."}
+                  </>
+                ) : (
+                  <>
+                    {step === "confirm" ? "Start Research" : "Continue"}
+                    <ArrowRight className="w-4 h-4 ml-1" />
+                  </>
+                )}
+              </Button>
+            ) : null}
+          </div>
           
-          {step === "decision" && (
-            <Button variant="ghost" onClick={onClose} className="flex-1">
-              Cancel
-            </Button>
-          )}
-
-          {step === "results" ? (
-            <Button onClick={handleUseResearch} className="flex-1" variant="shimmer">
-              <Sparkles className="w-4 h-4 mr-2" />
-              Use This Research
-            </Button>
-          ) : step === "research" ? null : (
-            <Button 
-              onClick={handleNext} 
-              disabled={!canProceed() || isLoading}
-              className="flex-1"
-              variant={step === "confirm" ? "shimmer" : "default"}
+          {step !== "research" && step !== "results" && (
+            <button
+              onClick={() => { onClose(); resetState(); }}
+              className="w-full text-center text-xs text-muted-foreground hover:text-foreground mt-3 py-2"
             >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : step === "confirm" ? (
-                <>
-                  <Search className="w-4 h-4 mr-2" />
-                  Start Research
-                </>
-              ) : (
-                <>
-                  Continue
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </>
-              )}
-            </Button>
+              Cancel
+            </button>
           )}
         </div>
       </SheetContent>
