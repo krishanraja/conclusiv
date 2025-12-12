@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { motion } from "framer-motion";
 import { ArrowLeft, Play, BookOpen, Share2, Download, FileText, Presentation, Lock, Copy, Check, Sparkles, ExternalLink, Film, ChevronLeft, ChevronRight, BarChart3 } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
@@ -114,6 +115,7 @@ export const PreviewScreen = () => {
 
   const { requireFeature, UpgradePromptComponent, isPro, limits } = useFeatureGate();
   const celebration = useCelebration();
+  const isMobile = useIsMobile();
 
   const [error, setError] = useState<{ code: ErrorCode; message: string; retryable: boolean } | null>(null);
   const [hasBuilt, setHasBuilt] = useState(false);
@@ -422,7 +424,7 @@ export const PreviewScreen = () => {
         )}
       </AnimatePresence>
 
-      <div className="min-h-[calc(100vh-4rem)] flex flex-col">
+      <div className="min-h-[calc(100dvh-4rem)] flex flex-col pb-20 md:pb-0">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border/50">
           <button
@@ -602,7 +604,7 @@ export const PreviewScreen = () => {
             </div>
 
             {/* Preview Window - Logo rendered outside overflow-hidden to prevent clipping */}
-            <div className="flex-1 mx-4 mb-4 relative">
+            <div className="flex-1 mx-4 mb-4 relative min-h-[50vh] lg:min-h-0">
               {/* Brand Logo Overlay - positioned outside the clipped container */}
               <BrandLogoOverlay />
               
@@ -611,6 +613,18 @@ export const PreviewScreen = () => {
                 <NarrativePreview showLogo={false} />
               </div>
             </div>
+            
+            {/* Mobile Inline Score & Summary - only on mobile when narrative exists */}
+            {isMobile && narrative && (
+              <div className="mx-4 mb-4 p-4 rounded-xl bg-card/50 border border-border/50 space-y-4">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  Narrative Score
+                </div>
+                <NarrativeQualityScore />
+                <ExecutiveSummary />
+              </div>
+            )}
           </div>
 
           {/* Right Sidebar - Editing Features Only */}

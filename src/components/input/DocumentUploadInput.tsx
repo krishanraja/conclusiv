@@ -114,15 +114,36 @@ export const DocumentUploadInput = ({
     );
   }
 
-  // Loading state
+  // Loading state - much more visible
   if (isLoading) {
     return (
       <div className="w-full">
         {fileInput}
-        <div className="flex items-center gap-2 text-sm py-1">
-          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-          <span className="text-muted-foreground">Parsing document...</span>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="relative rounded-lg bg-shimmer-start/10 border border-shimmer-start/30 p-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Loader2 className="w-6 h-6 animate-spin text-shimmer-start" />
+              <div className="absolute inset-0 w-6 h-6 rounded-full bg-shimmer-start/20 animate-ping" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">Parsing document...</p>
+              <p className="text-xs text-muted-foreground">This may take a few seconds</p>
+            </div>
+          </div>
+          {/* Progress bar animation */}
+          <div className="mt-3 h-1.5 bg-muted rounded-full overflow-hidden">
+            <motion.div 
+              className="h-full bg-shimmer-start rounded-full"
+              initial={{ width: "0%" }}
+              animate={{ width: "100%" }}
+              transition={{ duration: 8, ease: "linear" }}
+            />
+          </div>
+        </motion.div>
       </div>
     );
   }

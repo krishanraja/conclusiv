@@ -166,7 +166,14 @@ serve(async (req) => {
         throw new Error('LOVABLE_API_KEY is not configured');
       }
 
-      const base64ForAPI = btoa(String.fromCharCode(...binaryData));
+      // Use chunked base64 conversion to avoid stack overflow on large files
+      let base64ForAPI = '';
+      const chunkSize = 32768;
+      for (let i = 0; i < binaryData.length; i += chunkSize) {
+        const chunk = binaryData.subarray(i, i + chunkSize);
+        base64ForAPI += String.fromCharCode.apply(null, Array.from(chunk));
+      }
+      base64ForAPI = btoa(base64ForAPI);
       const dataUri = `data:application/pdf;base64,${base64ForAPI}`;
 
       const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
