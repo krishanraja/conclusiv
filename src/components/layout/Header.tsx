@@ -36,6 +36,8 @@ export const Header = () => {
               src="/favicon.png"
               alt="conclusiv" 
               className="h-6 w-6 sm:hidden"
+              fetchPriority="high"
+              decoding="async"
             />
             {/* Desktop: Full wordmark */}
             <img 
@@ -43,6 +45,8 @@ export const Header = () => {
               alt="conclusiv" 
               className="hidden sm:block h-5 w-auto"
               style={{ aspectRatio: 'auto' }}
+              fetchPriority="high"
+              decoding="async"
             />
           </div>
 

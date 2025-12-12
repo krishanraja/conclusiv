@@ -380,6 +380,8 @@ export const InputScreen = () => {
             alt="conclusiv" 
             className="h-8 md:h-10 w-auto relative z-10"
             style={{ aspectRatio: 'auto' }}
+            fetchPriority="high"
+            decoding="async"
           />
         </motion.div>
 

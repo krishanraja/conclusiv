@@ -117,6 +117,8 @@ export const TitleSequence = ({
                       src={logoUrl} 
                       alt={companyName} 
                       className="w-24 h-24 mb-4 object-contain"
+                      fetchPriority="high"
+                      decoding="async"
                       onError={(e) => {
                         // Hide the image if it fails to load
                         (e.target as HTMLImageElement).style.display = 'none';

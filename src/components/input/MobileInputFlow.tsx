@@ -163,6 +163,8 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
+          fetchPriority="high"
+          decoding="async"
         />
         <h1 className="text-2xl font-bold text-foreground leading-tight">
           Turn your business case into a{" "}

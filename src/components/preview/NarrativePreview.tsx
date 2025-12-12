@@ -90,6 +90,8 @@ export const NarrativePreview = ({ showLogo: showLogoProp = false }: NarrativePr
               "w-auto object-contain",
               logoSizeClasses[logoSize]
             )}
+            fetchPriority="high"
+            decoding="async"
           />
         </div>
       )}
