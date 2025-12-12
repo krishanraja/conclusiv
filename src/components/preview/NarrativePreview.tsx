@@ -8,6 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { ImagePicker, ImagePickerTrigger } from "@/components/editor/ImagePicker";
 import { useBrandLogo } from "@/hooks/useBrandLogo";
+import { InlineTensionBadge } from "./TensionIndicator";
 
 interface NarrativePreviewProps {
   showLogo?: boolean;
@@ -20,6 +21,7 @@ export const NarrativePreview = ({ showLogo: showLogoProp = false }: NarrativePr
     setCurrentSectionIndex,
     updateSectionImage,
     presentationStyle,
+    tensions,
   } = useNarrativeStore();
   const isMobile = useIsMobile();
   const reducedMotion = useReducedMotion();
@@ -135,10 +137,13 @@ export const NarrativePreview = ({ showLogo: showLogoProp = false }: NarrativePr
               initial={{ opacity: 0, y: reducedMotion ? 0 : 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: shouldSimplifyAnimations ? 0.05 : 0.15, duration: shouldSimplifyAnimations ? 0.1 : 0.2 }}
-              className="text-2xl font-semibold mb-4"
+              className="text-2xl font-semibold mb-4 flex items-center justify-center gap-2 flex-wrap"
               style={presentationStyle?.primaryFont ? { fontFamily: presentationStyle.primaryFont } : undefined}
             >
-              {currentSection?.title}
+              <span>{currentSection?.title}</span>
+              {tensions.length > 0 && currentSection && (
+                <InlineTensionBadge tensions={tensions} sectionTitle={currentSection.title} />
+              )}
             </motion.h2>
             
             {currentSection?.content && (
