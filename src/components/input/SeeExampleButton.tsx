@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, X } from "lucide-react";
+import { Eye, EyeOff, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
@@ -55,13 +55,20 @@ interface SeeExampleButtonProps {
 export const SeeExampleButton = ({ className, variant = "outline" }: SeeExampleButtonProps) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const { setRawText, rawText } = useNarrativeStore();
+  
+  // Check if the current text matches the example
+  const isExampleLoaded = rawText.trim() === EXAMPLE_RESEARCH.trim();
+  const hasOtherContent = rawText.trim().length > 0 && !isExampleLoaded;
 
-  const hasContent = rawText.trim().length > 0;
-
-  const handleLoadExample = () => {
-    if (hasContent) {
+  const handleClick = () => {
+    if (isExampleLoaded) {
+      // Toggle off - clear the example
+      setRawText("");
+    } else if (hasOtherContent) {
+      // Has other content - show confirmation
       setShowConfirm(true);
     } else {
+      // Empty - load example directly
       loadExample();
     }
   };
@@ -74,12 +81,21 @@ export const SeeExampleButton = ({ className, variant = "outline" }: SeeExampleB
   return (
     <>
       <Button
-        variant={variant}
-        onClick={handleLoadExample}
+        variant={isExampleLoaded ? "secondary" : variant}
+        onClick={handleClick}
         className={cn("h-12", className)}
       >
-        <Eye className="w-4 h-4 mr-2" />
-        Example
+        {isExampleLoaded ? (
+          <>
+            <EyeOff className="w-4 h-4 mr-2" />
+            Clear
+          </>
+        ) : (
+          <>
+            <Eye className="w-4 h-4 mr-2" />
+            Example
+          </>
+        )}
       </Button>
 
       {/* Confirmation Dialog */}

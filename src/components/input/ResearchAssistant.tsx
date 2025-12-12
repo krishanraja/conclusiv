@@ -392,6 +392,9 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     return `${seconds}s`;
   };
 
+  // Show floating indicator during input steps
+  const showSpecificityIndicator = step === "qualify" || step === "focus";
+
   return (
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); resetState(); } }}>
       <SheetContent side="left" className="w-full sm:max-w-md h-[100dvh] flex flex-col overflow-hidden border-r border-primary/20">
@@ -417,6 +420,20 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
             ))}
           </div>
         </SheetHeader>
+
+        {/* Floating Query Specificity Indicator */}
+        <AnimatePresence>
+          {showSpecificityIndicator && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="absolute bottom-24 right-4 z-10"
+            >
+              <QuerySpecificityIndicator qualification={qualification} />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="flex-1 overflow-y-auto">
         <AnimatePresence mode="wait">
@@ -557,8 +574,6 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                   </div>
                 </div>
 
-                {/* Query Specificity Indicator */}
-                <QuerySpecificityIndicator qualification={qualification} className="pt-2" />
               </div>
             </motion.div>
           )}
@@ -700,8 +715,6 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                   />
                 </div>
 
-                {/* Query Specificity Indicator */}
-                <QuerySpecificityIndicator qualification={qualification} className="pt-2" />
               </div>
             </motion.div>
           )}
