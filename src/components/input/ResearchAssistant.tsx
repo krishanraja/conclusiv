@@ -1,16 +1,18 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Sparkles, ArrowRight, ArrowLeft, Loader2, ExternalLink, ChevronRight, Target, Globe, Swords, Lightbulb, Building2, TrendingUp, Mic, MicOff, Link2, HelpCircle, ShieldCheck, ShieldX, AlertTriangle } from "lucide-react";
+import { Search, Sparkles, ArrowRight, ArrowLeft, Loader2, ExternalLink, ChevronRight, Target, Globe, Swords, Lightbulb, Building2, TrendingUp, Mic, MicOff, Link2, HelpCircle, ShieldCheck, ShieldX, AlertTriangle, Globe2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { formulateResearchQuery, executeResearch, structureVoiceInput } from "@/lib/api";
+import { formulateResearchQuery, executeResearch, structureVoiceInput, fetchBrandData } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
+import { useWhisperRecorder } from "@/hooks/useWhisperRecorder";
 import { useToast } from "@/hooks/use-toast";
+import { QuerySpecificityIndicator } from "./QuerySpecificityIndicator";
+import { ResearchTemplateManager } from "./ResearchTemplateManager";
 
 interface ResearchAssistantProps {
   isOpen: boolean;
@@ -114,6 +116,8 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
   const [isEditingQuery, setIsEditingQuery] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isStructuring, setIsStructuring] = useState(false);
+  const [isFetchingBrand, setIsFetchingBrand] = useState(false);
+  const [brandFetched, setBrandFetched] = useState(false);
   const [researchDepth, setResearchDepth] = useState<"quick" | "deep">("deep");
   const [voiceTranscript, setVoiceTranscript] = useState("");
   
@@ -125,10 +129,14 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     rawContent: string;
   } | null>(null);
 
-  // Voice recorder
+  // Whisper voice recorder
   const handleTranscript = useCallback((transcript: string) => {
-    setVoiceTranscript(prev => prev + " " + transcript);
-  }, []);
+    setVoiceTranscript(prev => prev ? prev + " " + transcript : transcript);
+    toast({
+      title: "Voice captured",
+      description: "Click 'Structure my thoughts' to organize your input.",
+    });
+  }, [toast]);
 
   const handleVoiceError = useCallback((error: string) => {
     toast({
@@ -138,19 +146,72 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     });
   }, [toast]);
 
-  const { isRecording, isSupported, toggleRecording } = useVoiceRecorder({
+  const { isRecording, isTranscribing, isSupported, toggleRecording, recordingDuration } = useWhisperRecorder({
     onTranscript: handleTranscript,
     onError: handleVoiceError,
-    silenceTimeout: 3000,
+    maxDuration: 60000,
   });
+
+  // URL auto-fetch effect
+  useEffect(() => {
+    const url = qualification.websiteUrl.trim();
+    if (!url || !isValidUrl(url) || brandFetched) return;
+    
+    // Don't fetch if we already have company name from the same URL
+    const cleanUrl = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    if (cleanUrl.length < 4) return;
+
+    const timeoutId = setTimeout(async () => {
+      setIsFetchingBrand(true);
+      try {
+        const result = await fetchBrandData(cleanUrl);
+        if (result.data) {
+          const { companyName, firmographics } = result.data;
+          
+          // Auto-fill company name if empty
+          if (!qualification.companyName && companyName) {
+            setQualification(prev => ({ ...prev, companyName }));
+          }
+          
+          // Auto-select industry if we found a match
+          if (!qualification.industry && firmographics?.industries?.[0]) {
+            const fetchedIndustry = firmographics.industries[0];
+            const matchedIndustry = industryOptions.find(
+              ind => fetchedIndustry.toLowerCase().includes(ind.toLowerCase()) ||
+                     ind.toLowerCase().includes(fetchedIndustry.toLowerCase())
+            );
+            if (matchedIndustry) {
+              setQualification(prev => ({ ...prev, industry: matchedIndustry }));
+            }
+          }
+          
+          setBrandFetched(true);
+          toast({
+            title: "Company info found",
+            description: `Identified: ${companyName || cleanUrl}`,
+          });
+        }
+      } catch (err) {
+        console.error("Brand fetch error:", err);
+      } finally {
+        setIsFetchingBrand(false);
+      }
+    }, 800);
+
+    return () => clearTimeout(timeoutId);
+  }, [qualification.websiteUrl, qualification.companyName, qualification.industry, brandFetched, toast]);
+
+  // Reset brand fetched flag when URL changes significantly
+  useEffect(() => {
+    setBrandFetched(false);
+  }, [qualification.websiteUrl]);
 
   const getDecisionType = () => decisionTypes.find(d => d.id === selectedDecision);
 
   // Validate URL format
   const isValidUrl = (url: string): boolean => {
-    if (!url) return true; // Empty is okay (optional but encouraged)
-    // Accept domain.com format or full URL
-    const domainPattern = /^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]\.[a-zA-Z]{2,}$/;
+    if (!url) return true;
+    const domainPattern = /^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]\.[a-zA-Z]{2,}/;
     const urlPattern = /^https?:\/\/.+/;
     return domainPattern.test(url) || urlPattern.test(url);
   };
@@ -186,6 +247,21 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     }
   };
 
+  // Handle loading template
+  const handleLoadTemplate = (template: Partial<QualificationData> & { audience?: string }) => {
+    setQualification(prev => ({
+      ...prev,
+      industry: template.industry || prev.industry,
+      primaryQuestion: template.primaryQuestion || prev.primaryQuestion,
+      knownConcerns: template.knownConcerns || prev.knownConcerns,
+      successCriteria: template.successCriteria || prev.successCriteria,
+      redFlags: template.redFlags || prev.redFlags,
+    }));
+    if (template.audience) {
+      setAudience(template.audience);
+    }
+  };
+
   const handleNext = async () => {
     if (step === "decision") {
       setStep("qualify");
@@ -194,7 +270,6 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     } else if (step === "focus") {
       setStep("audience");
     } else if (step === "audience") {
-      // Formulate the query with structured data
       setIsLoading(true);
       try {
         const decisionType = getDecisionType();
@@ -225,7 +300,6 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
         setIsLoading(false);
       }
     } else if (step === "confirm") {
-      // Execute research
       setStep("research");
       setIsLoading(true);
       try {
@@ -248,7 +322,6 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
           setResults(researchResults);
           setStep("results");
           
-          // Save to research history
           if (user) {
             try {
               await supabase.from("research_history").insert({
@@ -301,13 +374,14 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     setEditedQuery("");
     setResults(null);
     setVoiceTranscript("");
+    setBrandFetched(false);
   };
 
   const canProceed = () => {
     if (step === "decision") return selectedDecision !== null;
     if (step === "qualify") return qualification.companyName.trim().length >= 2;
     if (step === "focus") return qualification.primaryQuestion.trim().length >= 5;
-    if (step === "audience") return true; // Optional
+    if (step === "audience") return true;
     if (step === "confirm") return (editedQuery || suggestedQuery).trim().length > 0;
     return false;
   };
@@ -324,6 +398,11 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
 
   const updateField = (field: keyof QualificationData, value: string) => {
     setQualification(prev => ({ ...prev, [field]: value }));
+  };
+
+  const formatDuration = (ms: number) => {
+    const seconds = Math.floor(ms / 1000);
+    return `${seconds}s`;
   };
 
   return (
@@ -420,6 +499,40 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
               </div>
               
               <div className="space-y-3">
+                {/* Website URL - First for auto-fetch */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <Link2 className="w-3 h-3" />
+                    Website URL
+                    <span className="text-primary/70">(auto-fills company info)</span>
+                  </label>
+                  <div className="relative">
+                    <Input
+                      value={qualification.websiteUrl}
+                      onChange={(e) => updateField("websiteUrl", e.target.value)}
+                      placeholder="e.g., lionair.com or https://example.com"
+                      className={cn(
+                        "h-11 pr-10",
+                        qualification.websiteUrl && !isValidUrl(qualification.websiteUrl) && "border-destructive"
+                      )}
+                      autoFocus
+                    />
+                    {isFetchingBrand && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      </div>
+                    )}
+                    {brandFetched && !isFetchingBrand && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <CheckCircle2 className="w-4 h-4 text-success" />
+                      </div>
+                    )}
+                  </div>
+                  {qualification.websiteUrl && !isValidUrl(qualification.websiteUrl) && (
+                    <p className="text-xs text-destructive">Please enter a valid URL or domain</p>
+                  )}
+                </div>
+
                 {/* Company Name */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
@@ -431,35 +544,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                     onChange={(e) => updateField("companyName", e.target.value)}
                     placeholder="e.g., Lion Air, Acme Corp, Tesla"
                     className="h-11"
-                    autoFocus
                   />
-                </div>
-
-                {/* Website URL */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    <Link2 className="w-3 h-3" />
-                    Website URL
-                    <span className="text-primary/70">(strongly recommended)</span>
-                  </label>
-                  <Input
-                    value={qualification.websiteUrl}
-                    onChange={(e) => updateField("websiteUrl", e.target.value)}
-                    placeholder="e.g., lionair.com or https://example.com"
-                    className={cn(
-                      "h-11",
-                      qualification.websiteUrl && !isValidUrl(qualification.websiteUrl) && "border-destructive"
-                    )}
-                  />
-                  {qualification.websiteUrl && !isValidUrl(qualification.websiteUrl) && (
-                    <p className="text-xs text-destructive">Please enter a valid URL or domain</p>
-                  )}
-                  {!qualification.websiteUrl && qualification.companyName && (
-                    <p className="text-xs text-amber-500/80 flex items-center gap-1">
-                      <AlertTriangle className="w-3 h-3" />
-                      Adding a URL helps us research the right company
-                    </p>
-                  )}
                 </div>
 
                 {/* Industry */}
@@ -484,6 +569,9 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                     ))}
                   </div>
                 </div>
+
+                {/* Query Specificity Indicator */}
+                <QuerySpecificityIndicator qualification={qualification} className="pt-2" />
               </div>
             </motion.div>
           )}
@@ -504,28 +592,46 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                 </p>
               </div>
 
-              {/* Voice Input Section */}
+              {/* Voice Input Section - OpenAI Whisper */}
               {isSupported && (
                 <div className="p-3 rounded-lg border border-dashed border-primary/30 bg-primary/5 space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-primary">
-                      {isRecording ? "Listening... speak freely" : "Or speak your thoughts"}
-                    </p>
+                    <div>
+                      <p className="text-xs font-medium text-primary">
+                        {isRecording ? `Recording... ${formatDuration(recordingDuration)}` : 
+                         isTranscribing ? "Transcribing with Whisper..." : "Speak your thoughts"}
+                      </p>
+                      {!isRecording && !isTranscribing && (
+                        <p className="text-[10px] text-muted-foreground">
+                          Up to 60 seconds of free-form input
+                        </p>
+                      )}
+                    </div>
                     <button
                       onClick={toggleRecording}
+                      disabled={isTranscribing}
                       className={cn(
-                        "p-2 rounded-full transition-all",
+                        "p-2.5 rounded-full transition-all",
+                        isTranscribing ? "bg-muted text-muted-foreground" :
                         isRecording 
                           ? "bg-red-500/20 text-red-400 animate-pulse" 
                           : "bg-primary/10 text-primary hover:bg-primary/20"
                       )}
                     >
-                      {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                      {isTranscribing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : isRecording ? (
+                        <MicOff className="w-4 h-4" />
+                      ) : (
+                        <Mic className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                   {voiceTranscript && (
                     <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground italic">"{voiceTranscript.trim()}"</p>
+                      <p className="text-xs text-muted-foreground italic bg-background/50 p-2 rounded">
+                        "{voiceTranscript.trim()}"
+                      </p>
                       <Button
                         size="sm"
                         variant="outline"
@@ -606,6 +712,9 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                     className="min-h-[50px] resize-none text-sm"
                   />
                 </div>
+
+                {/* Query Specificity Indicator */}
+                <QuerySpecificityIndicator qualification={qualification} className="pt-2" />
               </div>
             </motion.div>
           )}
@@ -661,11 +770,21 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
               exit={{ opacity: 0, x: 20 }}
               className="space-y-4"
             >
-              <div>
-                <h3 className="text-lg font-semibold mb-1">Ready to research</h3>
-                <p className="text-sm text-muted-foreground">
-                  Here's what we'll investigate
-                </p>
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">Ready to research</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Here's what we'll investigate
+                  </p>
+                </div>
+                {/* Template Manager */}
+                <ResearchTemplateManager
+                  userId={user?.id || null}
+                  decisionType={selectedDecision || ""}
+                  audience={audience || ""}
+                  qualification={qualification}
+                  onLoadTemplate={handleLoadTemplate}
+                />
               </div>
 
               {/* Summary of inputs */}

@@ -438,6 +438,51 @@ export type Database = {
         }
         Relationships: []
       }
+      research_templates: {
+        Row: {
+          audience: string | null
+          created_at: string | null
+          decision_type: string
+          id: string
+          industry: string | null
+          known_concerns_template: string | null
+          name: string
+          primary_question_template: string | null
+          red_flags_template: string | null
+          success_criteria_template: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          audience?: string | null
+          created_at?: string | null
+          decision_type: string
+          id?: string
+          industry?: string | null
+          known_concerns_template?: string | null
+          name: string
+          primary_question_template?: string | null
+          red_flags_template?: string | null
+          success_criteria_template?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          audience?: string | null
+          created_at?: string | null
+          decision_type?: string
+          id?: string
+          industry?: string | null
+          known_concerns_template?: string | null
+          name?: string
+          primary_question_template?: string | null
+          red_flags_template?: string | null
+          success_criteria_template?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           created_at: string | null
