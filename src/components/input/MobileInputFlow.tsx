@@ -197,8 +197,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
           {" "}in 2 minutes
         </h1>
         <p className="text-sm text-muted-foreground mt-4 leading-relaxed">
-          Upload, generate or paste your business plan.{" "}
-          <span className="text-primary/80">Use the settings below to personalize your demo.</span>
+          Upload, generate or paste your business plan.
         </p>
       </div>
 
@@ -304,6 +303,11 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
             )}
           </div>
         </div>
+        
+        {/* Settings hint */}
+        <p className="text-xs text-primary/70 text-center mt-2">
+          Use the settings button to personalize your demo before continuing.
+        </p>
       </div>
 
       {/* Bottom Bar - Simplified */}
