@@ -181,11 +181,11 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
       />
 
       {/* Hero Section with Logo */}
-      <div className="flex-shrink-0 px-6 pt-6 pb-4 text-center">
+      <div className="flex-shrink-0 px-6 pt-8 pb-6 text-center">
         <motion.img 
           src={conclusivLogo} 
           alt="conclusiv" 
-          className="h-10 w-auto mx-auto mb-4"
+          className="h-14 w-auto mx-auto mb-6"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
@@ -194,13 +194,13 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
           Turn research into{" "}
           <span className="gradient-text">stories</span>
         </h1>
-        <p className="text-sm text-muted-foreground mt-2">
+        <p className="text-sm text-muted-foreground mt-3">
           Paste content or use our tools below
         </p>
       </div>
 
       {/* Action Buttons - THE HERO */}
-      <div className="flex-shrink-0 flex items-center justify-center gap-3 px-4 pb-4">
+      <div className="flex-shrink-0 flex items-center justify-center gap-3 px-4 pb-6">
         <Button
           variant="outline"
           onClick={() => fileInputRef.current?.click()}
@@ -268,8 +268,8 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         )}
       </AnimatePresence>
 
-      {/* Main Textarea with Shimmer Border */}
-      <div className="flex-1 px-4 pb-3 min-h-0">
+      {/* Main Textarea with Shimmer Border - Constrained Height */}
+      <div className="flex-[0.6] px-4 pb-3 min-h-0 max-h-[35vh]">
         <div className={cn(
           "h-full relative rounded-xl transition-all duration-300",
           !hasContent && "shimmer-border"
