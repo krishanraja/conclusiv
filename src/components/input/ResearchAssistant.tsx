@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Sparkles, ArrowRight, Loader2, ExternalLink, Mic, MicOff, Link2, HelpCircle, CheckCircle2, Clock, RefreshCw, ChevronDown, ChevronUp, Edit3, Building2, Target, Users } from "lucide-react";
+import { Search, Sparkles, ArrowRight, Loader2, ExternalLink, Mic, MicOff, CheckCircle2, Clock, RefreshCw, ChevronDown, ChevronUp, Edit3, Building2, Target, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -80,7 +80,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     if (selectedArchetype && archetypeToDecisionType[selectedArchetype]) {
       return archetypeToDecisionType[selectedArchetype].id;
     }
-    return "partner"; // Default to due diligence
+    return "partner";
   }, [selectedArchetype]);
 
   const initialAudience = useMemo(() => {
@@ -95,7 +95,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
   const [isLoading, setIsLoading] = useState(false);
   const [researchDepth, setResearchDepth] = useState<"quick" | "deep">("quick");
   const [researchError, setResearchError] = useState<string | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showContextEditor, setShowContextEditor] = useState(false);
 
   // Context fields - auto-populated from store
   const [companyName, setCompanyName] = useState("");
@@ -107,18 +107,19 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
   // The main input field
   const [primaryQuestion, setPrimaryQuestion] = useState("");
   
-  // Advanced optional fields
-  const [knownConcerns, setKnownConcerns] = useState("");
-  const [successCriteria, setSuccessCriteria] = useState("");
-  const [redFlags, setRedFlags] = useState("");
+  // AI-extracted fields (from voice input)
+  const [aiExtractedContext, setAiExtractedContext] = useState<{
+    concerns?: string;
+    successCriteria?: string;
+    redFlags?: string;
+  } | null>(null);
 
   // Brand fetching
   const [isFetchingBrand, setIsFetchingBrand] = useState(false);
   const [brandFetched, setBrandFetched] = useState(false);
 
   // Voice input
-  const [voiceTranscript, setVoiceTranscript] = useState("");
-  const [isStructuring, setIsStructuring] = useState(false);
+  const [isStructuringVoice, setIsStructuringVoice] = useState(false);
 
   // Results
   const [results, setResults] = useState<{
@@ -131,7 +132,6 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
   // Auto-populate from store when opening
   useEffect(() => {
     if (isOpen) {
-      // Populate from businessContext
       if (businessContext) {
         if (businessContext.companyName && !companyName) {
           setCompanyName(businessContext.companyName);
@@ -140,14 +140,11 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
           setIndustry(businessContext.industry);
         }
       }
-      // Populate website
       if (businessWebsite && !websiteUrl) {
         setWebsiteUrl(businessWebsite);
-        setBrandFetched(true); // Assume already fetched if in store
+        setBrandFetched(true);
       }
-      // Set decision type from archetype
       setDecisionType(initialDecision);
-      // Set audience from store
       setAudience(initialAudience);
     }
   }, [isOpen, businessContext, businessWebsite, initialDecision, initialAudience]);
@@ -212,14 +209,43 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     }
   }, [isOpen, user, checkExistingJobs, toast]);
 
-  // Voice recorder
-  const handleTranscript = useCallback((transcript: string) => {
-    setVoiceTranscript(prev => prev ? prev + " " + transcript : transcript);
-    toast({
-      title: "Voice captured",
-      description: "We'll add this to your research question.",
-    });
-  }, [toast]);
+  // Voice recorder with AI structuring
+  const handleTranscript = useCallback(async (transcript: string) => {
+    setPrimaryQuestion(prev => prev ? prev + " " + transcript : transcript);
+    
+    // Structure the voice input with AI
+    if (transcript.length > 20) {
+      setIsStructuringVoice(true);
+      try {
+        const result = await structureVoiceInput(transcript, decisionLabels[decisionType] || "analysis");
+        if (result.structured) {
+          // Auto-fill company if extracted and we don't have one
+          if (result.structured.companyName && !companyName) {
+            setCompanyName(result.structured.companyName);
+          }
+          if (result.structured.industry && !industry) {
+            setIndustry(result.structured.industry);
+          }
+          // Store AI-extracted context
+          if (result.structured.knownConcerns || result.structured.successCriteria || result.structured.redFlags) {
+            setAiExtractedContext({
+              concerns: result.structured.knownConcerns,
+              successCriteria: result.structured.successCriteria,
+              redFlags: result.structured.redFlags,
+            });
+          }
+          toast({
+            title: "Voice understood",
+            description: "AI extracted key details from your input.",
+          });
+        }
+      } catch (err) {
+        console.error("Voice structuring error:", err);
+      } finally {
+        setIsStructuringVoice(false);
+      }
+    }
+  }, [companyName, industry, decisionType, toast]);
 
   const handleVoiceError = useCallback((error: string) => {
     toast({
@@ -234,14 +260,6 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     onError: handleVoiceError,
     maxDuration: 60000,
   });
-
-  // Apply voice transcript to question
-  useEffect(() => {
-    if (voiceTranscript && !isRecording && !isTranscribing) {
-      setPrimaryQuestion(prev => prev ? prev + " " + voiceTranscript : voiceTranscript);
-      setVoiceTranscript("");
-    }
-  }, [voiceTranscript, isRecording, isTranscribing]);
 
   // URL auto-fetch
   useEffect(() => {
@@ -276,7 +294,6 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     return () => clearTimeout(timeoutId);
   }, [websiteUrl, brandFetched, companyName]);
 
-  // Reset brand fetched when URL changes
   useEffect(() => {
     setBrandFetched(false);
   }, [websiteUrl]);
@@ -292,7 +309,6 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     setIsLoading(true);
     setResearchError(null);
 
-    // Formulate query
     try {
       const formResult = await formulateResearchQuery({
         decisionType: decisionLabels[decisionType] || "analysis",
@@ -300,9 +316,9 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
         websiteUrl,
         industry,
         primaryQuestion,
-        knownConcerns,
-        successCriteria,
-        redFlags,
+        knownConcerns: aiExtractedContext?.concerns || "",
+        successCriteria: aiExtractedContext?.successCriteria || "",
+        redFlags: aiExtractedContext?.redFlags || "",
         audience: audience || undefined,
       });
 
@@ -322,7 +338,6 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
           setIsLoading(false);
         }
       } else {
-        // Direct call for quick research
         const result = await executeResearch(query, researchDepth);
         if (result.error) {
           setResearchError(result.error);
@@ -383,23 +398,20 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     cancelPolling();
     setStep("input");
     setPrimaryQuestion("");
-    setKnownConcerns("");
-    setSuccessCriteria("");
-    setRedFlags("");
     setResults(null);
-    setVoiceTranscript("");
     setResearchError(null);
     setIsLoading(false);
-    setShowAdvanced(false);
+    setShowContextEditor(false);
+    setAiExtractedContext(null);
   };
 
   // Check if we have pre-populated context
-  const hasContext = companyName || websiteUrl || industry;
+  const hasContext = companyName || industry || websiteUrl;
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); resetState(); } }}>
       <SheetContent side="left" className="w-full sm:max-w-md h-[100dvh] flex flex-col overflow-hidden border-r border-primary/20">
-        <SheetHeader className="mb-4">
+        <SheetHeader className="mb-2">
           <SheetTitle className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-primary/10">
               <Sparkles className="w-4 h-4 text-primary" />
@@ -413,7 +425,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
 
         <div className="flex-1 overflow-y-auto">
           <AnimatePresence mode="wait">
-            {/* Input Step - Single Screen */}
+            {/* Input Step - Voice-First Design */}
             {step === "input" && (
               <motion.div
                 key="input"
@@ -422,20 +434,21 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                 exit={{ opacity: 0, y: -10 }}
                 className="space-y-4"
               >
-                {/* Context Summary Card - Shows pre-populated data */}
-                {hasContext && (
-                  <div className="p-3 rounded-lg border border-border/50 bg-muted/30 space-y-2">
-                    <div className="flex items-center justify-between">
+                {/* Compact Context Card - Read-Only by Default */}
+                {hasContext && !showContextEditor && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-3 rounded-lg border border-border/50 bg-muted/30"
+                  >
+                    <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-medium text-muted-foreground">Research Context</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 text-xs px-2"
-                        onClick={() => setShowAdvanced(true)}
+                      <button
+                        onClick={() => setShowContextEditor(true)}
+                        className="p-1 rounded hover:bg-muted transition-colors"
                       >
-                        <Edit3 className="w-3 h-3 mr-1" />
-                        Edit
-                      </Button>
+                        <Edit3 className="w-3.5 h-3.5 text-muted-foreground" />
+                      </button>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {companyName && (
@@ -462,62 +475,20 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                         </Badge>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 )}
 
-                {/* Main Question Input */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-1.5">
-                    <HelpCircle className="w-4 h-4 text-primary" />
-                    What do you want to find out?
-                  </label>
-                  <div className="relative">
-                    <Textarea
-                      value={primaryQuestion}
-                      onChange={(e) => setPrimaryQuestion(e.target.value)}
-                      placeholder="e.g., Is this company financially stable? What are their growth prospects? Are there any regulatory risks?"
-                      className="min-h-[100px] resize-none text-sm pr-12"
-                      autoFocus
-                    />
-                    {isSupported && (
-                      <button
-                        onClick={toggleRecording}
-                        disabled={isTranscribing}
-                        className={cn(
-                          "absolute right-2 bottom-2 p-2 rounded-full transition-all",
-                          isTranscribing ? "bg-muted text-muted-foreground" :
-                          isRecording 
-                            ? "bg-red-500/20 text-red-400 animate-pulse" 
-                            : "bg-primary/10 text-primary hover:bg-primary/20"
-                        )}
-                      >
-                        {isTranscribing ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : isRecording ? (
-                          <MicOff className="w-4 h-4" />
-                        ) : (
-                          <Mic className="w-4 h-4" />
-                        )}
-                      </button>
-                    )}
-                  </div>
-                  {isRecording && (
-                    <p className="text-xs text-primary animate-pulse">
-                      Recording... {formatDuration(recordingDuration)}
-                    </p>
+                {/* Context Editor (Collapsible) */}
+                <Collapsible open={showContextEditor || !hasContext} onOpenChange={setShowContextEditor}>
+                  {hasContext && (
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="w-full justify-between text-xs text-muted-foreground h-8">
+                        {showContextEditor ? "Hide context editor" : "Edit research context"}
+                        {showContextEditor ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </Button>
+                    </CollapsibleTrigger>
                   )}
-                </div>
-
-                {/* Collapsible Context Editor */}
-                <Collapsible open={showAdvanced || !hasContext} onOpenChange={setShowAdvanced}>
-                  <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="w-full justify-between text-xs text-muted-foreground">
-                      {hasContext ? "Edit research context" : "Add research context"}
-                      {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-3 pt-3">
-                    {/* Company/Website */}
+                  <CollapsibleContent className="space-y-3 pt-2">
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">Company</label>
@@ -547,18 +518,16 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                       </div>
                     </div>
 
-                    {/* Industry */}
                     <div className="space-y-1">
                       <label className="text-xs text-muted-foreground">Industry</label>
                       <Input
                         value={industry}
                         onChange={(e) => setIndustry(e.target.value)}
-                        placeholder="e.g., Technology, Healthcare, Finance"
+                        placeholder="e.g., Technology, Healthcare"
                         className="h-9 text-sm"
                       />
                     </div>
 
-                    {/* Decision Type & Audience Row */}
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">Research Type</label>
@@ -590,30 +559,102 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                       </div>
                     </div>
 
-                    {/* Optional Advanced Fields */}
-                    <div className="space-y-2 pt-2 border-t border-border/50">
-                      <p className="text-xs text-muted-foreground">Optional: Guide the research</p>
-                      <Textarea
-                        value={knownConcerns}
-                        onChange={(e) => setKnownConcerns(e.target.value)}
-                        placeholder="Known concerns or things to investigate..."
-                        className="min-h-[50px] resize-none text-sm"
-                      />
-                      <Textarea
-                        value={successCriteria}
-                        onChange={(e) => setSuccessCriteria(e.target.value)}
-                        placeholder="What would make you say YES?"
-                        className="min-h-[50px] resize-none text-sm"
-                      />
-                      <Textarea
-                        value={redFlags}
-                        onChange={(e) => setRedFlags(e.target.value)}
-                        placeholder="Red flags to watch for..."
-                        className="min-h-[50px] resize-none text-sm"
-                      />
-                    </div>
+                    {hasContext && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full mt-2"
+                        onClick={() => setShowContextEditor(false)}
+                      >
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Done
+                      </Button>
+                    )}
                   </CollapsibleContent>
                 </Collapsible>
+
+                {/* VOICE-FIRST: Big Voice Button */}
+                <div className="flex flex-col items-center py-6">
+                  <motion.button
+                    onClick={toggleRecording}
+                    disabled={isTranscribing || isStructuringVoice || !isSupported}
+                    className={cn(
+                      "w-24 h-24 rounded-full flex items-center justify-center transition-all relative",
+                      !isSupported && "opacity-50 cursor-not-allowed",
+                      isTranscribing || isStructuringVoice 
+                        ? "bg-muted" 
+                        : isRecording 
+                          ? "bg-red-500/20 shadow-lg shadow-red-500/20" 
+                          : "bg-primary/10 hover:bg-primary/20 hover:shadow-lg hover:shadow-primary/10"
+                    )}
+                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.02 }}
+                  >
+                    {isTranscribing || isStructuringVoice ? (
+                      <Loader2 className="w-10 h-10 text-muted-foreground animate-spin" />
+                    ) : isRecording ? (
+                      <>
+                        <MicOff className="w-10 h-10 text-red-400" />
+                        <motion.div
+                          className="absolute inset-0 rounded-full border-2 border-red-400/50"
+                          animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0, 0.5] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                        />
+                      </>
+                    ) : (
+                      <Mic className="w-10 h-10 text-primary" />
+                    )}
+                  </motion.button>
+                  
+                  <p className="mt-3 text-sm text-muted-foreground text-center">
+                    {!isSupported 
+                      ? "Voice not supported in this browser"
+                      : isTranscribing 
+                        ? "Transcribing..."
+                        : isStructuringVoice
+                          ? "Understanding your request..."
+                          : isRecording 
+                            ? `Recording ${formatDuration(recordingDuration)}...`
+                            : "Tap to speak your research question"
+                    }
+                  </p>
+                </div>
+
+                {/* AI Extracted Context Preview */}
+                {aiExtractedContext && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-3 rounded-lg bg-primary/5 border border-primary/20"
+                  >
+                    <p className="text-xs font-medium text-primary mb-2 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      AI understood from your input:
+                    </p>
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      {aiExtractedContext.concerns && (
+                        <p>• <span className="text-foreground">Looking for:</span> {aiExtractedContext.concerns}</p>
+                      )}
+                      {aiExtractedContext.successCriteria && (
+                        <p>• <span className="text-foreground">Success:</span> {aiExtractedContext.successCriteria}</p>
+                      )}
+                      {aiExtractedContext.redFlags && (
+                        <p>• <span className="text-foreground">Red flags:</span> {aiExtractedContext.redFlags}</p>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Text Input (Secondary) */}
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Or type your question</label>
+                  <Textarea
+                    value={primaryQuestion}
+                    onChange={(e) => setPrimaryQuestion(e.target.value)}
+                    placeholder="What do you want to find out about this company?"
+                    className="min-h-[80px] resize-none text-sm"
+                  />
+                </div>
 
                 {/* Error display */}
                 {researchError && (
@@ -622,8 +663,8 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                   </div>
                 )}
 
-                {/* Research Buttons */}
-                <div className="flex gap-2">
+                {/* Research Buttons - Always Visible */}
+                <div className="flex gap-2 pt-2">
                   <Button
                     onClick={() => { setResearchDepth("quick"); handleStartResearch(); }}
                     disabled={!canStartResearch || isLoading}
@@ -644,9 +685,10 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                     title={!user ? "Sign in for deep research" : ""}
                   >
                     <Sparkles className="w-4 h-4 mr-2" />
-                    Deep Analysis
+                    Deep
                   </Button>
                 </div>
+                
                 {!user && (
                   <p className="text-xs text-muted-foreground text-center">
                     Sign in for deep analysis with auto-save
@@ -677,11 +719,11 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
 
                 <div className="text-center space-y-2">
                   <h3 className="font-semibold">
-                    {researchDepth === "deep" ? "Deep Analysis in Progress" : "Researching..."}
+                    {researchDepth === "deep" ? "Deep Analysis" : "Researching..."}
                   </h3>
                   <p className="text-sm text-muted-foreground max-w-[280px]">
                     {researchDepth === "deep" 
-                      ? "Analyzing multiple sources with deep reasoning. This may take a few minutes."
+                      ? "Analyzing multiple sources. This may take a few minutes."
                       : "Scanning sources for relevant information..."}
                   </p>
                 </div>
