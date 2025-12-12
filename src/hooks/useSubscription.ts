@@ -50,12 +50,27 @@ export const FEATURE_LIMITS = {
 export const useSubscription = () => {
   const { user, isLoading: authLoading } = useAuth();
   
-  const [subscription, setSubscription] = useState<SubscriptionState>({
-    plan: 'free',
-    status: 'free',
-    subscriptionEnd: null,
-    trialEnd: null,
-    isLoading: true,
+  // Load cached subscription state first for instant UI
+  const [subscription, setSubscription] = useState<SubscriptionState>(() => {
+    const cached = localStorage.getItem('conclusiv_subscription');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        // Cache valid for 5 minutes
+        if (parsed.cachedAt && Date.now() - parsed.cachedAt < 5 * 60 * 1000) {
+          return { ...parsed, isLoading: false };
+        }
+      } catch {
+        localStorage.removeItem('conclusiv_subscription');
+      }
+    }
+    return {
+      plan: 'free',
+      status: 'free',
+      subscriptionEnd: null,
+      trialEnd: null,
+      isLoading: true,
+    };
   });
   
   const [usage, setUsage] = useState<UsageState>({
@@ -100,13 +115,19 @@ export const useSubscription = () => {
         return;
       }
 
-      setSubscription({
+      const newState = {
         plan: data.plan || 'free',
         status: data.status || 'free',
         subscriptionEnd: data.subscription_end,
         trialEnd: data.trial_end,
         isLoading: false,
-      });
+      };
+      setSubscription(newState);
+      // Cache subscription for instant load on next visit
+      localStorage.setItem('conclusiv_subscription', JSON.stringify({
+        ...newState,
+        cachedAt: Date.now(),
+      }));
     } catch (err) {
       console.error('Failed to check subscription:', err);
       setSubscription(prev => ({ ...prev, isLoading: false }));
@@ -227,8 +248,9 @@ export const useSubscription = () => {
   const isTrial = subscription.status === 'trialing';
   const limits = isPro ? FEATURE_LIMITS.pro : FEATURE_LIMITS.free;
   
-  // First build is always free, then check weekly limits
-  const canBuild = isPro || !hasEverBuilt || usage.buildsThisWeek < limits.buildsPerWeek;
+  // First build is always free, trial users can build, then check weekly limits
+  // Also allow builds while subscription is loading to prevent false blocks
+  const canBuild = subscription.isLoading || isPro || isTrial || !hasEverBuilt || usage.buildsThisWeek < limits.buildsPerWeek;
   const isFirstBuild = !hasEverBuilt;
 
   const trialDaysRemaining = subscription.trialEnd 
