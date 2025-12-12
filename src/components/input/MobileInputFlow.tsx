@@ -159,7 +159,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
   };
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-4rem)] overflow-hidden">
+    <div className="flex flex-col h-[calc(100dvh-8rem)] overflow-hidden">
       {/* Research Assistant Modal */}
       <ResearchAssistant
         isOpen={showResearchAssistant}
@@ -181,7 +181,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
       />
 
       {/* Hero Section with Logo */}
-      <div className="flex-shrink-0 px-6 pt-12 pb-6 text-center">
+      <div className="flex-shrink-0 px-6 pt-6 pb-6 text-center">
         <motion.img 
           src={conclusivLogo}
           alt="conclusiv" 
@@ -274,8 +274,8 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         )}
       </AnimatePresence>
 
-      {/* Main Textarea with Shimmer Border - Reduced size */}
-      <div className="flex-1 px-4 pb-3 min-h-[20vh] max-h-[35vh]">
+      {/* Main Textarea with Shimmer Border */}
+      <div className="flex-1 px-4 pb-2 min-h-[20vh] max-h-[35vh]">
         <div className={cn(
           "h-full relative rounded-xl transition-all duration-300",
           !hasContent && "shimmer-border"
@@ -303,9 +303,11 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
             )}
           </div>
         </div>
-        
-        {/* Settings hint */}
-        <p className="text-xs text-primary/70 text-center mt-2">
+      </div>
+
+      {/* Settings hint - Outside constrained container */}
+      <div className="flex-shrink-0 px-4 pb-2">
+        <p className="text-xs text-primary/70 text-center">
           Use the settings button to personalize your demo before continuing.
         </p>
       </div>
