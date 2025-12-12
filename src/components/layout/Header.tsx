@@ -31,10 +31,17 @@ export const Header = () => {
       >
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
+            {/* Mobile: C icon */}
+            <img 
+              src="/favicon.png"
+              alt="conclusiv" 
+              className="h-8 w-8 sm:hidden"
+            />
+            {/* Desktop: Full wordmark */}
             <img 
               src={conclusivLogo} 
               alt="conclusiv" 
-              className="h-2.5 w-auto"
+              className="hidden sm:block h-5 w-auto"
               style={{ aspectRatio: 'auto' }}
             />
           </div>
