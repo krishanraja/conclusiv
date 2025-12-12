@@ -51,7 +51,7 @@ export const InputScreen = () => {
   } = useNarrativeStore();
 
   const { requireFeature, UpgradePromptComponent } = useFeatureGate();
-  const { incrementBuildCount, usage, limits, canBuild, isPro, isFirstBuild } = useSubscription();
+  const { incrementBuildCount, isPro, isFirstBuild, canBuild } = useSubscription();
   const isMobile = useIsMobile();
 
   const [isScrapingContext, setIsScrapingContext] = useState(false);
@@ -297,7 +297,6 @@ export const InputScreen = () => {
   const isTooShort = charCount > 0 && charCount < MIN_CHARS;
   // Only show free limit warning after first build is completed
   const showLargeDocWarning = !isPro && !isFirstBuild && charCount > FREE_MAX_CHARS;
-  const buildsRemaining = isPro ? '∞' : (isFirstBuild ? 1 : Math.max(0, limits.buildsPerWeek - usage.buildsThisWeek));
 
   // Mobile-first: Use dedicated mobile flow
   if (isMobile) {
@@ -488,11 +487,6 @@ export const InputScreen = () => {
                 )}
               </div>
               <div className="flex items-center gap-3">
-                {!isPro && usage.buildsThisWeek > 0 && (
-                  <span className={!canBuild ? "text-amber-500 font-medium" : "text-muted-foreground"}>
-                    {!canBuild ? "Build limit reached" : `${buildsRemaining} build${buildsRemaining !== 1 ? 's' : ''} left`}
-                  </span>
-                )}
                 {isLongInput && (
                   <span className={isVeryLongInput ? "text-muted-foreground" : "text-shimmer-start"}>
                     {isVeryLongInput 
@@ -573,17 +567,8 @@ export const InputScreen = () => {
             className="min-w-[200px] shadow-lg shadow-primary/20"
             data-onboarding="continue-button"
           >
-            {!canBuild ? (
-              <>
-                <Crown className="w-4 h-4 mr-2" />
-                Upgrade to Continue
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Continue
-              </>
-            )}
+            <Sparkles className="w-4 h-4 mr-2" />
+            Continue
           </Button>
           {/* Keyboard shortcuts hint */}
           <p className="text-[10px] text-muted-foreground/50 hidden md:block">
