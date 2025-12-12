@@ -35,7 +35,7 @@ export const Header = () => {
             <img 
               src="/favicon.png"
               alt="conclusiv" 
-              className="h-8 w-8 sm:hidden"
+              className="h-6 w-6 sm:hidden"
             />
             {/* Desktop: Full wordmark */}
             <img 
