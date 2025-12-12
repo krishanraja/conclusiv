@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 
 export const MobileQuickSettings = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const { tensions, includeTensionSlide, setIncludeTensionSlide } = useNarrativeStore();
   const { toast } = useToast();
 
