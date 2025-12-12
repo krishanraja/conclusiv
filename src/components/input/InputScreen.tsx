@@ -11,6 +11,7 @@ import { ResearchAssistant } from "./ResearchAssistant";
 import { ResearchHistory } from "./ResearchHistory";
 import { SeeExampleButton } from "./SeeExampleButton";
 import { MobileInputFlow } from "./MobileInputFlow";
+import { SetupSheet, useSetupSheet } from "./SetupSheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, AlertCircle, Crown, Check, Search } from "lucide-react";
@@ -53,6 +54,10 @@ export const InputScreen = () => {
   const { requireFeature, UpgradePromptComponent } = useFeatureGate();
   const { incrementBuildCount, isPro, isFirstBuild, canBuild } = useSubscription();
   const isMobile = useIsMobile();
+  
+  // Auto-open setup sheet for first-time users
+  const { shouldAutoOpen, hasChecked, markSetupComplete } = useSetupSheet();
+  const [showSetupSheet, setShowSetupSheet] = useState(false);
 
   const [isScrapingContext, setIsScrapingContext] = useState(false);
   const [isParsingDocument, setIsParsingDocument] = useState(false);
@@ -63,6 +68,13 @@ export const InputScreen = () => {
   const [showSuccessFlash, setShowSuccessFlash] = useState(false);
   const [showResearchAssistant, setShowResearchAssistant] = useState(false);
   const [suggestBusinessContext, setSuggestBusinessContext] = useState(false);
+  
+  // Auto-open setup sheet on first visit
+  useEffect(() => {
+    if (hasChecked && shouldAutoOpen) {
+      setShowSetupSheet(true);
+    }
+  }, [hasChecked, shouldAutoOpen]);
   
   const [pendingUrl, setPendingUrl] = useState("");
   const lastScrapedUrl = useRef("");
@@ -314,6 +326,13 @@ export const InputScreen = () => {
   return (
     <div className="min-h-[100dvh] flex flex-col md:items-center md:justify-center px-4 pt-16 md:pt-20 pb-28 md:pb-8 relative z-10 overflow-y-auto overflow-x-hidden" data-onboarding="welcome">
       {UpgradePromptComponent}
+      
+      {/* Setup Sheet - Auto-opens on first visit */}
+      <SetupSheet
+        isOpen={showSetupSheet}
+        onOpenChange={setShowSetupSheet}
+        onComplete={markSetupComplete}
+      />
       
       {/* Research Assistant */}
       <ResearchAssistant

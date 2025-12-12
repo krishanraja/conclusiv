@@ -129,18 +129,17 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     rawContent: string;
   } | null>(null);
 
-  // Auto-populate from store when opening
+  // Auto-populate from store when opening - ALWAYS sync, don't guard with existing values
   useEffect(() => {
     if (isOpen) {
-      if (businessContext) {
-        if (businessContext.companyName && !companyName) {
-          setCompanyName(businessContext.companyName);
-        }
-        if (businessContext.industry && !industry) {
-          setIndustry(businessContext.industry);
-        }
+      // Always sync from store to ensure latest data
+      if (businessContext?.companyName) {
+        setCompanyName(businessContext.companyName);
       }
-      if (businessWebsite && !websiteUrl) {
+      if (businessContext?.industry) {
+        setIndustry(businessContext.industry);
+      }
+      if (businessWebsite) {
         setWebsiteUrl(businessWebsite);
         setBrandFetched(true);
       }
