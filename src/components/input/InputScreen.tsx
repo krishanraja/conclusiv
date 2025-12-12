@@ -8,6 +8,7 @@ import { DocumentUploadInput } from "./DocumentUploadInput";
 import { ArchetypeSelector } from "./ArchetypeSelector";
 import { AmbientDemo } from "./AmbientDemo";
 import { ResearchAssistant } from "./ResearchAssistant";
+import { ResearchHistory } from "./ResearchHistory";
 import { SeeExampleButton } from "./SeeExampleButton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -485,6 +486,19 @@ export const InputScreen = () => {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Research History */}
+          <div className="pt-1">
+            <ResearchHistory
+              onContinueResearch={(query) => {
+                setShowResearchAssistant(true);
+              }}
+              onUseResults={(content) => {
+                const current = rawText;
+                setRawText(current ? `${current}\n\n---\n\n${content}` : content);
+              }}
+            />
           </div>
 
           {/* Optional Features - Unified Compact Style */}

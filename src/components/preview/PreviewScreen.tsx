@@ -21,6 +21,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { exportToPDF } from "@/lib/exports/pdfExport";
 import { exportToPPTX } from "@/lib/exports/pptxExport";
+import { exportBrandedPDF, exportBrandedPPTX } from "@/lib/exports/brandedExport";
 import { ViewMode } from "@/lib/types";
 import {
   DropdownMenu,
@@ -39,11 +40,14 @@ import { Input } from "@/components/ui/input";
 // New gamification imports
 import { NarrativeQualityScore } from "@/components/intelligence/NarrativeQualityScore";
 import { ExecutiveSummary } from "@/components/intelligence/ExecutiveSummary";
+import { ImproveMyScore } from "@/components/intelligence/ImproveMyScore";
 import { Confetti, MiniCelebration } from "@/components/celebration/Confetti";
 import { AchievementToast } from "@/components/celebration/AchievementToast";
 import { NarrativeRemix } from "@/components/power-user/NarrativeRemix";
 import { MakingOfView, MakingOfTrigger } from "@/components/power-user/MakingOfView";
 import { useCelebration } from "@/hooks/useCelebration";
+import { AlternativeComparison } from "./AlternativeComparison";
+import { PresentationAnalytics } from "@/components/analytics/PresentationAnalytics";
 import { useBrandLogo } from "@/hooks/useBrandLogo";
 
 // Brand Logo Overlay component - renders outside overflow-hidden containers
@@ -129,6 +133,8 @@ export const PreviewScreen = () => {
   const [alternativesPanelOpen, setAlternativesPanelOpen] = useState(false);
   const [makingOfOpen, setMakingOfOpen] = useState(false);
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
+  const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [lastShareId, setLastShareId] = useState<string | null>(null);
 
   // Build narrative on mount if not already built
   useEffect(() => {
@@ -244,7 +250,7 @@ export const PreviewScreen = () => {
     setCurrentStep("present");
   };
 
-  const handleExport = (type: 'pdf' | 'pptx') => {
+  const handleExport = async (type: 'pdf' | 'pptx') => {
     // Allow free tier to export with watermark
     const allowWatermarkedExport = !isPro;
     
@@ -263,22 +269,42 @@ export const PreviewScreen = () => {
 
     try {
       const title = businessContext?.companyName || 'Narrative';
-      const exportOptions = { watermark: !isPro };
+      const exportOptions = { 
+        watermark: !isPro,
+        logoUrl: businessContext?.logoUrl || businessContext?.userUploadedLogoUrl,
+        brandColors: businessContext?.brandColors,
+        brandFonts: businessContext?.brandFonts,
+      };
+      
+      // Use branded exports when brand context is available and user is Pro
+      const useBranded = isPro && (businessContext?.logoUrl || businessContext?.brandColors);
       
       if (type === 'pdf') {
-        exportToPDF(narrative, businessContext, title, exportOptions);
+        if (useBranded) {
+          await exportBrandedPDF(narrative, businessContext, title, exportOptions);
+        } else {
+          exportToPDF(narrative, businessContext, title, { watermark: !isPro });
+        }
         toast({
           title: "PDF Downloaded",
           description: isPro 
-            ? "Your narrative has been exported as a PDF."
+            ? useBranded 
+              ? "Your branded narrative has been exported as a PDF."
+              : "Your narrative has been exported as a PDF."
             : "PDF exported with Conclusiv watermark. Upgrade for clean exports.",
         });
       } else {
-        exportToPPTX(narrative, businessContext, title);
+        if (useBranded) {
+          await exportBrandedPPTX(narrative, businessContext, title, exportOptions);
+        } else {
+          exportToPPTX(narrative, businessContext, title);
+        }
         toast({
           title: "PowerPoint Downloaded",
           description: isPro
-            ? "Your narrative has been exported as a presentation."
+            ? useBranded
+              ? "Your branded presentation has been exported."
+              : "Your narrative has been exported as a presentation."
             : "Exported with Conclusiv branding. Upgrade for clean exports.",
         });
       }
@@ -336,6 +362,7 @@ export const PreviewScreen = () => {
 
       const url = `${window.location.origin}/share/${shareId}`;
       setShareUrl(url);
+      setLastShareId(shareId);
       setShareDialogOpen(true);
     } catch (err) {
       toast({
@@ -405,20 +432,32 @@ export const PreviewScreen = () => {
               Share your narrative with a secure link. Add password protection for extra security.
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4">
+          <div className="mt-4 space-y-4">
             <PasswordProtectedShare
               shareUrl={shareUrl}
               onPasswordSet={setSharePassword}
               currentPassword={sharePassword}
             />
+            {lastShareId && (
+              <PresentationAnalytics 
+                shareId={lastShareId} 
+                sectionCount={narrative?.sections.length || 0}
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* Alternative Comparison */}
+      <AlternativeComparison
+        isOpen={comparisonOpen}
+        onClose={() => setComparisonOpen(false)}
+      />
+
       {/* Alternatives Panel */}
       <AlternativesPanel 
         isOpen={alternativesPanelOpen} 
-        onClose={() => setAlternativesPanelOpen(false)} 
+        onClose={() => setAlternativesPanelOpen(false)}
       />
 
       {/* Mobile Quick Settings */}
@@ -543,9 +582,29 @@ export const PreviewScreen = () => {
                     </div>
                   )}
                   
+                  {/* Improve My Score */}
+                  {narrative && (
+                    <div className="mb-6">
+                      <ImproveMyScore />
+                    </div>
+                  )}
+                  
                   {/* Executive Summary */}
                   {narrative && (
                     <ExecutiveSummary />
+                  )}
+                  
+                  {/* Compare Alternatives */}
+                  {alternatives.length > 0 && (
+                    <button
+                      onClick={() => setComparisonOpen(true)}
+                      className="w-full mt-4 p-3 rounded-lg bg-muted/30 border border-border/50 hover:border-primary/30 transition-colors text-sm text-left"
+                    >
+                      <span className="font-medium">Compare Alternatives</span>
+                      <span className="text-xs text-muted-foreground block mt-0.5">
+                        {alternatives.length} alternative{alternatives.length > 1 ? 's' : ''} available
+                      </span>
+                    </button>
                   )}
                 </div>
               </motion.div>
