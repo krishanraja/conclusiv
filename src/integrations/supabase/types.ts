@@ -209,6 +209,54 @@ export type Database = {
         }
         Relationships: []
       }
+      narrative_comments: {
+        Row: {
+          author_name: string | null
+          content: string
+          created_at: string | null
+          id: string
+          narrative_id: string | null
+          parent_id: string | null
+          section_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          author_name?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          narrative_id?: string | null
+          parent_id?: string | null
+          section_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          author_name?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          narrative_id?: string | null
+          parent_id?: string | null
+          section_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_comments_narrative_id_fkey"
+            columns: ["narrative_id"]
+            isOneToOne: false
+            referencedRelation: "narratives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       narratives: {
         Row: {
           created_at: string | null
@@ -216,6 +264,7 @@ export type Database = {
           is_public: boolean | null
           narrative_data: Json
           share_id: string | null
+          share_password: string | null
           title: string | null
           user_id: string
         }
@@ -225,6 +274,7 @@ export type Database = {
           is_public?: boolean | null
           narrative_data: Json
           share_id?: string | null
+          share_password?: string | null
           title?: string | null
           user_id: string
         }
@@ -234,10 +284,93 @@ export type Database = {
           is_public?: boolean | null
           narrative_data?: Json
           share_id?: string | null
+          share_password?: string | null
           title?: string | null
           user_id?: string
         }
         Relationships: []
+      }
+      presentation_analytics: {
+        Row: {
+          created_at: string | null
+          device_info: Json | null
+          event_type: string
+          id: string
+          narrative_id: string | null
+          section_index: number | null
+          session_id: string
+          share_id: string
+          time_spent_seconds: number | null
+          viewer_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_info?: Json | null
+          event_type: string
+          id?: string
+          narrative_id?: string | null
+          section_index?: number | null
+          session_id: string
+          share_id: string
+          time_spent_seconds?: number | null
+          viewer_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_info?: Json | null
+          event_type?: string
+          id?: string
+          narrative_id?: string | null
+          section_index?: number | null
+          session_id?: string
+          share_id?: string
+          time_spent_seconds?: number | null
+          viewer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presentation_analytics_narrative_id_fkey"
+            columns: ["narrative_id"]
+            isOneToOne: false
+            referencedRelation: "narratives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      presenter_notes: {
+        Row: {
+          created_at: string | null
+          id: string
+          narrative_id: string | null
+          notes: string
+          section_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          narrative_id?: string | null
+          notes: string
+          section_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          narrative_id?: string | null
+          notes?: string
+          section_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presenter_notes_narrative_id_fkey"
+            columns: ["narrative_id"]
+            isOneToOne: false
+            referencedRelation: "narratives"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -269,6 +402,39 @@ export type Database = {
           onboarding_completed?: boolean | null
           onboarding_step?: number | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      research_history: {
+        Row: {
+          audience: string | null
+          created_at: string | null
+          decision_type: string | null
+          id: string
+          query: string
+          results: Json | null
+          subject: string | null
+          user_id: string
+        }
+        Insert: {
+          audience?: string | null
+          created_at?: string | null
+          decision_type?: string | null
+          id?: string
+          query: string
+          results?: Json | null
+          subject?: string | null
+          user_id: string
+        }
+        Update: {
+          audience?: string | null
+          created_at?: string | null
+          decision_type?: string | null
+          id?: string
+          query?: string
+          results?: Json | null
+          subject?: string | null
+          user_id?: string
         }
         Relationships: []
       }
