@@ -11,6 +11,7 @@ import { QuickAdjustments } from "./QuickAdjustments";
 import { AlternativesPanel } from "./AlternativesPanel";
 import { MobileQuickSettings } from "./MobileQuickSettings";
 import { MobileActionsDrawer } from "./MobileActionsDrawer";
+import { MobilePreviewLayout } from "./MobilePreviewLayout";
 import { PasswordProtectedShare } from "./PasswordProtectedShare";
 import { ErrorRecovery, parseAPIError } from "@/components/ui/error-recovery";
 import type { ErrorCode } from "@/components/ui/error-recovery";
@@ -407,6 +408,62 @@ export const PreviewScreen = () => {
     }
   };
 
+  // Mobile-first: Use dedicated mobile layout
+  if (isMobile) {
+    return (
+      <>
+        {UpgradePromptComponent}
+        
+        {/* Celebration components */}
+        <Confetti isActive={celebration.confetti} />
+        <MiniCelebration isActive={celebration.mini} />
+        <AchievementToast 
+          isVisible={celebration.achievement.show} 
+          message={celebration.achievement.message}
+          icon={celebration.achievement.icon}
+        />
+        
+        {/* Error Recovery Modal */}
+        <AnimatePresence>
+          {error && (
+            <ErrorRecovery
+              error={error}
+              onRetry={handleBuild}
+              onDismiss={() => setError(null)}
+              inputLength={rawText.length}
+            />
+          )}
+        </AnimatePresence>
+        
+        {/* Share Dialog */}
+        <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Share your narrative</DialogTitle>
+              <DialogDescription>
+                Share your narrative with a secure link.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4 space-y-4">
+              <PasswordProtectedShare
+                shareUrl={shareUrl}
+                onPasswordSet={setSharePassword}
+                currentPassword={sharePassword}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+        
+        <MobilePreviewLayout
+          onBack={handleBack}
+          onPresent={handlePresent}
+          onShare={handleShare}
+          onExport={() => handleExport('pdf')}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       {UpgradePromptComponent}
@@ -459,12 +516,6 @@ export const PreviewScreen = () => {
         isOpen={alternativesPanelOpen} 
         onClose={() => setAlternativesPanelOpen(false)}
       />
-
-      {/* Mobile Quick Settings */}
-      <MobileQuickSettings />
-      
-      {/* Mobile Actions Drawer */}
-      <MobileActionsDrawer />
 
       {/* Error Recovery Modal */}
       <AnimatePresence>

@@ -24,7 +24,7 @@ export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStage
   const isFinalizing = stage >= stages.length - 1;
 
   return (
-    <div className="flex flex-col items-center gap-8 w-full max-w-md">
+    <div className="flex flex-col items-center gap-6 md:gap-8 w-full max-w-md px-6 overflow-hidden">
       {/* Main progress ring */}
       <div className="relative">
         <motion.svg 
