@@ -10,6 +10,8 @@ import { NarrativePreview } from "./NarrativePreview";
 import { QuickAdjustments } from "./QuickAdjustments";
 import { AlternativesPanel } from "./AlternativesPanel";
 import { MobileQuickSettings } from "./MobileQuickSettings";
+import { MobileActionsDrawer } from "./MobileActionsDrawer";
+import { PasswordProtectedShare } from "./PasswordProtectedShare";
 import { ErrorRecovery, parseAPIError } from "@/components/ui/error-recovery";
 import type { ErrorCode } from "@/components/ui/error-recovery";
 import { cn } from "@/lib/utils";
@@ -121,6 +123,7 @@ export const PreviewScreen = () => {
   const [hasBuilt, setHasBuilt] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
+  const [sharePassword, setSharePassword] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [alternativesPanelOpen, setAlternativesPanelOpen] = useState(false);
@@ -242,7 +245,10 @@ export const PreviewScreen = () => {
   };
 
   const handleExport = (type: 'pdf' | 'pptx') => {
-    if (!requireFeature('export')) {
+    // Allow free tier to export with watermark
+    const allowWatermarkedExport = !isPro;
+    
+    if (!allowWatermarkedExport && !requireFeature('export')) {
       return;
     }
     
@@ -257,18 +263,23 @@ export const PreviewScreen = () => {
 
     try {
       const title = businessContext?.companyName || 'Narrative';
+      const exportOptions = { watermark: !isPro };
       
       if (type === 'pdf') {
-        exportToPDF(narrative, businessContext, title);
+        exportToPDF(narrative, businessContext, title, exportOptions);
         toast({
           title: "PDF Downloaded",
-          description: "Your narrative has been exported as a PDF.",
+          description: isPro 
+            ? "Your narrative has been exported as a PDF."
+            : "PDF exported with Conclusiv watermark. Upgrade for clean exports.",
         });
       } else {
         exportToPPTX(narrative, businessContext, title);
         toast({
           title: "PowerPoint Downloaded",
-          description: "Your narrative has been exported as a presentation.",
+          description: isPro
+            ? "Your narrative has been exported as a presentation."
+            : "Exported with Conclusiv branding. Upgrade for clean exports.",
         });
       }
     } catch (err) {
@@ -387,18 +398,19 @@ export const PreviewScreen = () => {
       
       {/* Share Dialog */}
       <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Share your narrative</DialogTitle>
             <DialogDescription>
-              Anyone with this link can view your narrative.
+              Share your narrative with a secure link. Add password protection for extra security.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-2 mt-4">
-            <Input value={shareUrl} readOnly className="flex-1" />
-            <Button onClick={copyToClipboard} variant="outline">
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            </Button>
+          <div className="mt-4">
+            <PasswordProtectedShare
+              shareUrl={shareUrl}
+              onPasswordSet={setSharePassword}
+              currentPassword={sharePassword}
+            />
           </div>
         </DialogContent>
       </Dialog>
@@ -411,6 +423,9 @@ export const PreviewScreen = () => {
 
       {/* Mobile Quick Settings */}
       <MobileQuickSettings />
+      
+      {/* Mobile Actions Drawer */}
+      <MobileActionsDrawer />
 
       {/* Error Recovery Modal */}
       <AnimatePresence>
