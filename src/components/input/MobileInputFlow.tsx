@@ -217,8 +217,8 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
           onClick={() => setShowResearchAssistant(true)}
           className="flex-1 h-12 text-sm font-medium"
         >
-          <Search className="w-4 h-4 mr-2" />
-          Research
+          <Sparkles className="w-4 h-4 mr-2" />
+          Generate
         </Button>
       </div>
 
