@@ -185,7 +185,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         <motion.img 
           src={conclusivLogo}
           alt="conclusiv" 
-          className="h-10 w-auto mx-auto mb-6"
+          className="h-5 w-auto mx-auto mb-6"
           style={{ aspectRatio: 'auto' }}
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
