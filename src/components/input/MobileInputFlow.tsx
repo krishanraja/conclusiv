@@ -181,20 +181,21 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
       />
 
       {/* Hero Section with Logo */}
-      <div className="flex-shrink-0 px-6 pt-6 pb-6 text-center">
+      <div className="flex-shrink-0 px-6 pt-8 pb-8 text-center">
         <motion.img 
           src={conclusivLogo} 
           alt="conclusiv" 
-          className="w-40 h-auto mx-auto mb-4"
+          className="w-40 h-auto mx-auto mb-6"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         />
-        <h1 className="text-2xl font-bold text-foreground">
-          Turn research into{" "}
-          <span className="gradient-text">stories</span>
+        <h1 className="text-2xl font-bold text-foreground leading-tight">
+          Turn your business case into a{" "}
+          <span className="gradient-text">demo</span>
+          {" "}in 2 minutes
         </h1>
-        <p className="text-sm text-muted-foreground mt-3">
+        <p className="text-sm text-muted-foreground mt-4">
           Paste content or use our tools below
         </p>
       </div>
@@ -268,8 +269,8 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         )}
       </AnimatePresence>
 
-      {/* Main Textarea with Shimmer Border - Fills available space */}
-      <div className="flex-1 px-4 pb-3 min-h-[25vh]">
+      {/* Main Textarea with Shimmer Border - Reduced size */}
+      <div className="flex-1 px-4 pb-3 min-h-[20vh] max-h-[35vh]">
         <div className={cn(
           "h-full relative rounded-xl transition-all duration-300",
           !hasContent && "shimmer-border"
@@ -324,20 +325,23 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
           <Drawer open={optionsDrawerOpen} onOpenChange={setOptionsDrawerOpen}>
             <DrawerTrigger asChild>
               <Button 
-                variant="ghost" 
+                variant="outline" 
                 size="icon"
-                className="flex-shrink-0 h-12 w-12 relative animate-pulse"
+                className="flex-shrink-0 h-12 w-12 relative border-primary/20 hover:border-primary/40"
               >
                 <Settings className="w-5 h-5" />
-                {/* Attention indicator */}
-                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-primary rounded-full" />
+                {/* Subtle pulsing badge */}
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                </span>
               </Button>
             </DrawerTrigger>
             <DrawerContent className="min-h-[60vh] max-h-[85vh]">
               <div className="p-6 space-y-8 overflow-y-auto">
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold">Options</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Add context to improve your story</p>
+                  <h3 className="text-lg font-semibold">Personalize Your Demo</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Add your brand and customize the story</p>
                 </div>
                 
                 {/* Business Context */}
@@ -348,13 +352,18 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
                   </label>
                   <p className="text-xs text-muted-foreground -mt-2">We'll pull your brand colors, logo, and company info</p>
                   <div className="flex gap-2">
-                    <input
-                      type="url"
-                      value={websiteInput}
-                      onChange={(e) => setWebsiteInput(e.target.value)}
-                      placeholder="yourcompany.com"
-                      className="flex-1 h-12 px-4 rounded-lg bg-muted/50 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
+                    <div className={cn(
+                      "flex-1 rounded-lg transition-all duration-300",
+                      !businessContext && "shimmer-border"
+                    )}>
+                      <input
+                        type="url"
+                        value={websiteInput}
+                        onChange={(e) => setWebsiteInput(e.target.value)}
+                        placeholder="yourcompany.com"
+                        className="w-full h-12 px-4 rounded-lg bg-muted/50 border-0 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
                     <Button 
                       size="sm" 
                       onClick={handleWebsiteSubmit}
