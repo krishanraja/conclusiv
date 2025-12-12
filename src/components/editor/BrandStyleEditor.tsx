@@ -1,12 +1,11 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, Palette, Type, ImageIcon, Check } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-import type { LogoPosition, LogoSize } from "@/lib/types";
+import type { LogoPosition, LogoSize, PresentationStyle } from "@/lib/types";
 
 const logoPositions: { value: LogoPosition; label: string }[] = [
   { value: 'top-left', label: 'Top Left' },
@@ -23,13 +22,13 @@ const logoSizes: { value: LogoSize; label: string }[] = [
 
 export const BrandStyleEditor = () => {
   const [expandedPanel, setExpandedPanel] = useState<string | null>(null);
+  const [showSaved, setShowSaved] = useState(false);
   const { 
     businessContext, 
     presentationStyle, 
     setPresentationStyle,
     userUploadedLogoUrl,
   } = useNarrativeStore();
-  const { toast } = useToast();
 
   const hasLogo = !!(businessContext?.logoUrl || userUploadedLogoUrl);
   const hasBrandColors = !!businessContext?.brandColors;
@@ -39,24 +38,38 @@ export const BrandStyleEditor = () => {
     setExpandedPanel(expandedPanel === panel ? null : panel);
   };
 
+  // Unified style update with auto-save indicator
+  const updateStyle = useCallback((updates: Partial<PresentationStyle>) => {
+    setPresentationStyle(updates);
+    setShowSaved(true);
+    setTimeout(() => setShowSaved(false), 1500);
+  }, [setPresentationStyle]);
+
   const applyBrandColor = (colorType: 'primary' | 'secondary' | 'accent', color: string) => {
-    setPresentationStyle({ [`${colorType}Color`]: color });
-    toast({
-      title: "Color applied",
-      description: `${colorType.charAt(0).toUpperCase() + colorType.slice(1)} color updated`,
-    });
+    updateStyle({ [`${colorType}Color`]: color });
   };
 
   const applyBrandFont = (fontType: 'primary' | 'secondary', font: string) => {
-    setPresentationStyle({ [`${fontType}Font`]: font });
-    toast({
-      title: "Font applied",
-      description: `${fontType.charAt(0).toUpperCase() + fontType.slice(1)} font set to ${font}`,
-    });
+    updateStyle({ [`${fontType}Font`]: font });
   };
 
   return (
     <div className="space-y-1">
+      {/* Auto-save indicator */}
+      <AnimatePresence>
+        {showSaved && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            className="flex items-center justify-end gap-1.5 text-xs text-green-500 pb-1"
+          >
+            <Check className="w-3 h-3" />
+            <span>Auto-saved</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
       {/* Colors Panel */}
       <div className="rounded-lg border border-border/50 overflow-hidden">
         <button
@@ -256,11 +269,11 @@ export const BrandStyleEditor = () => {
                     {/* Show/Hide toggle */}
                     <div className="flex items-center justify-between">
                       <Label htmlFor="show-logo" className="text-sm">Show logo on slides</Label>
-                      <Switch
-                        id="show-logo"
-                        checked={presentationStyle?.showLogo ?? true}
-                        onCheckedChange={(checked) => setPresentationStyle({ showLogo: checked })}
-                      />
+                        <Switch
+                          id="show-logo"
+                          checked={presentationStyle?.showLogo ?? true}
+                          onCheckedChange={(checked) => updateStyle({ showLogo: checked })}
+                        />
                     </div>
 
                     {presentationStyle?.showLogo && (
@@ -272,7 +285,7 @@ export const BrandStyleEditor = () => {
                             {logoPositions.map((pos) => (
                               <button
                                 key={pos.value}
-                                onClick={() => setPresentationStyle({ logoPosition: pos.value })}
+                                onClick={() => updateStyle({ logoPosition: pos.value })}
                                 className={cn(
                                   "px-2 py-1.5 text-xs rounded transition-colors",
                                   presentationStyle?.logoPosition === pos.value
@@ -293,7 +306,7 @@ export const BrandStyleEditor = () => {
                             {logoSizes.map((size) => (
                               <button
                                 key={size.value}
-                                onClick={() => setPresentationStyle({ logoSize: size.value })}
+                                onClick={() => updateStyle({ logoSize: size.value })}
                                 className={cn(
                                   "flex-1 px-3 py-1.5 text-xs rounded transition-colors",
                                   presentationStyle?.logoSize === size.value
