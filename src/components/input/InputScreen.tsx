@@ -295,7 +295,7 @@ export const InputScreen = () => {
   const buildsRemaining = isPro ? '∞' : (isFirstBuild ? 1 : Math.max(0, limits.buildsPerWeek - usage.buildsThisWeek));
 
   return (
-    <div className="min-h-[100dvh] md:min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-4 md:py-6 relative z-10 pb-28 md:pb-8" data-onboarding="welcome">
+    <div className="min-h-[100dvh] flex items-center justify-center px-4 pt-20 pb-28 md:pb-8 relative z-10" data-onboarding="welcome">
       {UpgradePromptComponent}
       
       {/* Research Assistant */}
@@ -328,7 +328,7 @@ export const InputScreen = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-3xl space-y-4 relative pt-4 md:pt-6"
+        className="w-full max-w-3xl space-y-4 relative"
       >
         {/* Brand Logo with glow effect */}
         <motion.div 
