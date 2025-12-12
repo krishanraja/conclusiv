@@ -308,7 +308,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
       {/* Settings hint - Outside constrained container */}
       <div className="flex-shrink-0 px-4 pb-2">
         <p className="text-xs text-primary/70 text-center">
-          Use the settings button to personalize your demo before continuing.
+          Use the settings button to personalize before continuing.
         </p>
       </div>
 
