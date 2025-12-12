@@ -268,8 +268,8 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         )}
       </AnimatePresence>
 
-      {/* Main Textarea with Shimmer Border - Constrained Height */}
-      <div className="flex-[0.6] px-4 pb-3 min-h-0 max-h-[35vh]">
+      {/* Main Textarea with Shimmer Border - Fills available space */}
+      <div className="flex-1 px-4 pb-3 min-h-[25vh]">
         <div className={cn(
           "h-full relative rounded-xl transition-all duration-300",
           !hasContent && "shimmer-border"
@@ -326,41 +326,47 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
               <Button 
                 variant="ghost" 
                 size="icon"
-                className="flex-shrink-0 h-12 w-12"
+                className="flex-shrink-0 h-12 w-12 relative animate-pulse"
               >
                 <Settings className="w-5 h-5" />
+                {/* Attention indicator */}
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-primary rounded-full" />
               </Button>
             </DrawerTrigger>
-            <DrawerContent className="max-h-[80vh]">
-              <div className="p-6 space-y-6 overflow-y-auto">
-                <h3 className="text-lg font-semibold text-center">Options</h3>
+            <DrawerContent className="min-h-[60vh] max-h-[85vh]">
+              <div className="p-6 space-y-8 overflow-y-auto">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold">Options</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Add context to improve your story</p>
+                </div>
                 
                 {/* Business Context */}
-                <div className="space-y-3">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Building2 className="w-4 h-4" />
+                <div className="space-y-4">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-primary" />
                     Add Business Context
                   </label>
+                  <p className="text-xs text-muted-foreground -mt-2">We'll pull your brand colors, logo, and company info</p>
                   <div className="flex gap-2">
                     <input
                       type="url"
                       value={websiteInput}
                       onChange={(e) => setWebsiteInput(e.target.value)}
                       placeholder="yourcompany.com"
-                      className="flex-1 h-10 px-3 rounded-lg bg-muted/50 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      className="flex-1 h-12 px-4 rounded-lg bg-muted/50 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                     />
                     <Button 
                       size="sm" 
                       onClick={handleWebsiteSubmit}
                       disabled={!websiteInput.includes(".") || isScrapingContext}
-                      className="h-10"
+                      className="h-12 px-6"
                     >
                       {isScrapingContext ? "..." : "Add"}
                     </Button>
                   </div>
                   {businessContext && (
-                    <div className="flex items-center gap-2 text-xs text-primary">
-                      <Check className="w-3 h-3" />
+                    <div className="flex items-center gap-2 text-sm text-primary bg-primary/5 p-3 rounded-lg">
+                      <Check className="w-4 h-4" />
                       {businessContext.companyName || "Context loaded"}
                       <button 
                         onClick={() => {
@@ -370,38 +376,20 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
                         }}
                         className="ml-auto text-muted-foreground hover:text-foreground"
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
                   )}
                 </div>
 
                 {/* Story Mode */}
-                <div className="space-y-3">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <BookOpen className="w-4 h-4" />
+                <div className="space-y-4">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-primary" />
                     Story Mode
                   </label>
+                  <p className="text-xs text-muted-foreground -mt-2">Choose a narrative structure for your story</p>
                   <ArchetypeSelector />
-                </div>
-                
-                {/* Upload Document */}
-                <div className="space-y-3">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Upload className="w-4 h-4" />
-                    Upload Document
-                  </label>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      fileInputRef.current?.click();
-                      setOptionsDrawerOpen(false);
-                    }}
-                    disabled={isParsingDocument}
-                  >
-                    {isParsingDocument ? "Parsing..." : "Choose PDF, Word, or PowerPoint"}
-                  </Button>
                 </div>
               </div>
             </DrawerContent>
