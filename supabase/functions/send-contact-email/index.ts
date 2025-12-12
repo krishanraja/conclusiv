@@ -73,11 +73,30 @@ const handler = async (req: Request): Promise<Response> => {
 
     const resend = new Resend(resendApiKey);
 
-    // Parse request body
-    const { name, email, category, subject, message, userId }: ContactRequest = await req.json();
+    // Parse request body - Note: we ignore userId from request body for security
+    const { name, email, category, subject, message }: Omit<ContactRequest, 'userId'> = await req.json();
+    
+    // SECURITY: Extract userId from JWT token if present, never trust client-provided userId
+    let validatedUserId: string | null = null;
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabaseAuth = createClient(supabaseUrl, supabaseKey);
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+        if (!authError && user) {
+          validatedUserId = user.id;
+          console.log(`[send-contact-email][${requestId}] User ID validated from JWT: ${validatedUserId}`);
+        }
+      } catch (authErr) {
+        console.warn(`[send-contact-email][${requestId}] JWT validation failed, proceeding as anonymous`);
+      }
+    }
     
     // Log sanitized input (no message content for privacy)
-    console.log(`[send-contact-email][${requestId}] Input: name="${name}", email="${email}", category="${category || 'general'}", subject="${subject}", userId="${userId || 'anonymous'}"`);
+    console.log(`[send-contact-email][${requestId}] Input: name="${name}", email="${email}", category="${category || 'general'}", subject="${subject}", userId="${validatedUserId || 'anonymous'}"`);
 
     // Validate required fields
     if (!name || !email || !subject || !message) {
@@ -131,7 +150,7 @@ const handler = async (req: Request): Promise<Response> => {
       subject,
       message,
       category: category || "general",
-      user_id: userId || null,
+      user_id: validatedUserId, // Use validated userId from JWT, not client input
     });
 
     if (dbError) {
@@ -187,7 +206,7 @@ const handler = async (req: Request): Promise<Response> => {
                 <div class="label">Message</div>
                 <div class="message-box">${sanitizedMessage}</div>
               </div>
-              ${userId ? `<div class="field"><div class="label">User ID</div><div class="value" style="font-family: monospace; font-size: 12px;">${sanitizeHtml(userId)}</div></div>` : ""}
+              ${validatedUserId ? `<div class="field"><div class="label">User ID (Verified)</div><div class="value" style="font-family: monospace; font-size: 12px;">${sanitizeHtml(validatedUserId)}</div></div>` : ""}
               <div class="meta">
                 Request ID: ${requestId}<br>
                 Timestamp: ${timestamp}

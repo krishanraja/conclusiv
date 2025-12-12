@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -45,15 +46,34 @@ const handler = async (req: Request): Promise<Response> => {
 
     const resend = new Resend(resendApiKey);
 
-    // Parse request body
+    // Parse request body - Note: we ignore userId from request body for security
     const body: FeedbackEmailRequest = await req.json();
-    const { feedbackType, rating, message, sentiment, userId, sessionId, page, context } = body;
+    const { feedbackType, rating, message, sentiment, sessionId, page, context } = body;
+    
+    // SECURITY: Extract userId from JWT token if present, never trust client-provided userId
+    let validatedUserId: string | null = null;
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabaseAuth = createClient(supabaseUrl, supabaseKey);
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+        if (!authError && user) {
+          validatedUserId = user.id;
+          console.log(`[send-feedback-email][${requestId}] User ID validated from JWT: ${validatedUserId}`);
+        }
+      } catch (authErr) {
+        console.warn(`[send-feedback-email][${requestId}] JWT validation failed, proceeding as anonymous`);
+      }
+    }
 
     console.log(`[send-feedback-email][${requestId}] Feedback received:`, {
       feedbackType,
       rating,
       sentiment,
-      userId: userId || "anonymous",
+      userId: validatedUserId || "anonymous",
       sessionId: sessionId || "none",
       page,
       hasMessage: !!message,
@@ -177,7 +197,7 @@ const handler = async (req: Request): Promise<Response> => {
               <div class="field">
                 <div class="label">User Info</div>
                 <div class="value">
-                  <strong>User ID:</strong> ${userId || "Anonymous"}<br>
+                  <strong>User ID${validatedUserId ? " (Verified)" : ""}:</strong> ${validatedUserId || "Anonymous"}<br>
                   <strong>Session:</strong> ${sessionId || "N/A"}<br>
                   <strong>Page:</strong> ${page || "N/A"}
                 </div>
