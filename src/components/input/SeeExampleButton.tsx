@@ -49,7 +49,7 @@ Strategic Recommendations
 
 interface SeeExampleButtonProps {
   className?: string;
-  variant?: "default" | "outline";
+  variant?: "default" | "outline" | "ghost";
 }
 
 export const SeeExampleButton = ({ className, variant = "outline" }: SeeExampleButtonProps) => {

@@ -181,11 +181,11 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
       />
 
       {/* Hero Section with Logo */}
-      <div className="flex-shrink-0 px-6 pt-8 pb-8 text-center">
+      <div className="flex-shrink-0 px-6 pt-8 pb-6 text-center">
         <motion.img 
-          src={conclusivLogo} 
+          src="/favicon.png"
           alt="conclusiv" 
-          className="w-40 h-auto mx-auto mb-6"
+          className="w-12 h-12 mx-auto mb-5"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
@@ -195,13 +195,14 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
           <span className="gradient-text">demo</span>
           {" "}in 2 minutes
         </h1>
-        <p className="text-sm text-muted-foreground mt-4">
-          Paste content or use our tools below
+        <p className="text-sm text-muted-foreground mt-4 leading-relaxed">
+          Upload, generate or paste your business plan.{" "}
+          <span className="text-primary/80">Use the settings below to personalize your demo.</span>
         </p>
       </div>
 
-      {/* Action Buttons - THE HERO */}
-      <div className="flex-shrink-0 flex items-center justify-center gap-3 px-4 pb-6">
+      {/* Primary Action Buttons - Upload & Research ONLY */}
+      <div className="flex-shrink-0 flex items-center justify-center gap-3 px-4 pb-3">
         <Button
           variant="outline"
           onClick={() => fileInputRef.current?.click()}
@@ -219,7 +220,11 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
           <Search className="w-4 h-4 mr-2" />
           Research
         </Button>
-        <SeeExampleButton className="flex-1 text-sm font-medium" />
+      </div>
+
+      {/* Example as subtle text link - clearly secondary */}
+      <div className="flex-shrink-0 text-center pb-4">
+        <SeeExampleButton variant="ghost" className="text-xs text-muted-foreground hover:text-primary h-auto py-1 px-2" />
       </div>
 
       {/* Status badges */}
