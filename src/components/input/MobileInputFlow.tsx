@@ -51,7 +51,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
     setBusinessContext,
   } = useNarrativeStore();
   
-  const { isPro, usage, limits, isFirstBuild } = useSubscription();
+  const { isPro, isFirstBuild } = useSubscription();
   
   const [isParsingDocument, setIsParsingDocument] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
@@ -66,7 +66,6 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
   const hasContent = charCount > 0;
   const isTooShort = charCount > 0 && charCount < MIN_CHARS;
   const showLargeDocWarning = !isPro && !isFirstBuild && charCount > FREE_MAX_CHARS;
-  const buildsRemaining = isPro ? '∞' : (isFirstBuild ? 1 : Math.max(0, limits.buildsPerWeek - usage.buildsThisWeek));
 
   const handleFileSelect = async (file: File) => {
     if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
@@ -302,8 +301,8 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
 
       {/* Bottom Actions - Fixed */}
       <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t border-border/30 px-4 py-4 pb-safe space-y-3">
-        {/* Warnings */}
-        {(isTooShort || showLargeDocWarning || !canBuild) && (
+        {/* Warnings - Only show content-related warnings, never build limit on load */}
+        {(isTooShort || showLargeDocWarning) && (
           <div className="flex items-center justify-center gap-2 text-xs">
             {isTooShort && (
               <span className="text-amber-500 flex items-center gap-1">
@@ -316,9 +315,6 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
                 <Crown className="w-3 h-3 text-primary" />
                 Upgrade for unlimited
               </span>
-            )}
-            {!canBuild && !isPro && (
-              <span className="text-amber-500">Build limit reached</span>
             )}
           </div>
         )}
@@ -413,29 +409,13 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
             variant="shimmer"
             size="lg"
             onClick={onContinue}
-            disabled={!rawText.trim() || isTooShort || isParsingDocument || !canBuild}
+            disabled={!rawText.trim() || isTooShort || isParsingDocument}
             className="flex-1 shadow-lg shadow-primary/20"
           >
-            {!canBuild ? (
-              <>
-                <Crown className="w-4 h-4 mr-2" />
-                Upgrade
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Continue
-              </>
-            )}
+            <Sparkles className="w-4 h-4 mr-2" />
+            Continue
           </Button>
         </div>
-        
-        {/* Builds remaining */}
-        {!isPro && hasContent && (
-          <p className="text-center text-xs text-muted-foreground/60">
-            {buildsRemaining} build{buildsRemaining !== 1 ? 's' : ''} remaining this week
-          </p>
-        )}
       </div>
     </div>
   );
