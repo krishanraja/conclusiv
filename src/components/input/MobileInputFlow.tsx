@@ -1,29 +1,25 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Sparkles, 
   Upload, 
-  Search, 
   Building2, 
-  BookOpen, 
-  Settings,
-  Crown,
   FileText,
-  X,
   Check,
-  AlertCircle
+  AlertCircle,
+  Crown,
+  Settings
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useToast } from "@/hooks/use-toast";
-import { parseDocument, scrapeBusinessContext, fetchBrandData } from "@/lib/api";
+import { parseDocument } from "@/lib/api";
 import { ResearchAssistant } from "./ResearchAssistant";
 import { SeeExampleButton } from "./SeeExampleButton";
-import { ArchetypeSelector } from "./ArchetypeSelector";
+import { SetupSheet, useSetupSheet } from "./SetupSheet";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 const MIN_CHARS = 50;
@@ -45,20 +41,18 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
   const {
     rawText,
     setRawText,
-    businessWebsite,
-    setBusinessWebsite,
     businessContext,
-    setBusinessContext,
   } = useNarrativeStore();
   
   const { isPro, isFirstBuild } = useSubscription();
   
+  // Auto-open setup sheet for first-time users
+  const { shouldAutoOpen, hasChecked, markSetupComplete } = useSetupSheet();
+  const [showSetupSheet, setShowSetupSheet] = useState(false);
+  
   const [isParsingDocument, setIsParsingDocument] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [showResearchAssistant, setShowResearchAssistant] = useState(false);
-  const [optionsDrawerOpen, setOptionsDrawerOpen] = useState(false);
-  const [isScrapingContext, setIsScrapingContext] = useState(false);
-  const [websiteInput, setWebsiteInput] = useState(businessWebsite);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -66,6 +60,13 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
   const hasContent = charCount > 0;
   const isTooShort = charCount > 0 && charCount < MIN_CHARS;
   const showLargeDocWarning = !isPro && !isFirstBuild && charCount > FREE_MAX_CHARS;
+
+  // Auto-open setup sheet on first visit
+  useEffect(() => {
+    if (hasChecked && shouldAutoOpen) {
+      setShowSetupSheet(true);
+    }
+  }, [hasChecked, shouldAutoOpen]);
 
   const handleFileSelect = async (file: File) => {
     if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
@@ -87,7 +88,6 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
     }
 
     setIsParsingDocument(true);
-    setOptionsDrawerOpen(false);
     
     try {
       const result = await parseDocument(file);
@@ -111,44 +111,6 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
     }
   };
 
-  const handleWebsiteSubmit = async () => {
-    if (!websiteInput.includes(".")) return;
-    
-    setIsScrapingContext(true);
-    setOptionsDrawerOpen(false);
-    
-    try {
-      const [scrapeResult, brandResult] = await Promise.all([
-        scrapeBusinessContext(websiteInput),
-        fetchBrandData(websiteInput),
-      ]);
-      
-      if (scrapeResult.context) {
-        setBusinessWebsite(websiteInput);
-        setBusinessContext({
-          ...scrapeResult.context,
-          logoUrl: brandResult.data?.logo?.url,
-          logoVariants: brandResult.data?.logos || [],
-          brandColors: brandResult.data?.colors,
-          brandFonts: brandResult.data?.fonts,
-          companyName: scrapeResult.context.companyName || brandResult.data?.companyName || '',
-        });
-        toast({
-          title: "Business context loaded",
-          description: scrapeResult.context.companyName || "Context added",
-        });
-      }
-    } catch (err) {
-      toast({
-        title: "Failed to load context",
-        description: "Please try again",
-        variant: "destructive",
-      });
-    } finally {
-      setIsScrapingContext(false);
-    }
-  };
-
   const handleResearchComplete = (content: string) => {
     setRawText(content);
     setShowResearchAssistant(false);
@@ -158,8 +120,19 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
     });
   };
 
+  const handleSetupComplete = () => {
+    markSetupComplete();
+  };
+
   return (
     <div className="flex flex-col h-[calc(100dvh-8rem)] overflow-hidden">
+      {/* Setup Sheet - Auto-opens on first visit */}
+      <SetupSheet
+        isOpen={showSetupSheet}
+        onOpenChange={setShowSetupSheet}
+        onComplete={handleSetupComplete}
+      />
+      
       {/* Research Assistant Modal */}
       <ResearchAssistant
         isOpen={showResearchAssistant}
@@ -229,7 +202,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
 
       {/* Status badges */}
       <AnimatePresence>
-        {(uploadedFileName || businessContext || isParsingDocument || isScrapingContext) && (
+        {(uploadedFileName || businessContext || isParsingDocument) && (
           <motion.div 
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -253,18 +226,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
                 {uploadedFileName.slice(0, 20)}
               </span>
             )}
-            {isScrapingContext && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-accent/20 rounded-full text-xs text-accent-foreground">
-                <motion.div 
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                >
-                  <Building2 className="w-3 h-3" />
-                </motion.div>
-                Loading context...
-              </span>
-            )}
-            {businessContext && !isScrapingContext && (
+            {businessContext && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-accent/20 rounded-full text-xs text-accent-foreground">
                 <Building2 className="w-3 h-3" />
                 {businessContext.companyName || 'Context loaded'}
@@ -308,7 +270,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
       {/* Settings hint - Outside constrained container */}
       <div className="flex-shrink-0 px-4 pb-2">
         <p className="text-xs text-primary/70 text-center">
-          Use the settings button to personalize before continuing.
+          Tap settings to personalize before continuing.
         </p>
       </div>
 
@@ -334,87 +296,21 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
 
         {/* Settings Icon + Continue Button */}
         <div className="flex items-center gap-3">
-          <Drawer open={optionsDrawerOpen} onOpenChange={setOptionsDrawerOpen}>
-            <DrawerTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="icon"
-                className="flex-shrink-0 h-12 w-12 relative border-primary/20 hover:border-primary/40"
-              >
-                <Settings className="w-5 h-5" />
-                {/* Subtle pulsing badge */}
-                <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
-                </span>
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent className="min-h-[60vh] max-h-[85vh]">
-              <div className="p-6 space-y-8 overflow-y-auto">
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold">Personalize Your Demo</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Add your brand and customize the story</p>
-                </div>
-                
-                {/* Business Context */}
-                <div className="space-y-4">
-                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-primary" />
-                    Add Business Context
-                  </label>
-                  <p className="text-xs text-muted-foreground -mt-2">We'll pull your brand colors, logo, and company info</p>
-                  <div className="flex gap-2">
-                    <div className={cn(
-                      "flex-1 rounded-lg transition-all duration-300",
-                      !businessContext && "shimmer-border"
-                    )}>
-                      <input
-                        type="url"
-                        value={websiteInput}
-                        onChange={(e) => setWebsiteInput(e.target.value)}
-                        placeholder="yourcompany.com"
-                        className="w-full h-12 px-4 rounded-lg bg-muted/50 border-0 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                      />
-                    </div>
-                    <Button 
-                      size="sm" 
-                      onClick={handleWebsiteSubmit}
-                      disabled={!websiteInput.includes(".") || isScrapingContext}
-                      className="h-12 px-6"
-                    >
-                      {isScrapingContext ? "..." : "Add"}
-                    </Button>
-                  </div>
-                  {businessContext && (
-                    <div className="flex items-center gap-2 text-sm text-primary bg-primary/5 p-3 rounded-lg">
-                      <Check className="w-4 h-4" />
-                      {businessContext.companyName || "Context loaded"}
-                      <button 
-                        onClick={() => {
-                          setBusinessContext(null);
-                          setBusinessWebsite("");
-                          setWebsiteInput("");
-                        }}
-                        className="ml-auto text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Story Mode */}
-                <div className="space-y-4">
-                  <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-primary" />
-                    Story Mode
-                  </label>
-                  <p className="text-xs text-muted-foreground -mt-2">Choose a narrative structure for your story</p>
-                  <ArchetypeSelector />
-                </div>
-              </div>
-            </DrawerContent>
-          </Drawer>
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={() => setShowSetupSheet(true)}
+            className="flex-shrink-0 h-12 w-12 relative border-primary/20 hover:border-primary/40"
+          >
+            <Settings className="w-5 h-5" />
+            {/* Subtle pulsing badge if no context */}
+            {!businessContext && (
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+              </span>
+            )}
+          </Button>
           
           <Button
             variant="shimmer"
