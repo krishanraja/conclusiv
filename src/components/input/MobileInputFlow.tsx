@@ -1,4 +1,4 @@
-import { useState, useRef, DragEvent } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Sparkles, 
@@ -6,7 +6,7 @@ import {
   Search, 
   Building2, 
   BookOpen, 
-  ChevronUp, 
+  Settings,
   Crown,
   FileText,
   X,
@@ -24,6 +24,7 @@ import { parseDocument, scrapeBusinessContext, fetchBrandData } from "@/lib/api"
 import { ResearchAssistant } from "./ResearchAssistant";
 import { SeeExampleButton } from "./SeeExampleButton";
 import { ArchetypeSelector } from "./ArchetypeSelector";
+import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 const MIN_CHARS = 50;
 const FREE_MAX_CHARS = 15000;
@@ -158,7 +159,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
   };
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-4rem)] pt-4 overflow-hidden">
+    <div className="flex flex-col h-[calc(100dvh-4rem)] overflow-hidden">
       {/* Research Assistant Modal */}
       <ResearchAssistant
         isOpen={showResearchAssistant}
@@ -179,39 +180,45 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         className="hidden"
       />
 
-      {/* Hero - Minimal (no duplicate logo, header is in Index) */}
-      <div className="px-6 pb-3 pt-2 text-center">
-        <h1 className="text-xl font-semibold text-foreground">
+      {/* Hero Section with Logo */}
+      <div className="flex-shrink-0 px-6 pt-6 pb-4 text-center">
+        <motion.img 
+          src={conclusivLogo} 
+          alt="conclusiv" 
+          className="h-10 w-auto mx-auto mb-4"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        />
+        <h1 className="text-2xl font-bold text-foreground">
           Turn research into{" "}
           <span className="gradient-text">stories</span>
         </h1>
-        <p className="text-sm text-muted-foreground mt-1.5">
+        <p className="text-sm text-muted-foreground mt-2">
           Paste content or use our tools below
         </p>
       </div>
 
-      {/* Quick Action Bar */}
-      <div className="flex items-center justify-center gap-2 px-4 pb-4">
+      {/* Action Buttons - THE HERO */}
+      <div className="flex-shrink-0 flex items-center justify-center gap-3 px-4 pb-4">
         <Button
           variant="outline"
-          size="sm"
           onClick={() => fileInputRef.current?.click()}
           disabled={isParsingDocument}
-          className="flex-1 max-w-[140px] h-10"
+          className="flex-1 h-12 text-sm font-medium"
         >
           <Upload className="w-4 h-4 mr-2" />
           Upload
         </Button>
         <Button
           variant="outline"
-          size="sm"
           onClick={() => setShowResearchAssistant(true)}
-          className="flex-1 max-w-[140px] h-10"
+          className="flex-1 h-12 text-sm font-medium"
         >
           <Search className="w-4 h-4 mr-2" />
           Research
         </Button>
-        <SeeExampleButton />
+        <SeeExampleButton className="flex-1 text-sm font-medium" />
       </div>
 
       {/* Status badges */}
@@ -221,7 +228,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="flex flex-wrap items-center justify-center gap-2 px-4 pb-3"
+            className="flex-shrink-0 flex flex-wrap items-center justify-center gap-2 px-4 pb-3"
           >
             {isParsingDocument && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 rounded-full text-xs text-primary">
@@ -261,17 +268,20 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         )}
       </AnimatePresence>
 
-      {/* Main Textarea - Takes remaining space */}
-      <div className="flex-1 px-4 pb-2 min-h-0">
-        <div className="h-full relative">
+      {/* Main Textarea with Shimmer Border */}
+      <div className="flex-1 px-4 pb-3 min-h-0">
+        <div className={cn(
+          "h-full relative rounded-xl transition-all duration-300",
+          !hasContent && "shimmer-border"
+        )}>
           <Textarea
             value={rawText}
             onChange={(e) => {
               setRawText(e.target.value);
               if (uploadedFileName) setUploadedFileName(null);
             }}
-            placeholder="Paste your research, strategy document, or business plan here..."
-            className="h-full w-full bg-card/50 border-border/50 resize-none text-sm rounded-xl focus:ring-primary/50 p-4"
+            placeholder="Paste your research here..."
+            className="h-full w-full bg-card/50 border-0 resize-none text-sm rounded-xl focus:ring-2 focus:ring-primary/50 p-4"
             disabled={isParsingDocument}
           />
           
@@ -289,11 +299,11 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         </div>
       </div>
 
-      {/* Bottom Actions - Compact */}
-      <div className="flex-shrink-0 bg-background/95 backdrop-blur-sm border-t border-border/30 px-4 py-3 pb-safe space-y-2">
-        {/* Warnings - Only show content-related warnings, never build limit on load */}
+      {/* Bottom Bar - Simplified */}
+      <div className="flex-shrink-0 bg-background/95 backdrop-blur-sm border-t border-border/30 px-4 py-3 pb-safe">
+        {/* Warnings */}
         {(isTooShort || showLargeDocWarning) && (
-          <div className="flex items-center justify-center gap-2 text-xs">
+          <div className="flex items-center justify-center gap-2 text-xs mb-2">
             {isTooShort && (
               <span className="text-amber-500 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
@@ -309,22 +319,21 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
           </div>
         )}
 
-        {/* Options Drawer Trigger + Continue Button */}
+        {/* Settings Icon + Continue Button */}
         <div className="flex items-center gap-3">
           <Drawer open={optionsDrawerOpen} onOpenChange={setOptionsDrawerOpen}>
             <DrawerTrigger asChild>
               <Button 
-                variant="outline" 
-                size="lg"
-                className="flex-shrink-0"
+                variant="ghost" 
+                size="icon"
+                className="flex-shrink-0 h-12 w-12"
               >
-                <ChevronUp className="w-4 h-4 mr-2" />
-                More
+                <Settings className="w-5 h-5" />
               </Button>
             </DrawerTrigger>
             <DrawerContent className="max-h-[80vh]">
               <div className="p-6 space-y-6 overflow-y-auto">
-                <h3 className="text-lg font-semibold text-center">Additional Options</h3>
+                <h3 className="text-lg font-semibold text-center">Options</h3>
                 
                 {/* Business Context */}
                 <div className="space-y-3">
@@ -385,7 +394,10 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => {
+                      fileInputRef.current?.click();
+                      setOptionsDrawerOpen(false);
+                    }}
                     disabled={isParsingDocument}
                   >
                     {isParsingDocument ? "Parsing..." : "Choose PDF, Word, or PowerPoint"}
@@ -400,7 +412,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
             size="lg"
             onClick={onContinue}
             disabled={!rawText.trim() || isTooShort || isParsingDocument}
-            className="flex-1 shadow-lg shadow-primary/20"
+            className="flex-1 h-12 shadow-lg shadow-primary/20"
           >
             <Sparkles className="w-4 h-4 mr-2" />
             Continue
