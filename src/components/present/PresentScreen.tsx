@@ -404,17 +404,27 @@ export const PresentScreen = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  // Fallback UI when narrative is missing - prevent blank screen
-  if (!narrative) {
+  // Fallback UI when narrative is missing or empty - prevent blank screen
+  if (!narrative || narrative.sections.length === 0) {
+    console.warn('[PresentScreen] Fallback triggered:', { 
+      hasNarrative: !!narrative, 
+      sectionCount: narrative?.sections?.length ?? 0 
+    });
+    
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
         <div className="text-center space-y-4 p-6">
           <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
             <X className="w-8 h-8 text-muted-foreground" />
           </div>
-          <h2 className="text-lg font-semibold text-foreground">No narrative loaded</h2>
+          <h2 className="text-lg font-semibold text-foreground">
+            {!narrative ? "No narrative loaded" : "No content to present"}
+          </h2>
           <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-            It looks like the presentation data wasn't loaded properly. Please go back and try again.
+            {!narrative 
+              ? "The presentation data wasn't loaded properly. Please go back and try again."
+              : "Your narrative doesn't have any sections yet. Please go back and build your content first."
+            }
           </p>
           <Button onClick={() => setCurrentStep("preview")} variant="outline" className="mt-4">
             <ChevronLeft className="w-4 h-4 mr-2" />

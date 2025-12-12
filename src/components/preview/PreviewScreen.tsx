@@ -247,6 +247,25 @@ export const PreviewScreen = () => {
   };
 
   const handlePresent = () => {
+    if (!narrative) {
+      toast({
+        title: "Cannot present",
+        description: "Please build your narrative first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (narrative.sections.length === 0) {
+      toast({
+        title: "Cannot present",
+        description: "Your narrative has no sections. Please build content first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    console.log('[PreviewScreen] Starting presentation with', narrative.sections.length, 'sections');
     setCurrentSectionIndex(0);
     setCurrentStep("present");
   };
