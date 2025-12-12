@@ -74,13 +74,13 @@ export const OnboardingManager = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4 pb-28 md:pb-4"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="bg-card border border-border rounded-2xl p-8 max-w-md w-full text-center shadow-2xl"
+            className="bg-card border border-border rounded-2xl p-8 max-w-md w-full text-center shadow-2xl max-h-[calc(100dvh-8rem)] overflow-y-auto"
           >
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
               <img src={faviconIcon} alt="" className="w-8 h-8" />
@@ -143,7 +143,7 @@ export const OnboardingManager = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed bottom-20 md:bottom-8 left-1/2 -translate-x-1/2 z-[101] bg-card/90 backdrop-blur-sm rounded-full px-4 py-2 border border-border"
+        className="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-[101] bg-card/90 backdrop-blur-sm rounded-full px-4 py-2 border border-border"
       >
         <OnboardingProgress
           currentStep={currentStep}
