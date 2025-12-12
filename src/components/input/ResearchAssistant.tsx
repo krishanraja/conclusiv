@@ -168,21 +168,8 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
         if (result.data) {
           const { companyName, firmographics } = result.data;
           
-          // Auto-fill company name if empty
           if (!qualification.companyName && companyName) {
             setQualification(prev => ({ ...prev, companyName }));
-          }
-          
-          // Auto-select industry if we found a match
-          if (!qualification.industry && firmographics?.industries?.[0]) {
-            const fetchedIndustry = firmographics.industries[0];
-            const matchedIndustry = industryOptions.find(
-              ind => fetchedIndustry.toLowerCase().includes(ind.toLowerCase()) ||
-                     ind.toLowerCase().includes(fetchedIndustry.toLowerCase())
-            );
-            if (matchedIndustry) {
-              setQualification(prev => ({ ...prev, industry: matchedIndustry }));
-            }
           }
           
           setBrandFetched(true);
