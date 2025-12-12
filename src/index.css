@@ -34,8 +34,9 @@
 
     --radius: 0.5rem;
 
-    /* Layout tokens */
-    --header-height: 4rem;
+  /* Layout tokens */
+  --header-height: 4rem;
+  --mobile-bottom-bar-height: 6rem;
 
     /* Shimmer colors */
     --shimmer-start: 78 100% 83%;
