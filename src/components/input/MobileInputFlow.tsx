@@ -181,11 +181,11 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
       />
 
       {/* Hero Section with Logo */}
-      <div className="flex-shrink-0 px-6 pt-8 pb-6 text-center">
+      <div className="flex-shrink-0 px-6 pt-6 pb-6 text-center">
         <motion.img 
           src={conclusivLogo} 
           alt="conclusiv" 
-          className="h-14 w-auto mx-auto mb-6"
+          className="w-40 h-auto mx-auto mb-4"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
