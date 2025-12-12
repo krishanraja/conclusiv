@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { formulateResearchQuery, executeResearch } from "@/lib/api";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ResearchAssistantProps {
   isOpen: boolean;
@@ -77,6 +79,7 @@ const audienceOptions = [
 ];
 
 export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssistantProps) => {
+  const { user } = useAuth();
   const [step, setStep] = useState<Step>("decision");
   const [selectedDecision, setSelectedDecision] = useState<string | null>(null);
   const [subject, setSubject] = useState("");
@@ -134,13 +137,30 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
         if (result.error) {
           console.error("Research error:", result.error);
         } else {
-          setResults({
+          const researchResults = {
             summary: result.summary || "",
             keyFindings: result.keyFindings || [],
             citations: result.citations || [],
             rawContent: result.rawContent || "",
-          });
+          };
+          setResults(researchResults);
           setStep("results");
+          
+          // Save to research history
+          if (user) {
+            try {
+              await supabase.from("research_history").insert({
+                user_id: user.id,
+                query: editedQuery || suggestedQuery,
+                subject,
+                decision_type: selectedDecision,
+                audience,
+                results: researchResults,
+              });
+            } catch (err) {
+              console.error("Failed to save research history:", err);
+            }
+          }
         }
       } catch (err) {
         console.error("Research error:", err);

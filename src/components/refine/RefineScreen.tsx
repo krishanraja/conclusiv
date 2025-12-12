@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HighlightableText } from "./HighlightableText";
 import { ClaimCard } from "./ClaimCard";
 import { VoiceRefinement } from "./VoiceRefinement";
-import { ArrowLeft, ArrowRight, Highlighter, MessageCircleQuestion, Mic, Loader2 } from "lucide-react";
+import { ClaimToSlideMapping } from "./ClaimToSlideMapping";
+import { ArrowLeft, ArrowRight, Highlighter, MessageCircleQuestion, Mic, Loader2, Presentation } from "lucide-react";
 
 export const RefineScreen = () => {
   const { toast } = useToast();
@@ -25,6 +26,7 @@ export const RefineScreen = () => {
     voiceFeedback,
     setVoiceFeedback,
     setIsLoading,
+    narrative,
   } = useNarrativeStore();
 
   const [activeTab, setActiveTab] = useState<string>("claims");
@@ -108,7 +110,7 @@ export const RefineScreen = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="claims" className="flex items-center gap-2">
               <MessageCircleQuestion className="w-4 h-4" />
               <span className="hidden sm:inline">Quick Q's</span>
@@ -120,6 +122,10 @@ export const RefineScreen = () => {
             <TabsTrigger value="voice" className="flex items-center gap-2">
               <Mic className="w-4 h-4" />
               <span className="hidden sm:inline">Voice</span>
+            </TabsTrigger>
+            <TabsTrigger value="mapping" className="flex items-center gap-2" disabled={!narrative}>
+              <Presentation className="w-4 h-4" />
+              <span className="hidden sm:inline">Mapping</span>
             </TabsTrigger>
           </TabsList>
 
@@ -191,6 +197,11 @@ export const RefineScreen = () => {
               feedback={voiceFeedback}
               onFeedbackChange={setVoiceFeedback}
             />
+          </TabsContent>
+
+          {/* Mapping Tab */}
+          <TabsContent value="mapping">
+            <ClaimToSlideMapping />
           </TabsContent>
         </Tabs>
       </motion.div>
