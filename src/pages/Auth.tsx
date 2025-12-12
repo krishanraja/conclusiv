@@ -163,7 +163,7 @@ export default function Auth() {
 
         {/* Logo */}
         <div className="flex justify-center">
-          <img src={conclusivLogo} alt="Conclusiv" className="h-8 w-auto" />
+          <img src={conclusivLogo} alt="Conclusiv" className="h-8 w-auto" fetchPriority="high" decoding="async" />
         </div>
 
         {/* Title */}

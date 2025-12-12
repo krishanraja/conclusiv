@@ -93,6 +93,8 @@ export const OnboardingManager = () => {
                 alt="Conclusiv" 
                 className="h-6 w-auto inline" 
                 style={{ verticalAlign: '-2px' }}
+                fetchPriority="high"
+                decoding="async"
               />
             </h2>
             <p className="text-muted-foreground mb-6">

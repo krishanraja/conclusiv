@@ -82,6 +82,8 @@ const BrandLogoOverlay = () => {
           "w-auto object-contain",
           logoSizeClasses[logoSize]
         )}
+        fetchPriority="high"
+        decoding="async"
       />
     </div>
   );

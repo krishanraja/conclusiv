@@ -42,6 +42,8 @@ export const BrandPreviewCard = ({
                 src={logoUrl}
                 alt={context.companyName}
                 className="w-full h-full object-contain p-1"
+                fetchPriority="high"
+                decoding="async"
                 onError={(e) => {
                   // Hide image on error to show fallback
                   (e.target as HTMLImageElement).style.display = 'none';

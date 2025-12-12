@@ -936,6 +936,8 @@ export const PresentScreen = () => {
           alt="conclusiv" 
           className="h-5 w-auto"
           style={{ aspectRatio: 'auto' }}
+          loading="lazy"
+          decoding="async"
         />
       </div>
     </div>
