@@ -461,7 +461,7 @@ export const InputScreen = () => {
                   >
                     <Search className="w-4 h-4" />
                   </motion.div>
-                  <span>Need research first?</span>
+                  <span>Generate content</span>
                   <Sparkles className="w-3.5 h-3.5 opacity-60" />
                 </motion.button>
                 
