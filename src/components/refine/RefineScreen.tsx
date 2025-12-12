@@ -78,7 +78,7 @@ export const RefineScreen = () => {
   const editedCount = keyClaims.filter(c => c.edited).length;
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] flex flex-col p-6 pt-24">
+    <div className="min-h-[calc(100vh-4rem)] flex flex-col p-6 pt-20">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <Button variant="ghost" onClick={handleBack}>
