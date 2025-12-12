@@ -58,6 +58,12 @@
     @apply border-border;
   }
 
+  /* Prevent horizontal scroll globally */
+  html, body, #root {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
@@ -67,6 +73,7 @@
       radial-gradient(ellipse at 50% 50%, hsl(78 100% 83% / 0.03) 0%, transparent 60%),
       hsl(0 0% 2%);
     min-height: 100vh;
+    min-height: 100dvh;
     position: relative;
   }
 

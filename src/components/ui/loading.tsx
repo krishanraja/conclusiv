@@ -23,7 +23,7 @@ export const LoadingOverlay = ({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.6, ease: "easeInOut" }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm overflow-hidden"
     >
       {useStages ? (
         <LoadingStages stage={stage} progress={progress} inputLength={inputLength} />

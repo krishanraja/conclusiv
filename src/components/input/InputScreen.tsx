@@ -10,11 +10,13 @@ import { AmbientDemo } from "./AmbientDemo";
 import { ResearchAssistant } from "./ResearchAssistant";
 import { ResearchHistory } from "./ResearchHistory";
 import { SeeExampleButton } from "./SeeExampleButton";
+import { MobileInputFlow } from "./MobileInputFlow";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, AlertCircle, Crown, Check, Search } from "lucide-react";
 import { useFeatureGate } from "@/components/subscription/FeatureGate";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useIsMobile } from "@/hooks/use-mobile";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 const MIN_CHARS = 50;
@@ -50,6 +52,7 @@ export const InputScreen = () => {
 
   const { requireFeature, UpgradePromptComponent } = useFeatureGate();
   const { incrementBuildCount, usage, limits, canBuild, isPro, isFirstBuild } = useSubscription();
+  const isMobile = useIsMobile();
 
   const [isScrapingContext, setIsScrapingContext] = useState(false);
   const [isParsingDocument, setIsParsingDocument] = useState(false);
@@ -296,8 +299,21 @@ export const InputScreen = () => {
   const showLargeDocWarning = !isPro && !isFirstBuild && charCount > FREE_MAX_CHARS;
   const buildsRemaining = isPro ? '∞' : (isFirstBuild ? 1 : Math.max(0, limits.buildsPerWeek - usage.buildsThisWeek));
 
+  // Mobile-first: Use dedicated mobile flow
+  if (isMobile) {
+    return (
+      <>
+        {UpgradePromptComponent}
+        <MobileInputFlow 
+          onContinue={handleContinue} 
+          canBuild={canBuild} 
+        />
+      </>
+    );
+  }
+
   return (
-    <div className="min-h-[100dvh] flex flex-col md:items-center md:justify-center px-4 pt-16 md:pt-20 pb-28 md:pb-8 relative z-10 overflow-y-auto" data-onboarding="welcome">
+    <div className="min-h-[100dvh] flex flex-col md:items-center md:justify-center px-4 pt-16 md:pt-20 pb-28 md:pb-8 relative z-10 overflow-y-auto overflow-x-hidden" data-onboarding="welcome">
       {UpgradePromptComponent}
       
       {/* Research Assistant */}
