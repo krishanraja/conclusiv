@@ -327,21 +327,42 @@ export const fetchBrandData = async (domain: string): Promise<FetchBrandDataResp
   }
 };
 
-// Guided research - formulate query
+// Structured research input
+export interface StructuredResearchInput {
+  decisionType: string;
+  companyName: string;
+  websiteUrl?: string;
+  industry?: string;
+  primaryQuestion: string;
+  knownConcerns?: string;
+  successCriteria?: string;
+  redFlags?: string;
+  audience?: string;
+}
+
+// Structure voice input response
+export interface StructureVoiceInputResponse {
+  structured?: {
+    companyName?: string;
+    websiteUrl?: string;
+    industry?: string;
+    primaryQuestion?: string;
+    knownConcerns?: string;
+    successCriteria?: string;
+    redFlags?: string;
+  };
+  error?: string;
+}
+
+// Guided research - formulate query with structured input
 export const formulateResearchQuery = async (
-  topic: string,
-  context?: string,
-  audience?: string,
-  specificQuestions?: string[]
+  input: StructuredResearchInput
 ): Promise<GuidedResearchFormulateResponse> => {
   try {
     const { data, error } = await supabase.functions.invoke('guided-research', {
       body: { 
         phase: 'formulate',
-        topic,
-        context,
-        audience,
-        specificQuestions,
+        structuredInput: input,
       }
     });
 
@@ -354,6 +375,31 @@ export const formulateResearchQuery = async (
     };
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Failed to formulate query' };
+  }
+};
+
+// Structure voice input with AI
+export const structureVoiceInput = async (
+  transcript: string,
+  decisionType: string
+): Promise<StructureVoiceInputResponse> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('guided-research', {
+      body: { 
+        phase: 'structure-voice',
+        transcript,
+        decisionType,
+      }
+    });
+
+    if (error) throw new Error(error.message);
+    if (data.error) throw new Error(data.error);
+
+    return {
+      structured: data.structured,
+    };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to structure voice input' };
   }
 };
 

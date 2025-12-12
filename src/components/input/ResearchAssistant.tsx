@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Sparkles, ArrowRight, ArrowLeft, Loader2, ExternalLink, ChevronRight, Target, Globe, Swords, Lightbulb, Building2, TrendingUp, HelpCircle, Users } from "lucide-react";
+import { Search, Sparkles, ArrowRight, ArrowLeft, Loader2, ExternalLink, ChevronRight, Target, Globe, Swords, Lightbulb, Building2, TrendingUp, Mic, MicOff, Link2, HelpCircle, ShieldCheck, ShieldX, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { formulateResearchQuery, executeResearch } from "@/lib/api";
+import { formulateResearchQuery, executeResearch, structureVoiceInput } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
+import { useToast } from "@/hooks/use-toast";
 
 interface ResearchAssistantProps {
   isOpen: boolean;
@@ -16,7 +18,7 @@ interface ResearchAssistantProps {
   onComplete: (researchContent: string) => void;
 }
 
-type Step = "decision" | "subject" | "audience" | "confirm" | "research" | "results";
+type Step = "decision" | "qualify" | "focus" | "audience" | "confirm" | "research" | "results";
 
 // Decision archetypes - the core question types
 const decisionTypes = [
@@ -25,7 +27,6 @@ const decisionTypes = [
     icon: Target, 
     label: "Should we invest?", 
     description: "Evaluate a company, opportunity, or asset",
-    placeholder: "Company or opportunity name",
     contextLabel: "investment",
   },
   { 
@@ -33,7 +34,6 @@ const decisionTypes = [
     icon: Globe, 
     label: "Should we enter this market?", 
     description: "New geography, segment, or vertical",
-    placeholder: "Market or geography",
     contextLabel: "market entry",
   },
   { 
@@ -41,7 +41,6 @@ const decisionTypes = [
     icon: Swords, 
     label: "How do we compete?", 
     description: "Competitive analysis and positioning",
-    placeholder: "Competitor or category",
     contextLabel: "competitive analysis",
   },
   { 
@@ -49,7 +48,6 @@ const decisionTypes = [
     icon: Lightbulb, 
     label: "What's the future of...?", 
     description: "Trends, disruption, and forecasts",
-    placeholder: "Industry or technology",
     contextLabel: "trend analysis",
   },
   { 
@@ -57,7 +55,6 @@ const decisionTypes = [
     icon: Building2, 
     label: "Is this the right partner?", 
     description: "Due diligence on a company or vendor",
-    placeholder: "Company or vendor name",
     contextLabel: "due diligence",
   },
   { 
@@ -65,9 +62,15 @@ const decisionTypes = [
     icon: TrendingUp, 
     label: "What's the opportunity size?", 
     description: "TAM, SAM, SOM analysis",
-    placeholder: "Market or product area",
     contextLabel: "opportunity sizing",
   },
+];
+
+// Industry options
+const industryOptions = [
+  "Technology", "Healthcare", "Finance", "Manufacturing", "Retail", 
+  "Energy", "Real Estate", "Transportation", "Media", "Telecommunications",
+  "Consumer Goods", "Professional Services", "Other"
 ];
 
 // Simplified audience options
@@ -78,19 +81,41 @@ const audienceOptions = [
   { id: "investors", label: "Investors", description: "Persuasive analysis", icon: "💰" },
 ];
 
+// Structured input for research
+interface QualificationData {
+  companyName: string;
+  websiteUrl: string;
+  industry: string;
+  primaryQuestion: string;
+  knownConcerns: string;
+  successCriteria: string;
+  redFlags: string;
+}
+
+const initialQualificationData: QualificationData = {
+  companyName: "",
+  websiteUrl: "",
+  industry: "",
+  primaryQuestion: "",
+  knownConcerns: "",
+  successCriteria: "",
+  redFlags: "",
+};
+
 export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssistantProps) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [step, setStep] = useState<Step>("decision");
   const [selectedDecision, setSelectedDecision] = useState<string | null>(null);
-  const [subject, setSubject] = useState("");
-  const [additionalContext, setAdditionalContext] = useState("");
-  const [showContext, setShowContext] = useState(false);
+  const [qualification, setQualification] = useState<QualificationData>(initialQualificationData);
   const [audience, setAudience] = useState<string | null>(null);
   const [suggestedQuery, setSuggestedQuery] = useState("");
   const [editedQuery, setEditedQuery] = useState("");
   const [isEditingQuery, setIsEditingQuery] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isStructuring, setIsStructuring] = useState(false);
   const [researchDepth, setResearchDepth] = useState<"quick" | "deep">("deep");
+  const [voiceTranscript, setVoiceTranscript] = useState("");
   
   // Results
   const [results, setResults] = useState<{
@@ -100,24 +125,90 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     rawContent: string;
   } | null>(null);
 
+  // Voice recorder
+  const handleTranscript = useCallback((transcript: string) => {
+    setVoiceTranscript(prev => prev + " " + transcript);
+  }, []);
+
+  const handleVoiceError = useCallback((error: string) => {
+    toast({
+      title: "Voice input error",
+      description: error,
+      variant: "destructive",
+    });
+  }, [toast]);
+
+  const { isRecording, isSupported, toggleRecording } = useVoiceRecorder({
+    onTranscript: handleTranscript,
+    onError: handleVoiceError,
+    silenceTimeout: 3000,
+  });
+
   const getDecisionType = () => decisionTypes.find(d => d.id === selectedDecision);
+
+  // Validate URL format
+  const isValidUrl = (url: string): boolean => {
+    if (!url) return true; // Empty is okay (optional but encouraged)
+    // Accept domain.com format or full URL
+    const domainPattern = /^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]\.[a-zA-Z]{2,}$/;
+    const urlPattern = /^https?:\/\/.+/;
+    return domainPattern.test(url) || urlPattern.test(url);
+  };
+
+  // Structure voice input with AI
+  const handleStructureVoice = async () => {
+    if (!voiceTranscript.trim()) return;
+    
+    setIsStructuring(true);
+    try {
+      const result = await structureVoiceInput(voiceTranscript, selectedDecision || "analysis");
+      if (result.error) {
+        toast({
+          title: "Couldn't structure input",
+          description: result.error,
+          variant: "destructive",
+        });
+      } else if (result.structured) {
+        setQualification(prev => ({
+          ...prev,
+          ...result.structured,
+        }));
+        setVoiceTranscript("");
+        toast({
+          title: "Input structured",
+          description: "Your thoughts have been organized into the fields below.",
+        });
+      }
+    } catch (err) {
+      console.error("Structure error:", err);
+    } finally {
+      setIsStructuring(false);
+    }
+  };
 
   const handleNext = async () => {
     if (step === "decision") {
-      setStep("subject");
-    } else if (step === "subject") {
+      setStep("qualify");
+    } else if (step === "qualify") {
+      setStep("focus");
+    } else if (step === "focus") {
       setStep("audience");
     } else if (step === "audience") {
-      // Formulate the query
+      // Formulate the query with structured data
       setIsLoading(true);
       try {
         const decisionType = getDecisionType();
-        const result = await formulateResearchQuery(
-          `${decisionType?.label} ${subject}`,
-          decisionType?.contextLabel || "analysis",
-          audience as any || undefined,
-          additionalContext ? [additionalContext] : undefined
-        );
+        const result = await formulateResearchQuery({
+          decisionType: decisionType?.contextLabel || "analysis",
+          companyName: qualification.companyName,
+          websiteUrl: qualification.websiteUrl,
+          industry: qualification.industry,
+          primaryQuestion: qualification.primaryQuestion,
+          knownConcerns: qualification.knownConcerns,
+          successCriteria: qualification.successCriteria,
+          redFlags: qualification.redFlags,
+          audience: audience || undefined,
+        });
         if (result.suggestedQuery) {
           setSuggestedQuery(result.suggestedQuery);
           setEditedQuery(result.suggestedQuery);
@@ -125,6 +216,11 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
         setStep("confirm");
       } catch (err) {
         console.error("Formulation error:", err);
+        toast({
+          title: "Error formulating query",
+          description: "Please try again",
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
@@ -136,6 +232,12 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
         const result = await executeResearch(editedQuery || suggestedQuery, researchDepth);
         if (result.error) {
           console.error("Research error:", result.error);
+          toast({
+            title: "Research error",
+            description: result.error,
+            variant: "destructive",
+          });
+          setStep("confirm");
         } else {
           const researchResults = {
             summary: result.summary || "",
@@ -152,7 +254,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
               await supabase.from("research_history").insert({
                 user_id: user.id,
                 query: editedQuery || suggestedQuery,
-                subject,
+                subject: qualification.companyName,
                 decision_type: selectedDecision,
                 audience,
                 results: researchResults,
@@ -171,8 +273,9 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
   };
 
   const handleBack = () => {
-    if (step === "subject") setStep("decision");
-    else if (step === "audience") setStep("subject");
+    if (step === "qualify") setStep("decision");
+    else if (step === "focus") setStep("qualify");
+    else if (step === "audience") setStep("focus");
     else if (step === "confirm") setStep("audience");
     else if (step === "results") setStep("confirm");
   };
@@ -185,7 +288,6 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
       
       onComplete(results.rawContent + citationText);
       onClose();
-      // Reset state
       resetState();
     }
   };
@@ -193,18 +295,18 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
   const resetState = () => {
     setStep("decision");
     setSelectedDecision(null);
-    setSubject("");
-    setAdditionalContext("");
-    setShowContext(false);
+    setQualification(initialQualificationData);
     setAudience(null);
     setSuggestedQuery("");
     setEditedQuery("");
     setResults(null);
+    setVoiceTranscript("");
   };
 
   const canProceed = () => {
     if (step === "decision") return selectedDecision !== null;
-    if (step === "subject") return subject.trim().length >= 2;
+    if (step === "qualify") return qualification.companyName.trim().length >= 2;
+    if (step === "focus") return qualification.primaryQuestion.trim().length >= 5;
     if (step === "audience") return true; // Optional
     if (step === "confirm") return (editedQuery || suggestedQuery).trim().length > 0;
     return false;
@@ -212,17 +314,22 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
 
   const stepNumber = {
     decision: 1,
-    subject: 2,
+    qualify: 2,
+    focus: 2,
     audience: 3,
     confirm: 4,
     research: 5,
     results: 6,
   };
 
+  const updateField = (field: keyof QualificationData, value: string) => {
+    setQualification(prev => ({ ...prev, [field]: value }));
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); resetState(); } }}>
       <SheetContent side="left" className="w-full sm:max-w-md h-[100dvh] flex flex-col overflow-hidden border-r border-primary/20">
-        <SheetHeader className="mb-6">
+        <SheetHeader className="mb-4">
           <SheetTitle className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-primary/10">
               <Sparkles className="w-4 h-4 text-primary" />
@@ -296,45 +403,209 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
             </motion.div>
           )}
 
-          {/* Step 2: Subject */}
-          {step === "subject" && (
+          {/* Step 2a: Qualify - Company/Subject Identification */}
+          {step === "qualify" && (
             <motion.div
-              key="subject"
+              key="qualify"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
               className="space-y-4"
             >
               <div>
-                <h3 className="text-lg font-semibold mb-1">About what specifically?</h3>
+                <h3 className="text-lg font-semibold mb-1">Who or what are we researching?</h3>
                 <p className="text-sm text-muted-foreground">
-                  {getDecisionType()?.description}
+                  Help us identify the exact target
                 </p>
               </div>
+              
               <div className="space-y-3">
-                <Input
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder={getDecisionType()?.placeholder}
-                  className="text-base h-12"
-                  autoFocus
-                />
-                
-                {!showContext ? (
-                  <button
-                    onClick={() => setShowContext(true)}
-                    className="text-xs text-primary/70 hover:text-primary transition-colors flex items-center gap-1"
-                  >
-                    <span>+ Add context you already know</span>
-                  </button>
-                ) : (
-                  <Textarea
-                    value={additionalContext}
-                    onChange={(e) => setAdditionalContext(e.target.value)}
-                    placeholder="Any specific angles, concerns, or things you already know..."
-                    className="min-h-[80px] resize-none text-sm"
+                {/* Company Name */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <Building2 className="w-3 h-3" />
+                    Company / Subject Name *
+                  </label>
+                  <Input
+                    value={qualification.companyName}
+                    onChange={(e) => updateField("companyName", e.target.value)}
+                    placeholder="e.g., Lion Air, Acme Corp, Tesla"
+                    className="h-11"
+                    autoFocus
                   />
-                )}
+                </div>
+
+                {/* Website URL */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <Link2 className="w-3 h-3" />
+                    Website URL
+                    <span className="text-primary/70">(strongly recommended)</span>
+                  </label>
+                  <Input
+                    value={qualification.websiteUrl}
+                    onChange={(e) => updateField("websiteUrl", e.target.value)}
+                    placeholder="e.g., lionair.com or https://example.com"
+                    className={cn(
+                      "h-11",
+                      qualification.websiteUrl && !isValidUrl(qualification.websiteUrl) && "border-destructive"
+                    )}
+                  />
+                  {qualification.websiteUrl && !isValidUrl(qualification.websiteUrl) && (
+                    <p className="text-xs text-destructive">Please enter a valid URL or domain</p>
+                  )}
+                  {!qualification.websiteUrl && qualification.companyName && (
+                    <p className="text-xs text-amber-500/80 flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      Adding a URL helps us research the right company
+                    </p>
+                  )}
+                </div>
+
+                {/* Industry */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Industry / Sector
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {industryOptions.map((ind) => (
+                      <button
+                        key={ind}
+                        onClick={() => updateField("industry", qualification.industry === ind ? "" : ind)}
+                        className={cn(
+                          "px-2.5 py-1 text-xs rounded-full border transition-all",
+                          qualification.industry === ind
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {ind}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 2b: Focus - Research Questions */}
+          {step === "focus" && (
+            <motion.div
+              key="focus"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="space-y-4"
+            >
+              <div>
+                <h3 className="text-lg font-semibold mb-1">What do you want to know?</h3>
+                <p className="text-sm text-muted-foreground">
+                  Guide the research with specific questions
+                </p>
+              </div>
+
+              {/* Voice Input Section */}
+              {isSupported && (
+                <div className="p-3 rounded-lg border border-dashed border-primary/30 bg-primary/5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-primary">
+                      {isRecording ? "Listening... speak freely" : "Or speak your thoughts"}
+                    </p>
+                    <button
+                      onClick={toggleRecording}
+                      className={cn(
+                        "p-2 rounded-full transition-all",
+                        isRecording 
+                          ? "bg-red-500/20 text-red-400 animate-pulse" 
+                          : "bg-primary/10 text-primary hover:bg-primary/20"
+                      )}
+                    >
+                      {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {voiceTranscript && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground italic">"{voiceTranscript.trim()}"</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleStructureVoice}
+                        disabled={isStructuring}
+                        className="w-full text-xs h-8"
+                      >
+                        {isStructuring ? (
+                          <>
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            Structuring...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3 h-3 mr-1" />
+                            Structure my thoughts
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <div className="space-y-3">
+                {/* Primary Question */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <HelpCircle className="w-3 h-3" />
+                    What's your #1 question about them? *
+                  </label>
+                  <Textarea
+                    value={qualification.primaryQuestion}
+                    onChange={(e) => updateField("primaryQuestion", e.target.value)}
+                    placeholder="e.g., Are they financially stable enough for a long-term partnership?"
+                    className="min-h-[60px] resize-none text-sm"
+                  />
+                </div>
+
+                {/* Known Concerns */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    What do you already know that concerns you?
+                  </label>
+                  <Textarea
+                    value={qualification.knownConcerns}
+                    onChange={(e) => updateField("knownConcerns", e.target.value)}
+                    placeholder="e.g., I heard they had layoffs last quarter, or their stock has been volatile"
+                    className="min-h-[50px] resize-none text-sm"
+                  />
+                </div>
+
+                {/* Success Criteria */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" />
+                    What would make you say YES?
+                  </label>
+                  <Textarea
+                    value={qualification.successCriteria}
+                    onChange={(e) => updateField("successCriteria", e.target.value)}
+                    placeholder="e.g., Growing revenue, strong leadership, good press coverage"
+                    className="min-h-[50px] resize-none text-sm"
+                  />
+                </div>
+
+                {/* Red Flags */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <ShieldX className="w-3 h-3" />
+                    What would make you say NO?
+                  </label>
+                  <Textarea
+                    value={qualification.redFlags}
+                    onChange={(e) => updateField("redFlags", e.target.value)}
+                    placeholder="e.g., Regulatory issues, declining revenue, bad customer reviews"
+                    className="min-h-[50px] resize-none text-sm"
+                  />
+                </div>
               </div>
             </motion.div>
           )}
@@ -395,6 +666,23 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                 <p className="text-sm text-muted-foreground">
                   Here's what we'll investigate
                 </p>
+              </div>
+
+              {/* Summary of inputs */}
+              <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Target:</span>
+                  <span className="font-medium">{qualification.companyName}</span>
+                  {qualification.websiteUrl && (
+                    <span className="text-primary">({qualification.websiteUrl})</span>
+                  )}
+                </div>
+                {qualification.industry && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Industry:</span>
+                    <span>{qualification.industry}</span>
+                  </div>
+                )}
               </div>
               
               <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
@@ -466,7 +754,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                 <Search className="absolute inset-0 m-auto w-8 h-8 text-primary" />
               </div>
               <div className="text-center">
-                <h3 className="text-lg font-semibold mb-2">Researching...</h3>
+                <h3 className="text-lg font-semibold mb-2">Researching {qualification.companyName}...</h3>
                 <p className="text-sm text-muted-foreground max-w-[280px]">
                   {researchDepth === "deep" 
                     ? "Conducting deep analysis. This may take a few minutes."
