@@ -24,7 +24,6 @@ import { parseDocument, scrapeBusinessContext, fetchBrandData } from "@/lib/api"
 import { ResearchAssistant } from "./ResearchAssistant";
 import { SeeExampleButton } from "./SeeExampleButton";
 import { ArchetypeSelector } from "./ArchetypeSelector";
-import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 const MIN_CHARS = 50;
 const FREE_MAX_CHARS = 15000;
@@ -159,7 +158,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
   };
 
   return (
-    <div className="flex flex-col min-h-[100dvh] pb-safe">
+    <div className="flex flex-col h-[calc(100dvh-4rem)] pt-4 overflow-hidden">
       {/* Research Assistant Modal */}
       <ResearchAssistant
         isOpen={showResearchAssistant}
@@ -180,17 +179,8 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         className="hidden"
       />
 
-      {/* Header */}
-      <div className="flex items-center justify-center pt-6 pb-4 px-4">
-        <img 
-          src={conclusivLogo} 
-          alt="conclusiv" 
-          className="h-7 w-auto"
-        />
-      </div>
-
-      {/* Hero - Minimal */}
-      <div className="px-6 pb-4 text-center">
+      {/* Hero - Minimal (no duplicate logo, header is in Index) */}
+      <div className="px-6 pb-3 pt-2 text-center">
         <h1 className="text-xl font-semibold text-foreground">
           Turn research into{" "}
           <span className="gradient-text">stories</span>
@@ -272,8 +262,8 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
       </AnimatePresence>
 
       {/* Main Textarea - Takes remaining space */}
-      <div className="flex-1 px-4 pb-4">
-        <div className="h-full min-h-[200px] relative">
+      <div className="flex-1 px-4 pb-2 min-h-0">
+        <div className="h-full relative">
           <Textarea
             value={rawText}
             onChange={(e) => {
@@ -299,8 +289,8 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         </div>
       </div>
 
-      {/* Bottom Actions - Fixed */}
-      <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t border-border/30 px-4 py-4 pb-safe space-y-3">
+      {/* Bottom Actions - Compact */}
+      <div className="flex-shrink-0 bg-background/95 backdrop-blur-sm border-t border-border/30 px-4 py-3 pb-safe space-y-2">
         {/* Warnings - Only show content-related warnings, never build limit on load */}
         {(isTooShort || showLargeDocWarning) && (
           <div className="flex items-center justify-center gap-2 text-xs">

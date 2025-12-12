@@ -150,7 +150,7 @@ export const InputScreen = () => {
       } finally {
         setIsScrapingContext(false);
       }
-    }, 800);
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, [pendingUrl, isScrapingContext, setBusinessContext]);
