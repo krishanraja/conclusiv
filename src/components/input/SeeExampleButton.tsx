@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, Sparkles, X } from "lucide-react";
+import { Eye, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNarrativeStore } from "@/store/narrativeStore";
+import { cn } from "@/lib/utils";
 
 // Sample research content that demonstrates the tool's capabilities
 const EXAMPLE_RESEARCH = `Strategic Analysis: TechFlow Inc. - Series B Readiness Assessment
@@ -46,8 +47,12 @@ Strategic Recommendations
 3. Consider strategic partnerships over pure organic growth
 4. Build defensible moats through proprietary data assets`;
 
-export const SeeExampleButton = () => {
-  const [isHovered, setIsHovered] = useState(false);
+interface SeeExampleButtonProps {
+  className?: string;
+  variant?: "default" | "outline";
+}
+
+export const SeeExampleButton = ({ className, variant = "outline" }: SeeExampleButtonProps) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const { setRawText, rawText } = useNarrativeStore();
 
@@ -68,36 +73,14 @@ export const SeeExampleButton = () => {
 
   return (
     <>
-      <motion.button
-        type="button"
+      <Button
+        variant={variant}
         onClick={handleLoadExample}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        initial={{ opacity: 0, x: 10 }}
-        animate={{ opacity: 1, x: 0 }}
-        whileHover={{ x: -4 }}
-        className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group"
+        className={cn("h-12", className)}
       >
-        <motion.div 
-          className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent/50 group-hover:bg-accent transition-colors"
-        >
-          <Eye className="w-4 h-4" />
-        </motion.div>
-        <span>See example</span>
-        <AnimatePresence>
-          {isHovered && (
-            <motion.span
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "auto" }}
-              exit={{ opacity: 0, width: 0 }}
-              className="flex items-center gap-1 text-xs text-shimmer-start overflow-hidden whitespace-nowrap"
-            >
-              <Sparkles className="w-3 h-3" />
-              Load sample
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </motion.button>
+        <Eye className="w-4 h-4 mr-2" />
+        Example
+      </Button>
 
       {/* Confirmation Dialog */}
       <AnimatePresence>
