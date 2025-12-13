@@ -1,33 +1,20 @@
 import React, { useCallback, useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import conclusivIcon from "@/assets/conclusiv-icon.png";
+import { criticalImages, isImageReady, onImageReady } from "@/lib/imagePreloader";
 
 interface SplashScreenProps {
   onComplete: () => void;
 }
 
-// Preload image immediately when module loads (before React renders)
-const preloadedImage = new Image();
-preloadedImage.src = conclusivIcon;
-
 export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
-  // Check if image was already cached from the module-level preload
-  const [imageReady, setImageReady] = useState(preloadedImage.complete);
+  const [imageReady, setImageReady] = useState(() => isImageReady("conclusivIcon"));
   const [animationComplete, setAnimationComplete] = useState(false);
   const hasCompleted = useRef(false);
 
   // Handle image load if it wasn't already cached
   useEffect(() => {
     if (imageReady) return;
-    
-    const handleLoad = () => setImageReady(true);
-    
-    if (preloadedImage.complete) {
-      setImageReady(true);
-    } else {
-      preloadedImage.addEventListener("load", handleLoad);
-      return () => preloadedImage.removeEventListener("load", handleLoad);
-    }
+    return onImageReady("conclusivIcon", () => setImageReady(true));
   }, [imageReady]);
 
   // Trigger completion when both conditions are met
@@ -43,7 +30,6 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
   }, []);
 
   // Don't start the splash animation until the image is ready
-  // Show a minimal placeholder that feels intentional
   if (!imageReady) {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background">
@@ -130,7 +116,7 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           className="relative z-10"
         >
           <img 
-            src={conclusivIcon} 
+            src={criticalImages.conclusivIcon} 
             alt="Conclusiv" 
             className="w-14 h-14 object-contain"
           />
