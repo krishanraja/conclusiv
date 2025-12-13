@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
@@ -14,9 +14,11 @@ import { PresentScreen } from "@/components/present/PresentScreen";
 import { LoadingOverlay } from "@/components/ui/loading";
 import { FeedbackWidget } from "@/components/feedback/FeedbackWidget";
 import { OnboardingManager } from "@/components/onboarding/OnboardingManager";
+import { SplashScreen } from "@/components/ui/SplashScreen";
 import { AnimatePresence, motion } from "framer-motion";
 
 const Index = () => {
+  const [showSplash, setShowSplash] = useState(true);
   const { toast } = useToast();
   const { checkSubscription } = useSubscription();
   const { trackPageView, trackStepChange, trackSubscriptionAction } = useAnalytics();
@@ -79,7 +81,19 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen min-h-[100dvh] bg-background flex flex-col overflow-x-hidden max-w-[100vw]">
+    <>
+      <AnimatePresence>
+        {showSplash && (
+          <SplashScreen onComplete={() => setShowSplash(false)} />
+        )}
+      </AnimatePresence>
+      
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: showSplash ? 0 : 1 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+        className="min-h-screen min-h-[100dvh] bg-background flex flex-col overflow-x-hidden max-w-[100vw]"
+      >
       <Header />
       
       <AnimatePresence>
@@ -119,7 +133,8 @@ const Index = () => {
       
       {/* Onboarding for first-time users */}
       {currentStep === "input" && <OnboardingManager />}
-    </div>
+      </motion.div>
+    </>
   );
 };
 
