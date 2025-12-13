@@ -6,38 +6,51 @@ interface SplashScreenProps {
   onComplete: () => void;
 }
 
+// Preload image immediately when module loads (before React renders)
+const preloadedImage = new Image();
+preloadedImage.src = conclusivIcon;
+
 export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
-  const [imageLoaded, setImageLoaded] = useState(false);
+  // Check if image was already cached from the module-level preload
+  const [imageReady, setImageReady] = useState(preloadedImage.complete);
   const [animationComplete, setAnimationComplete] = useState(false);
   const hasCompleted = useRef(false);
 
-  // Only trigger completion when BOTH conditions are met
+  // Handle image load if it wasn't already cached
   useEffect(() => {
-    if (imageLoaded && animationComplete && !hasCompleted.current) {
+    if (imageReady) return;
+    
+    const handleLoad = () => setImageReady(true);
+    
+    if (preloadedImage.complete) {
+      setImageReady(true);
+    } else {
+      preloadedImage.addEventListener("load", handleLoad);
+      return () => preloadedImage.removeEventListener("load", handleLoad);
+    }
+  }, [imageReady]);
+
+  // Trigger completion when both conditions are met
+  useEffect(() => {
+    if (imageReady && animationComplete && !hasCompleted.current) {
       hasCompleted.current = true;
       setTimeout(onComplete, 200);
     }
-  }, [imageLoaded, animationComplete, onComplete]);
+  }, [imageReady, animationComplete, onComplete]);
 
   const handleAnimationComplete = useCallback(() => {
     setAnimationComplete(true);
   }, []);
 
-  const handleImageLoad = useCallback(() => {
-    setImageLoaded(true);
-  }, []);
-
-  // Preload the image on mount
-  useEffect(() => {
-    const img = new Image();
-    img.onload = handleImageLoad;
-    img.src = conclusivIcon;
-    
-    // If image is already cached, onload might not fire
-    if (img.complete) {
-      handleImageLoad();
-    }
-  }, [handleImageLoad]);
+  // Don't start the splash animation until the image is ready
+  // Show a minimal placeholder that feels intentional
+  if (!imageReady) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/5 via-background to-background" />
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -52,11 +65,11 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
       
       {/* Logo container with loading ring */}
       <div className="relative flex items-center justify-center">
-        {/* Outer glow - simplified */}
+        {/* Outer glow */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
           className="absolute w-32 h-32 rounded-full bg-primary/10 blur-xl"
         />
         
@@ -106,14 +119,13 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           </defs>
         </svg>
         
-        {/* C Icon - centered in loading ring */}
+        {/* Logo - appears immediately since we waited for image to load */}
         <motion.div
           initial={{ opacity: 0, scale: 0.7 }}
-          animate={{ opacity: imageLoaded ? 1 : 0, scale: imageLoaded ? 1 : 0.7 }}
+          animate={{ opacity: 1, scale: 1 }}
           transition={{ 
-            duration: 0.5, 
+            duration: 0.4, 
             ease: [0.34, 1.3, 0.64, 1],
-            delay: 0.1 
           }}
           className="relative z-10"
         >
