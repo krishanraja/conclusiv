@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
 import { parseDocument } from "@/lib/api";
-import { DocumentUploadInput } from "./DocumentUploadInput";
+
 import { AmbientDemo } from "./AmbientDemo";
 import { ResearchAssistant } from "./ResearchAssistant";
 import { ResearchHistory } from "./ResearchHistory";
@@ -12,7 +12,7 @@ import { MobileInputFlow } from "./MobileInputFlow";
 import { SetupSheet, useSetupSheet } from "./SetupSheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, AlertCircle, Crown, Check, Search, Settings2 } from "lucide-react";
+import { Sparkles, AlertCircle, Crown, Check, Search, Settings2, Upload, FileText } from "lucide-react";
 import { useFeatureGate } from "@/components/subscription/FeatureGate";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -346,7 +346,49 @@ export const InputScreen = () => {
           </AnimatePresence>
         </div>
 
-        {/* Main Input Card with glassmorphism */}
+        {/* Primary Action Cards - Upload & Generate */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="grid grid-cols-2 gap-3"
+        >
+          {/* Upload Document Card */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isParsingDocument}
+            className="flex items-center gap-3 px-4 py-4 rounded-xl border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group bg-card/50 backdrop-blur-sm text-left disabled:opacity-50"
+            data-onboarding="document-upload"
+          >
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              <Upload className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-medium text-foreground block">Upload Document</span>
+              <p className="text-xs text-muted-foreground truncate">PDF, Word, or PowerPoint</p>
+            </div>
+          </button>
+
+          {/* Generate with AI Card */}
+          <button
+            type="button"
+            onClick={() => setShowResearchAssistant(true)}
+            className="flex items-center gap-3 px-4 py-4 rounded-xl border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group bg-card/50 backdrop-blur-sm text-left"
+            data-onboarding="research-assistant"
+          >
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors relative">
+              <Search className="w-5 h-5 text-primary" />
+              <Sparkles className="w-3 h-3 text-shimmer-start absolute -top-1 -right-1" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-medium text-foreground block">Generate with AI</span>
+              <p className="text-xs text-muted-foreground truncate">Research & writing assistant</p>
+            </div>
+          </button>
+        </motion.div>
+
+        {/* Secondary: Text Area (Output/Paste) */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -355,144 +397,134 @@ export const InputScreen = () => {
             showSuccessFlash ? 'ring-2 ring-shimmer-start/30' : ''
           }`}
         >
-          {/* Text Input with drag & drop support */}
-          <div className="space-y-1">
-            <div 
-              className={`shimmer-border shimmer-glow rounded-lg relative transition-all duration-300 ${
-                isDraggingOnTextarea ? 'ring-2 ring-shimmer-start scale-[1.01]' : ''
-              }`}
-              onDragEnter={handleTextareaDragEnter}
-              onDragOver={handleTextareaDragOver}
-              onDragLeave={handleTextareaDragLeave}
-              onDrop={handleTextareaDrop}
-            >
-              <Textarea
-                value={rawText}
-                onChange={(e) => {
-                  setRawText(e.target.value);
-                  if (uploadedFileName) setUploadedFileName(null);
-                }}
-                placeholder="Paste your research, strategy document, or business plan... or drag & drop a file"
-                className={`bg-background/50 border-0 resize-none text-sm rounded-lg focus:ring-primary/50 transition-all ${
-                  hasContent ? 'min-h-[80px]' : 'min-h-[100px] md:min-h-[120px]'
-                }`}
-                disabled={isParsingDocument}
-              />
-              {isDraggingOnTextarea && (
-                <div className="absolute inset-0 flex items-center justify-center bg-shimmer-start/10 rounded-lg pointer-events-none">
-                  <p className="text-shimmer-start font-medium">Drop file here</p>
+          {/* Label for the text area */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {uploadedFileName ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <FileText className="w-4 h-4 text-shimmer-start" />
+                  <span className="text-foreground font-medium">{uploadedFileName}</span>
+                  <button
+                    type="button"
+                    onClick={handleClearDocument}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Clear
+                  </button>
                 </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">Or paste your content directly</span>
               )}
             </div>
-            
-            {/* Research Assistant Trigger & See Example - green left arrow */}
-            {!hasContent && (
-              <div className="flex items-center justify-between mt-2">
-                <motion.button
-                  type="button"
-                  onClick={() => setShowResearchAssistant(true)}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  whileHover={{ x: 4 }}
-                  className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors group"
-                  data-onboarding="research-assistant"
-                >
-                  <motion.div 
-                    className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors"
-                    animate={{ x: [0, 3, 0] }}
-                    transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                  >
-                    <Search className="w-4 h-4" />
-                  </motion.div>
-                  <span>Generate content</span>
-                  <Sparkles className="w-3.5 h-3.5 opacity-60" />
-                </motion.button>
-                
-                <SeeExampleButton />
+            <SeeExampleButton />
+          </div>
+
+          {/* Text Input with drag & drop support */}
+          <div 
+            className={`rounded-lg relative transition-all duration-300 border border-border/30 ${
+              isDraggingOnTextarea ? 'ring-2 ring-shimmer-start scale-[1.01] border-shimmer-start' : 'hover:border-border/50'
+            }`}
+            onDragEnter={handleTextareaDragEnter}
+            onDragOver={handleTextareaDragOver}
+            onDragLeave={handleTextareaDragLeave}
+            onDrop={handleTextareaDrop}
+          >
+            <Textarea
+              value={rawText}
+              onChange={(e) => {
+                setRawText(e.target.value);
+                if (uploadedFileName) setUploadedFileName(null);
+              }}
+              placeholder="Content from uploads or AI generation will appear here..."
+              className={`bg-background/30 border-0 resize-none text-sm rounded-lg focus:ring-primary/50 transition-all ${
+                hasContent ? 'min-h-[100px]' : 'min-h-[80px]'
+              }`}
+              disabled={isParsingDocument}
+            />
+            {isDraggingOnTextarea && (
+              <div className="absolute inset-0 flex items-center justify-center bg-shimmer-start/10 rounded-lg pointer-events-none">
+                <p className="text-shimmer-start font-medium">Drop file here</p>
               </div>
             )}
-            <div className="flex justify-between items-center text-xs px-1">
-              <div className="flex items-center gap-2">
-                <span className={isTooShort ? "text-amber-500" : "text-muted-foreground"}>
-                  {charCount.toLocaleString()} characters
+            {isParsingDocument && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-lg">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span>Parsing document...</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Character count and warnings */}
+          <div className="flex justify-between items-center text-xs px-1">
+            <div className="flex items-center gap-2">
+              <span className={isTooShort ? "text-amber-500" : "text-muted-foreground"}>
+                {charCount.toLocaleString()} characters
+              </span>
+              {isTooShort && (
+                <span className="text-amber-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Min {MIN_CHARS} required
                 </span>
-                {isTooShort && (
-                  <span className="text-amber-500 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    Min {MIN_CHARS} required
-                  </span>
-                )}
-                {showLargeDocWarning && (
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <Crown className="w-3 h-3 text-primary" />
-                    Upgrade for unlimited size
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                {isLongInput && (
-                  <span className={isVeryLongInput ? "text-muted-foreground" : "text-shimmer-start"}>
-                    {isVeryLongInput 
-                      ? "Large document — we'll extract key insights" 
-                      : "Processing in smart chunks"}
-                  </span>
-                )}
-              </div>
+              )}
+              {showLargeDocWarning && (
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <Crown className="w-3 h-3 text-primary" />
+                  Upgrade for unlimited size
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {isLongInput && (
+                <span className={isVeryLongInput ? "text-muted-foreground" : "text-shimmer-start"}>
+                  {isVeryLongInput 
+                    ? "Large document — we'll extract key insights" 
+                    : "Processing in smart chunks"}
+                </span>
+              )}
             </div>
           </div>
 
           {/* Research History */}
-          <div className="pt-1">
-            <ResearchHistory
-              onContinueResearch={(query) => {
-                setShowResearchAssistant(true);
-              }}
-              onUseResults={(content) => {
-                const current = rawText;
-                setRawText(current ? `${current}\n\n---\n\n${content}` : content);
-              }}
-            />
-          </div>
+          <ResearchHistory
+            onContinueResearch={(query) => {
+              setShowResearchAssistant(true);
+            }}
+            onUseResults={(content) => {
+              const current = rawText;
+              setRawText(current ? `${current}\n\n---\n\n${content}` : content);
+            }}
+          />
+        </motion.div>
 
-          {/* Optional Features - Document Upload + Settings Button */}
-          <div className="space-y-2 pt-1 border-t border-border/30">
-            <div data-onboarding="document-upload">
-              <DocumentUploadInput
-                isExpanded={isDocumentExpanded}
-                onToggle={() => setIsDocumentExpanded(!isDocumentExpanded)}
-                isLoading={isParsingDocument}
-                fileName={uploadedFileName}
-                onFileSelect={handleFileSelect}
-                onClear={handleClearDocument}
-                hasContent={hasContent}
-              />
+        {/* Personalize Settings Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          <button
+            type="button"
+            onClick={() => setShowSetupSheet(true)}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group bg-card/50 backdrop-blur-sm"
+            data-onboarding="business-context"
+          >
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors relative">
+              <Settings2 className="w-5 h-5 text-primary" />
+              {!businessContext && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-shimmer-start rounded-full animate-pulse" />
+              )}
             </div>
-
-            {/* Settings Button - Opens SetupSheet for personalization */}
-            <div data-onboarding="business-context">
-              <button
-                type="button"
-                onClick={() => setShowSetupSheet(true)}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group"
-              >
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors relative">
-                  <Settings2 className="w-4 h-4 text-primary" />
-                  {/* Pulsing indicator when no context is set */}
-                  {!businessContext && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-shimmer-start rounded-full animate-pulse" />
-                  )}
-                </div>
-                <div className="flex-1 text-left">
-                  <span className="text-sm font-medium text-foreground">
-                    {businessContext ? `${businessContext.companyName || 'Business'} Settings` : 'Personalize Your Presentation'}
-                  </span>
-                  <p className="text-xs text-muted-foreground">
-                    {businessContext ? 'Edit business context & story type' : 'Add your logo, brand colors & story type'}
-                  </p>
-                </div>
-              </button>
+            <div className="flex-1 text-left">
+              <span className="text-sm font-medium text-foreground">
+                {businessContext ? `${businessContext.companyName || 'Business'} Settings` : 'Personalize Your Presentation'}
+              </span>
+              <p className="text-xs text-muted-foreground">
+                {businessContext ? 'Edit business context & story type' : 'Add your logo, brand colors & story type'}
+              </p>
             </div>
-          </div>
+          </button>
         </motion.div>
 
         {/* Continue Button - Always visible */}
