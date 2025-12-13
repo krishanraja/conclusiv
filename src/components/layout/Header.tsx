@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Zap } from "lucide-react";
-import conclusivLogo from "@/assets/conclusiv-logo.png";
+import conclusivIcon from "@/assets/conclusiv-icon.png";
 import { AccountMenu } from "./AccountMenu";
 import { CompanyBrainIndicator } from "./CompanyBrainIndicator";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,20 +31,11 @@ export const Header = () => {
       >
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
-            {/* Mobile: C icon */}
+            {/* C icon - responsive sizing */}
             <img 
-              src="/favicon.png"
+              src={conclusivIcon}
               alt="conclusiv" 
-              className="h-6 w-6 sm:hidden"
-              fetchPriority="high"
-              decoding="async"
-            />
-            {/* Desktop: Full wordmark */}
-            <img 
-              src={conclusivLogo} 
-              alt="conclusiv" 
-              className="hidden sm:block h-5 w-auto"
-              style={{ aspectRatio: 'auto' }}
+              className="h-7 w-7 sm:h-8 sm:w-8 object-contain"
               fetchPriority="high"
               decoding="async"
             />
