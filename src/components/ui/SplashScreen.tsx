@@ -99,16 +99,13 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         </motion.div>
       </div>
       
-      {/* Brand name */}
+      {/* Tagline */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.3, ease: [0.4, 0, 0.2, 1] }}
-        className="absolute bottom-1/3 flex flex-col items-center gap-2"
+        className="absolute bottom-1/3"
       >
-        <span className="text-xl font-semibold tracking-wide text-foreground">
-          conclusiv
-        </span>
         <span className="text-xs text-muted-foreground tracking-widest uppercase">
           Crafting your narrative
         </span>
