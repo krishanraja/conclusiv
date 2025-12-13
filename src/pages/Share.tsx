@@ -85,23 +85,30 @@ const Share = () => {
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const { data, error } = await supabase
-      .from("narratives")
-      .select("narrative_data, share_password")
-      .eq("share_id", shareId)
-      .eq("is_public", true)
-      .single();
+    try {
+      // Use secure server-side password verification
+      const { data, error } = await supabase.functions.invoke('verify-share-password', {
+        body: { shareId, password: passwordInput }
+      });
 
-    if (error || !data) {
-      setPasswordError(true);
-      return;
-    }
+      if (error) {
+        console.error('[Share] Password verification error:', error);
+        setPasswordError(true);
+        return;
+      }
 
-    if (data.share_password === passwordInput) {
-      setNarrative(data.narrative_data as unknown as NarrativeSchema);
-      setIsUnlocked(true);
-      setPasswordError(false);
-    } else {
+      if (data.valid && data.narrative) {
+        setNarrative(data.narrative as NarrativeSchema);
+        if (data.narrativeId) {
+          setNarrativeId(data.narrativeId);
+        }
+        setIsUnlocked(true);
+        setPasswordError(false);
+      } else {
+        setPasswordError(true);
+      }
+    } catch (err) {
+      console.error('[Share] Password verification failed:', err);
       setPasswordError(true);
     }
   };

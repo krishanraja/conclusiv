@@ -23,7 +23,7 @@ async function extractTextFromDocx(base64Data: string): Promise<string> {
       throw new Error("Could not find document.xml in DOCX file");
     }
 
-    let text = documentXml
+    const text = documentXml
       .replace(/<\/w:p>/g, '\n')
       .replace(/<w:tab\/>/g, '\t')
       .replace(/<w:t[^>]*>([^<]*)<\/w:t>/g, '$1')
@@ -71,7 +71,7 @@ async function extractTextFromPptx(base64Data: string): Promise<string> {
         const slideNum = slideFile.match(/slide(\d+)/)?.[1];
         textParts.push(`\n--- Slide ${slideNum} ---\n`);
         
-        let slideText = slideXml
+        const slideText = slideXml
           .replace(/<a:t>([^<]*)<\/a:t>/g, '$1 ')
           .replace(/<[^>]+>/g, '')
           .replace(/\s+/g, ' ')
@@ -97,7 +97,7 @@ async function extractTextFromPptx(base64Data: string): Promise<string> {
       for (const notesFile of notesFiles) {
         const notesXml = await zip.file(notesFile)?.async("string");
         if (notesXml) {
-          let notesText = notesXml
+          const notesText = notesXml
             .replace(/<a:t>([^<]*)<\/a:t>/g, '$1 ')
             .replace(/<[^>]+>/g, '')
             .replace(/\s+/g, ' ')

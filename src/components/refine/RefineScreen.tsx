@@ -64,7 +64,8 @@ export const RefineScreen = () => {
     if (activeTab === "claims" && !claimsLoaded && keyClaims.length === 0) {
       handleTabChange("claims");
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claimsLoaded, keyClaims.length]);
 
   const handleBack = () => {
     setCurrentStep("input");

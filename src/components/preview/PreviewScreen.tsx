@@ -137,12 +137,41 @@ export const PreviewScreen = () => {
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [lastShareId, setLastShareId] = useState<string | null>(null);
+  
+  // Update password in database when it changes
+  const handlePasswordSet = async (password: string | null) => {
+    setSharePassword(password);
+    
+    // Save to database if we have a share ID
+    if (lastShareId && user) {
+      try {
+        const { error } = await supabase
+          .from("narratives")
+          .update({ share_password: password })
+          .eq("share_id", lastShareId)
+          .eq("user_id", user.id);
+        
+        if (error) {
+          console.error('[PreviewScreen] Failed to update share password:', error);
+          toast({
+            title: "Password update failed",
+            description: "Could not save the password. Try again.",
+            variant: "destructive",
+          });
+        }
+      } catch (err) {
+        console.error('[PreviewScreen] Error updating share password:', err);
+      }
+    }
+  };
 
   // Build narrative on mount if not already built
   useEffect(() => {
     if (!narrative && !hasBuilt) {
       handleBuild();
     }
+    // Intentionally only run on mount - we use hasBuilt to prevent re-runs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleBuild = async () => {
@@ -464,7 +493,7 @@ export const PreviewScreen = () => {
             <div className="mt-4 space-y-4">
               <PasswordProtectedShare
                 shareUrl={shareUrl}
-                onPasswordSet={setSharePassword}
+                onPasswordSet={handlePasswordSet}
                 currentPassword={sharePassword}
               />
             </div>
@@ -509,7 +538,7 @@ export const PreviewScreen = () => {
           <div className="mt-4 space-y-4">
             <PasswordProtectedShare
               shareUrl={shareUrl}
-              onPasswordSet={setSharePassword}
+              onPasswordSet={handlePasswordSet}
               currentPassword={sharePassword}
             />
             {lastShareId && (

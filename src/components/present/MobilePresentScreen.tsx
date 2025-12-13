@@ -42,7 +42,7 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
   }, [nextSection, prevSection, onExit]);
 
   // Swipe handling
-  const handleDragEnd = useCallback((_: any, info: PanInfo) => {
+  const handleDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const threshold = 50;
     
     if (info.offset.x < -threshold && currentSectionIndex < (narrative?.sections.length ?? 0) - 1) {
@@ -53,7 +53,7 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
     setDragDirection(null);
   }, [currentSectionIndex, narrative?.sections.length, nextSection, prevSection]);
 
-  const handleDrag = useCallback((_: any, info: PanInfo) => {
+  const handleDrag = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (info.offset.x < -20) {
       setDragDirection('left');
     } else if (info.offset.x > 20) {
