@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { NarrativePreview } from "./NarrativePreview";
 import { QuickAdjustments } from "./QuickAdjustments";
 import { AlternativesPanel } from "./AlternativesPanel";
-import { MobileQuickSettings } from "./MobileQuickSettings";
 import { MobileActionsDrawer } from "./MobileActionsDrawer";
 import { MobilePreviewLayout } from "./MobilePreviewLayout";
 import { PasswordProtectedShare } from "./PasswordProtectedShare";
