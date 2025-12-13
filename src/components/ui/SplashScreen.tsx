@@ -1,3 +1,4 @@
+import React from "react";
 import { motion } from "framer-motion";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 
@@ -6,16 +7,18 @@ interface SplashScreenProps {
 }
 
 export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
+  // Use useEffect to trigger completion after animation sequence
+  React.useEffect(() => {
+    const timer = setTimeout(onComplete, 2400);
+    return () => clearTimeout(timer);
+  }, [onComplete]);
+
   return (
     <motion.div
       initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.6, ease: "easeInOut" }}
-      onAnimationComplete={() => {
-        // Trigger complete after the full animation sequence
-        setTimeout(onComplete, 2000);
-      }}
       className="fixed inset-0 z-[100] flex items-center justify-center bg-background"
     >
       {/* Subtle radial gradient background */}
@@ -84,7 +87,7 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ 
             duration: 0.6, 
-            ease: [0.34, 1.56, 0.64, 1], // Spring-like
+            ease: [0.34, 1.56, 0.64, 1] as const,
             delay: 0.2 
           }}
           className="relative z-10"

@@ -14,15 +14,16 @@ import { PresentScreen } from "@/components/present/PresentScreen";
 import { LoadingOverlay } from "@/components/ui/loading";
 import { FeedbackWidget } from "@/components/feedback/FeedbackWidget";
 import { OnboardingManager } from "@/components/onboarding/OnboardingManager";
+import { SplashScreen } from "@/components/ui/SplashScreen";
 import { AnimatePresence, motion } from "framer-motion";
 
 const Index = () => {
+  const [showSplash, setShowSplash] = useState(true);
   const { toast } = useToast();
   const { checkSubscription } = useSubscription();
   const { trackPageView, trackStepChange, trackSubscriptionAction } = useAnalytics();
   const { incrementUsageCount } = useFeedback();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [isPageReady, setIsPageReady] = useState(false);
   const { 
     currentStep, 
     isLoading, 
@@ -31,15 +32,6 @@ const Index = () => {
     loadingProgress,
     rawText 
   } = useNarrativeStore();
-
-  // Coordinate initial page render
-  useEffect(() => {
-    // Small delay ensures fonts, styles, and initial state are ready
-    const timer = requestAnimationFrame(() => {
-      setIsPageReady(true);
-    });
-    return () => cancelAnimationFrame(timer);
-  }, []);
 
   // Track page view on mount
   useEffect(() => {
@@ -88,121 +80,61 @@ const Index = () => {
     return <PresentScreen />;
   }
 
-  // Staggered animation variants for coordinated entrance
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        duration: 0.4,
-        ease: [0.25, 0.1, 0.25, 1],
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
-  const headerVariants = {
-    hidden: { opacity: 0, y: -8 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.4,
-        ease: [0.25, 0.1, 0.25, 1],
-      },
-    },
-  };
-
-  const mainVariants = {
-    hidden: { opacity: 0, y: 12 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.5,
-        ease: [0.25, 0.1, 0.25, 1],
-      },
-    },
-  };
-
-  const stepTransitionVariants = {
-    initial: { opacity: 0, y: 8 },
-    animate: { 
-      opacity: 1, 
-      y: 0,
-      transition: {
-        duration: 0.35,
-        ease: [0.25, 0.1, 0.25, 1],
-      },
-    },
-    exit: { 
-      opacity: 0,
-      y: -8,
-      transition: {
-        duration: 0.2,
-        ease: [0.25, 0.1, 0.25, 1],
-      },
-    },
-  };
-
   return (
-    <motion.div 
-      className="min-h-screen min-h-[100dvh] bg-background flex flex-col overflow-x-hidden max-w-[100vw]"
-      variants={containerVariants}
-      initial="hidden"
-      animate={isPageReady ? "visible" : "hidden"}
-    >
-      <motion.div variants={headerVariants}>
-        <Header />
-      </motion.div>
-      
+    <>
       <AnimatePresence>
-        {isLoading && (
-          <LoadingOverlay 
-            message={loadingMessage || "Processing..."} 
-            stage={loadingStage}
-            progress={loadingProgress}
-            inputLength={rawText.length}
-          />
+        {showSplash && (
+          <SplashScreen onComplete={() => setShowSplash(false)} />
         )}
       </AnimatePresence>
       
-      <motion.main
-        variants={mainVariants}
-        className="flex-1 pt-16"
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: showSplash ? 0 : 1 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+        className="min-h-screen min-h-[100dvh] bg-background flex flex-col overflow-x-hidden max-w-[100vw]"
       >
+        <Header />
+        
+        <AnimatePresence>
+          {isLoading && (
+            <LoadingOverlay 
+              message={loadingMessage || "Processing..."} 
+              stage={loadingStage}
+              progress={loadingProgress}
+              inputLength={rawText.length}
+            />
+          )}
+        </AnimatePresence>
+        
         <AnimatePresence mode="wait">
-          <motion.div
+          <motion.main
             key={currentStep}
-            variants={stepTransitionVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex-1 pt-16"
           >
             {currentStep === "input" && <InputScreen />}
             {currentStep === "refine" && <RefineScreen />}
             {currentStep === "preview" && <PreviewScreen />}
-          </motion.div>
+          </motion.main>
         </AnimatePresence>
-      </motion.main>
-      
-      {/* Footer only on desktop for input step */}
-      {currentStep === "input" && (
-        <motion.div 
-          className="hidden md:block"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5, duration: 0.3 }}
-        >
-          <Footer />
-        </motion.div>
-      )}
-      
-      <FeedbackWidget currentStep={currentStep} />
-      
-      {/* Onboarding for first-time users */}
-      {currentStep === "input" && <OnboardingManager />}
-    </motion.div>
+        
+        {/* Footer only on desktop for input step */}
+        {currentStep === "input" && (
+          <div className="hidden md:block">
+            <Footer />
+          </div>
+        )}
+        
+        <FeedbackWidget currentStep={currentStep} />
+        
+        {/* Onboarding for first-time users */}
+        {currentStep === "input" && <OnboardingManager />}
+      </motion.div>
+    </>
   );
 };
 
