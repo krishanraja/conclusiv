@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  
+  <!-- Core Pages -->
+  <url>
+    <loc>https://conclusiv.ai/</loc>
+    <lastmod>2024-12-13</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  
+  <url>
+    <loc>https://conclusiv.ai/faq</loc>
+    <lastmod>2024-12-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <url>
+    <loc>https://conclusiv.ai/blog</loc>
+    <lastmod>2024-12-13</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <url>
+    <loc>https://conclusiv.ai/contact</loc>
+    <lastmod>2024-12-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://conclusiv.ai/terms</loc>
+    <lastmod>2024-12-13</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  
+  <url>
+    <loc>https://conclusiv.ai/privacy</loc>
+    <lastmod>2024-12-13</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  
+  <!-- Blog Posts -->
+  <url>
+    <loc>https://conclusiv.ai/blog/how-to-create-perfect-pitch-deck-2024</loc>
+    <lastmod>2024-12-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <url>
+    <loc>https://conclusiv.ai/blog/ai-pitch-deck-generators-comparison</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <url>
+    <loc>https://conclusiv.ai/blog/storytelling-for-investors</loc>
+    <lastmod>2024-12-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <url>
+    <loc>https://conclusiv.ai/blog/voice-first-presentation-creation</loc>
+    <lastmod>2024-12-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+</urlset>

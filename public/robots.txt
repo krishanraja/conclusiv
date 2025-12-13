@@ -1,14 +1,24 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
+# Conclusiv - AI Business Plan & Pitch Deck Generator
+# https://conclusiv.ai
 
 User-agent: *
 Allow: /
+
+# Core pages
+Allow: /
+Allow: /blog
+Allow: /blog/*
+Allow: /faq
+Allow: /terms
+Allow: /privacy
+Allow: /contact
+
+# Disallow admin and auth pages
+Disallow: /auth
+Disallow: /share/*
+
+# Sitemap
+Sitemap: https://conclusiv.ai/sitemap.xml
+
+# Crawl delay for politeness
+Crawl-delay: 1

@@ -6,11 +6,17 @@ export const Footer = () => {
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
         <p>© {new Date().getFullYear()} Mindmaker LLC. All rights reserved.</p>
         <div className="flex items-center gap-4">
+          <Link to="/faq" className="hover:text-foreground transition-colors">
+            FAQ
+          </Link>
+          <Link to="/blog" className="hover:text-foreground transition-colors">
+            Blog
+          </Link>
           <Link to="/terms" className="hover:text-foreground transition-colors">
-            Terms of Service
+            Terms
           </Link>
           <Link to="/privacy" className="hover:text-foreground transition-colors">
-            Privacy Policy
+            Privacy
           </Link>
           <Link to="/contact" className="hover:text-foreground transition-colors">
             Contact

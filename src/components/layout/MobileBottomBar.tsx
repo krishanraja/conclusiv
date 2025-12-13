@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
-import { MessageSquare, MoreHorizontal, X, FileText, Shield, Mail } from "lucide-react";
+import { MessageSquare, MoreHorizontal, FileText, Shield, Mail, HelpCircle, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -52,6 +51,24 @@ export const MobileBottomBar = ({ onFeedbackClick }: MobileBottomBarProps) => {
                 <p className="text-xs text-muted-foreground mb-4">
                   © {new Date().getFullYear()} Mindmaker LLC
                 </p>
+                
+                <Link
+                  to="/faq"
+                  onClick={() => setIsLinksOpen(false)}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors"
+                >
+                  <HelpCircle className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-sm">FAQ</span>
+                </Link>
+                
+                <Link
+                  to="/blog"
+                  onClick={() => setIsLinksOpen(false)}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors"
+                >
+                  <BookOpen className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-sm">Blog</span>
+                </Link>
                 
                 <Link
                   to="/terms"
