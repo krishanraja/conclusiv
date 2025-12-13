@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { OnboardingProgress } from "./OnboardingProgress";
 
 interface OnboardingSpotlightProps {
   targetSelector: string;
@@ -14,6 +15,9 @@ interface OnboardingSpotlightProps {
   showSkip?: boolean;
   actionLabel?: string;
   isActive: boolean;
+  currentStep?: number;
+  totalSteps?: number;
+  onStepClick?: (step: number) => void;
 }
 
 export const OnboardingSpotlight = ({
@@ -26,6 +30,9 @@ export const OnboardingSpotlight = ({
   showSkip = true,
   actionLabel = "Next",
   isActive,
+  currentStep,
+  totalSteps,
+  onStepClick,
 }: OnboardingSpotlightProps) => {
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -171,6 +178,17 @@ export const OnboardingSpotlight = ({
               {actionLabel}
             </Button>
           </div>
+
+          {/* Progress indicator inside tooltip */}
+          {currentStep !== undefined && totalSteps !== undefined && (
+            <div className="mt-3 pt-3 border-t border-border">
+              <OnboardingProgress
+                currentStep={currentStep}
+                totalSteps={totalSteps}
+                onStepClick={onStepClick}
+              />
+            </div>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>

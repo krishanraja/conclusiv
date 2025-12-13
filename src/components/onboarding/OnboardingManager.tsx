@@ -129,30 +129,18 @@ export const OnboardingManager = () => {
   }
 
   return (
-    <>
-      <OnboardingSpotlight
-        targetSelector={step.targetSelector}
-        title={step.title}
-        description={step.description}
-        position={step.position}
-        onNext={completeStep}
-        onSkip={skipOnboarding}
-        actionLabel={step.actionLabel}
-        isActive={isActive}
-      />
-
-      {/* Progress indicator - fixed at bottom on mobile */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-[101] bg-card/90 backdrop-blur-sm rounded-full px-4 py-2 border border-border"
-      >
-        <OnboardingProgress
-          currentStep={currentStep}
-          totalSteps={totalSteps}
-          onStepClick={goToStep}
-        />
-      </motion.div>
-    </>
+    <OnboardingSpotlight
+      targetSelector={step.targetSelector}
+      title={step.title}
+      description={step.description}
+      position={step.position}
+      onNext={completeStep}
+      onSkip={skipOnboarding}
+      actionLabel={step.actionLabel}
+      isActive={isActive}
+      currentStep={currentStep}
+      totalSteps={totalSteps}
+      onStepClick={goToStep}
+    />
   );
 };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { 
   ChevronLeft, 
@@ -35,6 +35,12 @@ export const MobilePreviewLayout = ({
   const { narrative, businessContext } = useNarrativeStore();
   const [leftPanelOpen, setLeftPanelOpen] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
+
+  // Auto-open Quick Adjustments on mount
+  useEffect(() => {
+    const timer = setTimeout(() => setRightPanelOpen(true), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handlePanEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const threshold = 50;

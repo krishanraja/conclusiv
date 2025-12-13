@@ -2,10 +2,8 @@ import { useState, useEffect, useRef, useCallback, DragEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
-import { scrapeBusinessContext, parseDocument, fetchBrandData } from "@/lib/api";
-import { BusinessContextInput } from "./BusinessContextInput";
+import { parseDocument } from "@/lib/api";
 import { DocumentUploadInput } from "./DocumentUploadInput";
-import { ArchetypeSelector } from "./ArchetypeSelector";
 import { AmbientDemo } from "./AmbientDemo";
 import { ResearchAssistant } from "./ResearchAssistant";
 import { ResearchHistory } from "./ResearchHistory";
@@ -14,7 +12,7 @@ import { MobileInputFlow } from "./MobileInputFlow";
 import { SetupSheet, useSetupSheet } from "./SetupSheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, AlertCircle, Crown, Check, Search } from "lucide-react";
+import { Sparkles, AlertCircle, Crown, Check, Search, Settings2 } from "lucide-react";
 import { useFeatureGate } from "@/components/subscription/FeatureGate";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -42,13 +40,8 @@ export const InputScreen = () => {
   const {
     rawText,
     setRawText,
-    businessWebsite,
-    setBusinessWebsite,
     businessContext,
-    setBusinessContext,
     setCurrentStep,
-    userUploadedLogoUrl,
-    setUserUploadedLogoUrl,
   } = useNarrativeStore();
 
   const { requireFeature, UpgradePromptComponent } = useFeatureGate();
@@ -59,15 +52,12 @@ export const InputScreen = () => {
   const { shouldAutoOpen, hasChecked, markSetupComplete } = useSetupSheet();
   const [showSetupSheet, setShowSetupSheet] = useState(false);
 
-  const [isScrapingContext, setIsScrapingContext] = useState(false);
   const [isParsingDocument, setIsParsingDocument] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isDocumentExpanded, setIsDocumentExpanded] = useState(false);
-  const [isContextExpanded, setIsContextExpanded] = useState(false);
   const [isDraggingOnTextarea, setIsDraggingOnTextarea] = useState(false);
   const [showSuccessFlash, setShowSuccessFlash] = useState(false);
   const [showResearchAssistant, setShowResearchAssistant] = useState(false);
-  const [suggestBusinessContext, setSuggestBusinessContext] = useState(false);
   
   // Auto-open setup sheet on first visit
   useEffect(() => {
@@ -76,34 +66,18 @@ export const InputScreen = () => {
     }
   }, [hasChecked, shouldAutoOpen]);
   
-  const [pendingUrl, setPendingUrl] = useState("");
-  const lastScrapedUrl = useRef("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-collapse document section after successful upload + show success flash + suggest business context
+  // Auto-collapse document section after successful upload + show success flash
   useEffect(() => {
     if (uploadedFileName && rawText.trim()) {
       setIsDocumentExpanded(false);
       setShowSuccessFlash(true);
       
-      // Suggest adding business context after doc parse if not already loaded
-      if (!businessContext) {
-        setSuggestBusinessContext(true);
-        const dismissTimer = setTimeout(() => setSuggestBusinessContext(false), 8000);
-        return () => clearTimeout(dismissTimer);
-      }
-      
       const timer = setTimeout(() => setShowSuccessFlash(false), 2000);
       return () => clearTimeout(timer);
     }
-  }, [uploadedFileName, rawText, businessContext]);
-
-  // Auto-collapse context section after successful scrape
-  useEffect(() => {
-    if (businessContext) {
-      setIsContextExpanded(false);
-    }
-  }, [businessContext]);
+  }, [uploadedFileName, rawText]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -126,47 +100,6 @@ export const InputScreen = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [rawText, isParsingDocument, canBuild]);
 
-  useEffect(() => {
-    if (!pendingUrl || !pendingUrl.includes(".") || pendingUrl === lastScrapedUrl.current) {
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      if (isScrapingContext) return;
-      
-      lastScrapedUrl.current = pendingUrl;
-      setIsScrapingContext(true);
-      try {
-        // Fetch both business context and brand data in parallel
-        const [scrapeResult, brandResult] = await Promise.all([
-          scrapeBusinessContext(pendingUrl),
-          fetchBrandData(pendingUrl),
-        ]);
-        
-        if (scrapeResult.context) {
-          // Merge brand data into business context
-          const enrichedContext = {
-            ...scrapeResult.context,
-            logoUrl: brandResult.data?.logo?.url,
-            logoVariants: brandResult.data?.logos || [],
-            brandColors: brandResult.data?.colors,
-            brandFonts: brandResult.data?.fonts,
-            firmographics: brandResult.data?.firmographics,
-            // Use Brandfetch company name if scrape didn't get it
-            companyName: scrapeResult.context.companyName || brandResult.data?.companyName || '',
-          };
-          setBusinessContext(enrichedContext);
-        }
-      } catch (err) {
-        console.error("Failed to scrape context:", err);
-      } finally {
-        setIsScrapingContext(false);
-      }
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [pendingUrl, isScrapingContext, setBusinessContext]);
-
   const handleResearchComplete = (content: string) => {
     setRawText(content);
     toast({
@@ -175,17 +108,6 @@ export const InputScreen = () => {
     });
   };
 
-  const handleWebsiteChange = (url: string) => {
-    setBusinessWebsite(url);
-    setPendingUrl(url);
-  };
-
-  const handleClearContext = () => {
-    setBusinessWebsite("");
-    setPendingUrl("");
-    lastScrapedUrl.current = "";
-    setBusinessContext(null);
-  };
 
   const handleFileSelect = async (file: File) => {
     if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
@@ -532,7 +454,7 @@ export const InputScreen = () => {
             />
           </div>
 
-          {/* Optional Features - Unified Compact Style */}
+          {/* Optional Features - Document Upload + Settings Button */}
           <div className="space-y-2 pt-1 border-t border-border/30">
             <div data-onboarding="document-upload">
               <DocumentUploadInput
@@ -546,30 +468,30 @@ export const InputScreen = () => {
               />
             </div>
 
-            <BusinessContextInput
-              value={businessWebsite}
-              onChange={handleWebsiteChange}
-              context={businessContext}
-              isLoading={isScrapingContext}
-              onClear={handleClearContext}
-              isExpanded={isContextExpanded}
-              onToggle={() => {
-                setIsContextExpanded(!isContextExpanded);
-                setSuggestBusinessContext(false);
-              }}
-              userLogoUrl={userUploadedLogoUrl || undefined}
-              onLogoUpload={setUserUploadedLogoUrl}
-              onLogoRemove={() => setUserUploadedLogoUrl(null)}
-              onLogoSelect={(url) => {
-                // Update the logoUrl in businessContext when user selects a variant
-                if (businessContext) {
-                  setBusinessContext({ ...businessContext, logoUrl: url });
-                }
-              }}
-              suggestExpand={suggestBusinessContext && !businessContext}
-            />
-
-            <ArchetypeSelector />
+            {/* Settings Button - Opens SetupSheet for personalization */}
+            <div data-onboarding="business-context">
+              <button
+                type="button"
+                onClick={() => setShowSetupSheet(true)}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group"
+              >
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors relative">
+                  <Settings2 className="w-4 h-4 text-primary" />
+                  {/* Pulsing indicator when no context is set */}
+                  {!businessContext && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-shimmer-start rounded-full animate-pulse" />
+                  )}
+                </div>
+                <div className="flex-1 text-left">
+                  <span className="text-sm font-medium text-foreground">
+                    {businessContext ? `${businessContext.companyName || 'Business'} Settings` : 'Personalize Your Presentation'}
+                  </span>
+                  <p className="text-xs text-muted-foreground">
+                    {businessContext ? 'Edit business context & story type' : 'Add your logo, brand colors & story type'}
+                  </p>
+                </div>
+              </button>
+            </div>
           </div>
         </motion.div>
 
