@@ -1,6 +1,5 @@
 import React, { useCallback } from "react";
 import { motion } from "framer-motion";
-import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -80,7 +79,7 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           </defs>
         </svg>
         
-        {/* Logo - snappier spring */}
+        {/* C Icon - centered in loading ring */}
         <motion.div
           initial={{ opacity: 0, scale: 0.7 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -89,13 +88,17 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
             ease: [0.34, 1.3, 0.64, 1],
             delay: 0.1 
           }}
-          className="relative z-10"
+          className="relative z-10 flex items-center justify-center w-16 h-16"
         >
-          <img 
-            src={conclusivLogo} 
-            alt="Conclusiv" 
-            className="w-16 h-16 object-contain"
-          />
+          <span 
+            className="text-4xl font-bold bg-gradient-to-br from-primary via-primary to-primary/80 bg-clip-text text-transparent"
+            style={{ 
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              textShadow: '0 0 20px hsl(var(--primary) / 0.3)'
+            }}
+          >
+            C
+          </span>
         </motion.div>
       </div>
       
