@@ -111,11 +111,7 @@ export const ResearchTemplateManager = ({
 
       if (error) throw error;
 
-      toast({
-        title: "Template saved",
-        description: `"${templateName}" has been saved for future use.`,
-      });
-
+      // Dialog closes indicating success - no toast needed
       setShowSaveDialog(false);
       setTemplateName("");
       fetchTemplates();
@@ -140,11 +136,7 @@ export const ResearchTemplateManager = ({
       redFlags: template.red_flags_template || "",
       audience: template.audience || "",
     });
-
-    toast({
-      title: "Template loaded",
-      description: `Applied "${template.name}" template.`,
-    });
+    // Fields populated indicating success - no toast needed
   };
 
   const deleteTemplate = async (templateId: string, templateName: string) => {
@@ -155,12 +147,7 @@ export const ResearchTemplateManager = ({
         .eq('id', templateId);
 
       if (error) throw error;
-
-      toast({
-        title: "Template deleted",
-        description: `"${templateName}" has been removed.`,
-      });
-
+      // Template disappears from list indicating success - no toast needed
       fetchTemplates();
     } catch (err) {
       console.error('Error deleting template:', err);

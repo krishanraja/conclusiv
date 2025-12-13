@@ -114,7 +114,8 @@ export const useAnalytics = () => {
         device_info: deviceInfo as Json,
       }));
 
-      await supabase.from("analytics_events").insert(eventsToInsert as any);
+      // @ts-expect-error - Supabase type inference requires explicit cast for complex Json types
+      await supabase.from("analytics_events").insert(eventsToInsert);
     } catch (error) {
       console.error("Failed to flush analytics events:", error);
       // Re-add events to queue on failure

@@ -76,10 +76,7 @@ export const ResearchHistory = ({ onContinueResearch, onUseResults }: ResearchHi
 
       if (!error) {
         setHistory(prev => prev.filter(h => h.id !== id));
-        toast({
-          title: "Research deleted",
-          description: "Entry removed from history.",
-        });
+        // Visual feedback from item disappearing - no toast needed
       }
     } catch (err) {
       toast({
@@ -99,10 +96,7 @@ export const ResearchHistory = ({ onContinueResearch, onUseResults }: ResearchHi
     e.stopPropagation();
     if (entry.results?.rawContent) {
       onUseResults(entry.results.rawContent);
-      toast({
-        title: "Research loaded",
-        description: "Previous research has been added to your input.",
-      });
+      // Content appears in input field - no toast needed
     }
   };
 

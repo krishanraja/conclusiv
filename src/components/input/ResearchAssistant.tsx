@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ArrowRight, Loader2, ExternalLink, Mic, MicOff, CheckCircle2, Clock, RefreshCw, ChevronDown, ChevronUp, Edit3, Building2, Target, Users, Sparkles } from "lucide-react";
+import { Search, ArrowRight, Loader2, ExternalLink, Mic, MicOff, CheckCircle2, Clock, RefreshCw, ChevronDown, ChevronUp, Edit3, Building2, Target, Users, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -239,7 +239,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
         setIsStructuringVoice(false);
       }
     }
-  }, [companyName, industry, decisionType, toast]);
+  }, [companyName, industry, decisionType]);
 
   const handleVoiceError = useCallback((error: string) => {
     toast({
@@ -404,7 +404,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); resetState(); } }}>
-      <SheetContent side="left" className="w-full sm:max-w-md h-[100dvh] flex flex-col overflow-hidden border-r border-primary/20">
+      <SheetContent side="left" className="w-full sm:max-w-md h-[100dvh] flex flex-col overflow-hidden border-r border-primary/20 px-4 sm:px-6">
         <SheetHeader className="mb-2">
           <SheetTitle className="flex items-center gap-2 justify-center">
             <div className="relative p-2 rounded-lg bg-primary/10">
@@ -654,7 +654,21 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
 
                 {/* Text Input (Secondary) */}
                 <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">Or type your question</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-muted-foreground">Or type your question</label>
+                    {primaryQuestion && (
+                      <button
+                        onClick={() => {
+                          setPrimaryQuestion("");
+                          setAiExtractedContext(null);
+                        }}
+                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                        Clear & retry
+                      </button>
+                    )}
+                  </div>
                   <Textarea
                     value={primaryQuestion}
                     onChange={(e) => setPrimaryQuestion(e.target.value)}

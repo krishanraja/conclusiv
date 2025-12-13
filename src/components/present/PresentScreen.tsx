@@ -321,6 +321,11 @@ export const PresentScreen = () => {
 
   const blurAmount = useMotionValue(0);
 
+  // Pre-compute transformed values (must be called before any early returns per Rules of Hooks)
+  const transformedX = useTransform(cameraX, (x) => `calc(50vw - ${x}px)`);
+  const transformedY = useTransform(cameraY, (y) => `calc(50vh - ${y}px)`);
+  const transformedBlur = useTransform(blurAmount, (b) => `blur(${b}px)`);
+
   // Update camera when section changes
   useEffect(() => {
     if (!narrative || nodePositions.length === 0) return;
@@ -500,12 +505,12 @@ export const PresentScreen = () => {
         <motion.div
           className="absolute w-full h-full will-change-transform"
           style={{
-            x: useTransform(cameraX, (x) => `calc(50vw - ${x}px)`),
-            y: useTransform(cameraY, (y) => `calc(50vh - ${y}px)`),
+            x: transformedX,
+            y: transformedY,
             scale: cameraZoom,
             rotate: isMobile ? 0 : cameraRotation,
             // Disable motion blur on mobile
-            filter: isMobile ? "none" : useTransform(blurAmount, (b) => `blur(${b}px)`),
+            filter: isMobile ? "none" : transformedBlur,
             transformStyle: isMobile ? "flat" : "preserve-3d",
             backfaceVisibility: "hidden",
           }}

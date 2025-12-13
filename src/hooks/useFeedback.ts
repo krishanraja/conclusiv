@@ -94,7 +94,8 @@ export const useFeedback = () => {
           context: enrichedContext as Json,
           sentiment,
           page,
-        } as any);
+        // @ts-expect-error - Supabase type inference requires explicit typing for Json columns
+        });
 
         if (dbError) {
           console.error("[useFeedback] Database insert failed:", dbError);

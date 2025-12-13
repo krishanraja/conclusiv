@@ -95,10 +95,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
       if (result.text) {
         setRawText(result.text);
         setUploadedFileName(file.name);
-        toast({
-          title: "Document parsed",
-          description: `Extracted ${result.text.length.toLocaleString()} characters`,
-        });
+        // Success indicated by UI state change - no toast needed
       }
     } catch (err) {
       toast({
@@ -114,10 +111,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
   const handleResearchComplete = (content: string) => {
     setRawText(content);
     setShowResearchAssistant(false);
-    toast({
-      title: "Research loaded",
-      description: "Your research has been added",
-    });
+    // Success indicated by content appearing in textarea - no toast needed
   };
 
   const handleSetupComplete = () => {
@@ -178,23 +172,33 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
 
       {/* Primary Action Buttons - Upload & Research ONLY */}
       <div className="flex-shrink-0 flex items-center justify-center gap-3 px-4 pb-3">
-        <Button
-          variant="outline"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isParsingDocument}
-          className="flex-1 h-12 text-sm font-medium"
-        >
-          <Upload className="w-4 h-4 mr-2" />
-          Upload
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => setShowResearchAssistant(true)}
-          className="flex-1 h-12 text-sm font-medium"
-        >
-          <Sparkles className="w-4 h-4 mr-2" />
-          Generate
-        </Button>
+        <div className={cn(
+          "flex-1 rounded-lg transition-all duration-300",
+          businessContext && !hasContent && "shimmer-border"
+        )}>
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isParsingDocument}
+            className="w-full h-12 text-sm font-medium border-0 bg-card/50"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Upload
+          </Button>
+        </div>
+        <div className={cn(
+          "flex-1 rounded-lg transition-all duration-300",
+          businessContext && !hasContent && "shimmer-border"
+        )}>
+          <Button
+            variant="outline"
+            onClick={() => setShowResearchAssistant(true)}
+            className="w-full h-12 text-sm font-medium border-0 bg-card/50"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Generate
+          </Button>
+        </div>
       </div>
 
       {/* Example as subtle text link - clearly secondary */}
@@ -238,11 +242,11 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         )}
       </AnimatePresence>
 
-      {/* Main Textarea with Shimmer Border */}
+      {/* Main Textarea - Shimmer only when no setup is done */}
       <div className="flex-1 px-4 pb-2 min-h-[20vh] max-h-[35vh]">
         <div className={cn(
           "h-full relative rounded-xl transition-all duration-300",
-          !hasContent && "shimmer-border"
+          !hasContent && !businessContext && "shimmer-border"
         )}>
           <Textarea
             value={rawText}

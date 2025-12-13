@@ -27,7 +27,7 @@ export const extractThemes = (text: string): Theme[] => {
     else if (lower.includes('threat') || lower.includes('risk')) currentCategory = 'threats';
     else if (lower.includes('insight') || lower.includes('finding')) currentCategory = 'insights';
     else if (line.trim().startsWith('-') || line.trim().startsWith('•')) {
-      const cleanLine = line.replace(/^[\-•\*]\s*/, '').trim();
+      const cleanLine = line.replace(/^[-•*]\s*/, '').trim();
       if (cleanLine) {
         switch (currentCategory) {
           case 'strengths': strengths.push(cleanLine); break;

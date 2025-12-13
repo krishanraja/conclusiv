@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { 
   ChevronLeft, 
@@ -11,13 +11,13 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NarrativePreview } from "./NarrativePreview";
 import { NarrativeQualityScore } from "@/components/intelligence/NarrativeQualityScore";
 import { ExecutiveSummary } from "@/components/intelligence/ExecutiveSummary";
 import { ImproveMyScore } from "@/components/intelligence/ImproveMyScore";
 import { QuickAdjustments } from "./QuickAdjustments";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
+import { getIcon } from "@/lib/icons";
 
 interface MobilePreviewLayoutProps {
   onBack: () => void;
@@ -35,43 +35,57 @@ export const MobilePreviewLayout = ({
   const { narrative, businessContext } = useNarrativeStore();
   const [leftPanelOpen, setLeftPanelOpen] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [dragDirection, setDragDirection] = useState<'left' | 'right' | null>(null);
 
-  // Auto-open Quick Adjustments on mount
-  useEffect(() => {
-    const timer = setTimeout(() => setRightPanelOpen(true), 300);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handlePanEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+  // Swipe to navigate between sections
+  const handleDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const threshold = 50;
     
-    if (info.offset.x > threshold && !leftPanelOpen && !rightPanelOpen) {
-      setLeftPanelOpen(true);
-    } else if (info.offset.x < -threshold && !leftPanelOpen && !rightPanelOpen) {
-      setRightPanelOpen(true);
-    } else if (info.offset.x < -threshold && leftPanelOpen) {
-      setLeftPanelOpen(false);
-    } else if (info.offset.x > threshold && rightPanelOpen) {
-      setRightPanelOpen(false);
+    if (!narrative) return;
+    
+    // Navigate sections with swipe
+    if (info.offset.x < -threshold && currentIndex < narrative.sections.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    } else if (info.offset.x > threshold && currentIndex > 0) {
+      setCurrentIndex(prev => prev - 1);
     }
-  };
+    setDragDirection(null);
+  }, [currentIndex, narrative]);
 
-  if (!narrative) return null;
+  const handleDrag = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (info.offset.x < -30) {
+      setDragDirection('left');
+    } else if (info.offset.x > 30) {
+      setDragDirection('right');
+    } else {
+      setDragDirection(null);
+    }
+  }, []);
+
+  if (!narrative || narrative.sections.length === 0) return null;
+
+  const currentSection = narrative.sections[currentIndex];
+  const Icon = getIcon(currentSection?.icon || 'Lightbulb');
+  const progress = ((currentIndex + 1) / narrative.sections.length) * 100;
 
   return (
-    <div className="flex flex-col h-[100dvh] overflow-hidden bg-background">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border/30 bg-background/95 backdrop-blur-sm z-20">
+    <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
+      {/* Header - Fixed height */}
+      <div className="flex-shrink-0 flex items-center justify-between px-3 py-2 border-b border-border/30 bg-background z-20">
         <Button variant="ghost" size="sm" onClick={onBack} className="h-8 px-2">
           <ArrowLeft className="w-4 h-4" />
         </Button>
         
         <div className="flex items-center gap-1">
           {businessContext?.companyName && (
-            <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+            <span className="text-xs text-muted-foreground truncate max-w-[100px]">
               {businessContext.companyName}
             </span>
           )}
+          <span className="text-xs text-primary ml-1">
+            {currentIndex + 1}/{narrative.sections.length}
+          </span>
         </div>
         
         <div className="flex items-center gap-1">
@@ -94,37 +108,130 @@ export const MobilePreviewLayout = ({
         </div>
       </div>
 
-      {/* Swipe Hint */}
-      <AnimatePresence>
-        {!leftPanelOpen && !rightPanelOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute top-1/2 left-0 right-0 z-10 pointer-events-none flex justify-between px-1"
-          >
-            <div className="w-1 h-12 bg-primary/20 rounded-r-full" />
-            <div className="w-1 h-12 bg-primary/20 rounded-l-full" />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Progress bar */}
+      <div className="flex-shrink-0 h-1 bg-muted/30">
+        <motion.div
+          className="h-full bg-primary"
+          initial={{ width: 0 }}
+          animate={{ width: `${progress}%` }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+        />
+      </div>
 
-      {/* Main Preview Area with Pan Gesture */}
+      {/* Main Preview Area - Full swipe */}
       <motion.div 
-        className="flex-1 overflow-hidden relative"
-        onPanEnd={handlePanEnd}
-        drag={false}
+        className="flex-1 relative overflow-hidden touch-pan-y"
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.2}
+        onDrag={handleDrag}
+        onDragEnd={handleDragEnd}
       >
-        <div className="h-full overflow-y-auto overflow-x-hidden">
-          <NarrativePreview />
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentIndex}
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -100 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="absolute inset-0 flex flex-col items-center justify-center p-6"
+          >
+            {/* Section Icon */}
+            <motion.div
+              className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-4"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.1 }}
+            >
+              <Icon className="w-7 h-7 text-primary" />
+            </motion.div>
+
+            {/* Section Title */}
+            <motion.h2
+              className="text-xl font-bold text-center mb-3 text-foreground"
+              initial={{ y: 10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.15 }}
+            >
+              {currentSection.title}
+            </motion.h2>
+
+            {/* Section Content */}
+            {currentSection.content && (
+              <motion.p
+                className="text-sm text-muted-foreground text-center leading-relaxed max-w-xs"
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                {currentSection.content}
+              </motion.p>
+            )}
+
+            {/* Section Items */}
+            {currentSection.items && currentSection.items.length > 0 && (
+              <motion.ul
+                className="mt-4 space-y-2 w-full max-w-xs"
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.25 }}
+              >
+                {currentSection.items.slice(0, 4).map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-primary shrink-0" />
+                    <span className="line-clamp-2">{item}</span>
+                  </li>
+                ))}
+              </motion.ul>
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Swipe Direction Indicators */}
+        <AnimatePresence>
+          {dragDirection === 'left' && currentIndex < narrative.sections.length - 1 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              exit={{ opacity: 0 }}
+              className="absolute right-2 top-1/2 -translate-y-1/2"
+            >
+              <ChevronRight className="w-8 h-8 text-primary" />
+            </motion.div>
+          )}
+          {dragDirection === 'right' && currentIndex > 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              exit={{ opacity: 0 }}
+              className="absolute left-2 top-1/2 -translate-y-1/2"
+            >
+              <ChevronLeft className="w-8 h-8 text-primary" />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
+
+      {/* Dot Navigation */}
+      <div className="flex-shrink-0 flex justify-center gap-1.5 py-2">
+        {narrative.sections.map((_, idx) => (
+          <button
+            key={idx}
+            onClick={() => setCurrentIndex(idx)}
+            className={cn(
+              "w-2 h-2 rounded-full transition-all duration-200",
+              idx === currentIndex
+                ? "w-5 bg-primary"
+                : "bg-muted-foreground/30"
+            )}
+          />
+        ))}
+      </div>
 
       {/* Left Slide-in Panel - Score & Summary */}
       <AnimatePresence>
         {leftPanelOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -132,7 +239,6 @@ export const MobilePreviewLayout = ({
               onClick={() => setLeftPanelOpen(false)}
               className="fixed inset-0 bg-black/50 z-30"
             />
-            {/* Panel */}
             <motion.div
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
@@ -166,7 +272,6 @@ export const MobilePreviewLayout = ({
       <AnimatePresence>
         {rightPanelOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -174,7 +279,6 @@ export const MobilePreviewLayout = ({
               onClick={() => setRightPanelOpen(false)}
               className="fixed inset-0 bg-black/50 z-30"
             />
-            {/* Panel */}
             <motion.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
@@ -202,13 +306,13 @@ export const MobilePreviewLayout = ({
         )}
       </AnimatePresence>
 
-      {/* Bottom Action Bar */}
-      <div className="flex items-center justify-around px-2 py-3 border-t border-border/30 bg-background/95 backdrop-blur-sm z-20 pb-safe">
+      {/* Bottom Action Bar - Fixed height, safe area aware */}
+      <div className="flex-shrink-0 flex items-center justify-around px-2 py-2 border-t border-border/30 bg-background z-20 pb-safe">
         <Button
           variant="ghost"
           size="sm"
           onClick={onExport}
-          className="flex flex-col items-center gap-1 h-auto py-2"
+          className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-3"
         >
           <Download className="w-5 h-5" />
           <span className="text-[10px]">Export</span>
@@ -218,9 +322,9 @@ export const MobilePreviewLayout = ({
           variant="shimmer"
           size="lg"
           onClick={onPresent}
-          className="px-8"
+          className="px-6 h-10"
         >
-          <Play className="w-4 h-4 mr-2" />
+          <Play className="w-4 h-4 mr-1.5" />
           Present
         </Button>
         
@@ -228,7 +332,7 @@ export const MobilePreviewLayout = ({
           variant="ghost"
           size="sm"
           onClick={onShare}
-          className="flex flex-col items-center gap-1 h-auto py-2"
+          className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-3"
         >
           <Share2 className="w-5 h-5" />
           <span className="text-[10px]">Share</span>

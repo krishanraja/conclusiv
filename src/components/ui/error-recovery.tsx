@@ -150,12 +150,10 @@ export const ErrorRecovery = ({
         <p className="text-xs text-center text-muted-foreground">
           Having trouble?{" "}
           <a 
-            href="https://docs.lovable.dev/tips-tricks/troubleshooting" 
-            target="_blank" 
-            rel="noopener noreferrer"
+            href="/contact" 
             className="text-primary hover:underline"
           >
-            View troubleshooting guide
+            Contact support
           </a>
         </p>
       </div>
