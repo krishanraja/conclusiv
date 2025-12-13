@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Layers, Layout, List, Lock, Users, AlertTriangle, Clock, RefreshCw, Paintbrush } from "lucide-react";
+import { ChevronRight, Layers, Layout, List, Lock, Users, AlertTriangle, Clock, Paintbrush } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { TemplateName } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -9,7 +9,7 @@ import { AudienceSelector } from "./AudienceSelector";
 import { TensionCard } from "./TensionCard";
 import { DurationSelector } from "./DurationSelector";
 import { BrandStyleEditor } from "@/components/editor/BrandStyleEditor";
-import { useToast } from "@/hooks/use-toast";
+
 
 const templates: { name: TemplateName; label: string; proOnly: boolean }[] = [
   { name: "LinearStoryboard", label: "Linear", proOnly: false },
@@ -22,7 +22,6 @@ const templates: { name: TemplateName; label: string; proOnly: boolean }[] = [
 export const QuickAdjustments = () => {
   const [expandedPanel, setExpandedPanel] = useState<string | null>(null);
   const [settingsChanged, setSettingsChanged] = useState(false);
-  const { toast } = useToast();
   const { 
     themes, 
     toggleThemeKeep, 
@@ -44,17 +43,9 @@ export const QuickAdjustments = () => {
     setExpandedPanel(expandedPanel === panel ? null : panel);
   };
 
-  const handleSettingChange = (setting: string) => {
+  const handleSettingChange = (_setting: string) => {
     setSettingsChanged(true);
-    toast({
-      title: "Setting updated",
-      description: (
-        <span className="flex items-center gap-2">
-          <RefreshCw className="w-3 h-3" />
-          Click "Rebuild" to apply {setting.toLowerCase()} changes
-        </span>
-      ),
-    });
+    // Visual feedback via settingsChanged state - no toast needed
   };
 
   const handleTemplateSelect = (template: TemplateName, proOnly: boolean) => {

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Sparkles, ArrowRight, Loader2, ExternalLink, Mic, MicOff, CheckCircle2, Clock, RefreshCw, ChevronDown, ChevronUp, Edit3, Building2, Target, Users } from "lucide-react";
+import { Search, ArrowRight, Loader2, ExternalLink, Mic, MicOff, CheckCircle2, Clock, RefreshCw, ChevronDown, ChevronUp, Edit3, Building2, Target, Users, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useResearchJob, ResearchJob } from "@/hooks/useResearchJob";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import type { NarrativeArchetype, AudienceMode } from "@/lib/types";
+import conclusivIcon from "@/assets/conclusiv-icon.png";
 
 interface ResearchAssistantProps {
   isOpen: boolean;
@@ -199,10 +200,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
         if (job) {
           setStep("research");
           setIsLoading(true);
-          toast({
-            title: "Resuming research",
-            description: "Found an in-progress research job.",
-          });
+          // Silently resume - UI shows progress
         }
       });
     }
@@ -233,10 +231,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
               redFlags: result.structured.redFlags,
             });
           }
-          toast({
-            title: "Voice understood",
-            description: "AI extracted key details from your input.",
-          });
+          // Silently extracted - no toast needed
         }
       } catch (err) {
         console.error("Voice structuring error:", err);
@@ -411,15 +406,28 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); resetState(); } }}>
       <SheetContent side="left" className="w-full sm:max-w-md h-[100dvh] flex flex-col overflow-hidden border-r border-primary/20">
         <SheetHeader className="mb-2">
-          <SheetTitle className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-primary/10">
-              <Sparkles className="w-4 h-4 text-primary" />
+          <SheetTitle className="flex items-center gap-2 justify-center">
+            <div className="relative p-2 rounded-lg bg-primary/10">
+              <img 
+                src={conclusivIcon} 
+                alt="" 
+                className="w-5 h-5 object-contain"
+              />
+              <motion.div
+                className="absolute inset-0 rounded-lg bg-primary/20"
+                animate={{ 
+                  opacity: [0.2, 0.5, 0.2],
+                  scale: [1, 1.15, 1],
+                }}
+                transition={{ 
+                  duration: 2.5, 
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
             </div>
             Research Assistant
           </SheetTitle>
-          <p className="text-sm text-muted-foreground">
-            AI-powered research in seconds
-          </p>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto">

@@ -80,10 +80,7 @@ export const SetupSheet = ({ isOpen, onOpenChange, onComplete }: SetupSheetProps
         setBusinessContext(enrichedContext);
         setHasFetched(true);
         
-        toast({
-          title: "Brand loaded",
-          description: enrichedContext.companyName || "Context added successfully",
-        });
+        // Brand loaded - UI already shows success via the brand preview card
       }
     } catch (err) {
       console.error("Failed to fetch brand:", err);
