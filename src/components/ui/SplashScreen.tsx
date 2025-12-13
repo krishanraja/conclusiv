@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import conclusivIcon from "@/assets/conclusiv-icon.png";
 
@@ -7,11 +7,37 @@ interface SplashScreenProps {
 }
 
 export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
-  // Trigger completion when the main animation sequence finishes
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [animationComplete, setAnimationComplete] = useState(false);
+  const hasCompleted = useRef(false);
+
+  // Only trigger completion when BOTH conditions are met
+  useEffect(() => {
+    if (imageLoaded && animationComplete && !hasCompleted.current) {
+      hasCompleted.current = true;
+      setTimeout(onComplete, 200);
+    }
+  }, [imageLoaded, animationComplete, onComplete]);
+
   const handleAnimationComplete = useCallback(() => {
-    // Small buffer before signaling completion
-    setTimeout(onComplete, 200);
-  }, [onComplete]);
+    setAnimationComplete(true);
+  }, []);
+
+  const handleImageLoad = useCallback(() => {
+    setImageLoaded(true);
+  }, []);
+
+  // Preload the image on mount
+  useEffect(() => {
+    const img = new Image();
+    img.onload = handleImageLoad;
+    img.src = conclusivIcon;
+    
+    // If image is already cached, onload might not fire
+    if (img.complete) {
+      handleImageLoad();
+    }
+  }, [handleImageLoad]);
 
   return (
     <motion.div
@@ -83,7 +109,7 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         {/* C Icon - centered in loading ring */}
         <motion.div
           initial={{ opacity: 0, scale: 0.7 }}
-          animate={{ opacity: 1, scale: 1 }}
+          animate={{ opacity: imageLoaded ? 1 : 0, scale: imageLoaded ? 1 : 0.7 }}
           transition={{ 
             duration: 0.5, 
             ease: [0.34, 1.3, 0.64, 1],
