@@ -81,60 +81,68 @@ const Index = () => {
   }
 
   return (
-    <>
-      <AnimatePresence>
+    <div className="min-h-screen min-h-[100dvh] bg-background">
+      {/* Splash Screen with exit animation */}
+      <AnimatePresence mode="wait">
         {showSplash && (
-          <SplashScreen onComplete={() => setShowSplash(false)} />
+          <SplashScreen key="splash" onComplete={() => setShowSplash(false)} />
         )}
       </AnimatePresence>
       
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: showSplash ? 0 : 1 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-        className="min-h-screen min-h-[100dvh] bg-background flex flex-col overflow-x-hidden max-w-[100vw]"
-      >
-        <Header />
-        
-        <AnimatePresence>
-          {isLoading && (
-            <LoadingOverlay 
-              message={loadingMessage || "Processing..."} 
-              stage={loadingStage}
-              progress={loadingProgress}
-              inputLength={rawText.length}
-            />
-          )}
-        </AnimatePresence>
-        
-        <AnimatePresence mode="wait">
-          <motion.main
-            key={currentStep}
+      {/* Main Content - renders after splash completes */}
+      <AnimatePresence>
+        {!showSplash && (
+          <motion.div
+            key="main-content"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="flex-1 pt-16"
+            transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+            className="flex flex-col overflow-x-hidden max-w-[100vw] min-h-screen min-h-[100dvh]"
+            style={{ willChange: "opacity" }}
           >
-            {currentStep === "input" && <InputScreen />}
-            {currentStep === "refine" && <RefineScreen />}
-            {currentStep === "preview" && <PreviewScreen />}
-          </motion.main>
-        </AnimatePresence>
-        
-        {/* Footer only on desktop for input step */}
-        {currentStep === "input" && (
-          <div className="hidden md:block">
-            <Footer />
-          </div>
+            <Header />
+            
+            <AnimatePresence>
+              {isLoading && (
+                <LoadingOverlay 
+                  message={loadingMessage || "Processing..."} 
+                  stage={loadingStage}
+                  progress={loadingProgress}
+                  inputLength={rawText.length}
+                />
+              )}
+            </AnimatePresence>
+            
+            <AnimatePresence mode="wait">
+              <motion.main
+                key={currentStep}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                className="flex-1 pt-16"
+              >
+                {currentStep === "input" && <InputScreen />}
+                {currentStep === "refine" && <RefineScreen />}
+                {currentStep === "preview" && <PreviewScreen />}
+              </motion.main>
+            </AnimatePresence>
+            
+            {/* Footer only on desktop for input step */}
+            {currentStep === "input" && (
+              <div className="hidden md:block">
+                <Footer />
+              </div>
+            )}
+            
+            <FeedbackWidget currentStep={currentStep} />
+            
+            {/* Onboarding for first-time users */}
+            {currentStep === "input" && <OnboardingManager />}
+          </motion.div>
         )}
-        
-        <FeedbackWidget currentStep={currentStep} />
-        
-        {/* Onboarding for first-time users */}
-        {currentStep === "input" && <OnboardingManager />}
-      </motion.div>
-    </>
+      </AnimatePresence>
+    </div>
   );
 };
 
