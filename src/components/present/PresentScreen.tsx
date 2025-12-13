@@ -13,6 +13,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { TitleSequence } from "@/components/cinematic/TitleSequence";
 import { useBrandLogo } from "@/hooks/useBrandLogo";
+import { MobilePresentScreen } from "./MobilePresentScreen";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 // Canvas size for infinite canvas
@@ -435,8 +436,13 @@ export const PresentScreen = () => {
     );
   }
 
+  // Use mobile-optimized presentation on mobile devices
+  if (isMobile) {
+    return <MobilePresentScreen onExit={() => setCurrentStep("preview")} />;
+  }
+
   // Simplified rendering for reduced motion preference
-  const shouldSimplifyAnimations = reducedMotion || isMobile;
+  const shouldSimplifyAnimations = reducedMotion;
 
   return (
     <>

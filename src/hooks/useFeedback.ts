@@ -132,11 +132,7 @@ export const useFeedback = () => {
         const count = parseInt(localStorage.getItem(FEEDBACK_COUNT_KEY) || "0", 10);
         localStorage.setItem(FEEDBACK_COUNT_KEY, (count + 1).toString());
 
-        toast({
-          title: "Thank you for your feedback!",
-          description: "Your input helps us improve Conclusiv.",
-        });
-
+        // Feedback submitted - inline UI handles thank you message
         return true;
       } catch (error) {
         console.error("[useFeedback] Failed to submit feedback:", error);

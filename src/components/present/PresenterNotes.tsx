@@ -93,10 +93,7 @@ export const PresenterNotes = ({ narrativeId, isPresenting = false }: PresenterN
 
       setNotes(prev => ({ ...prev, [editingSection]: draftNote }));
       setEditingSection(null);
-      toast({
-        title: "Notes saved",
-        description: "Your presenter notes have been saved.",
-      });
+      // Notes saved - inline UI update is sufficient feedback
     } catch (err) {
       toast({
         title: "Failed to save",

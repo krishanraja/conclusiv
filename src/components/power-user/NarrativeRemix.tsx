@@ -77,10 +77,7 @@ export const NarrativeRemix = ({ onRemixComplete }: NarrativeRemixProps) => {
       const result = response.data;
       if (result.narrative) {
         setNarrative(result.narrative);
-        toast({
-          title: "Narrative remixed",
-          description: `Applied "${option.label}" transformation`,
-        });
+        // Narrative updates visibly - no toast needed
         onRemixComplete?.();
       }
     } catch (error) {

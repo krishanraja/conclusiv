@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
+
 
 interface PasswordProtectedShareProps {
   shareUrl: string;
@@ -22,7 +22,6 @@ export const PasswordProtectedShare = ({
   const [password, setPassword] = useState(currentPassword || "");
   const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState(false);
-  const { toast } = useToast();
 
   const handleToggle = (enabled: boolean) => {
     setIsEnabled(enabled);
@@ -47,11 +46,7 @@ export const PasswordProtectedShare = ({
     await navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    
-    toast({
-      title: "Copied!",
-      description: isEnabled ? "Link and password copied to clipboard." : "Link copied to clipboard.",
-    });
+    // Button shows checkmark - no toast needed
   };
 
   const generatePassword = () => {

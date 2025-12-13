@@ -400,10 +400,7 @@ export const PreviewScreen = () => {
     await navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast({
-      title: "Copied!",
-      description: "Link copied to clipboard.",
-    });
+    // Button shows checkmark - no toast needed
   };
 
   const handleGenerateAlternatives = async () => {
