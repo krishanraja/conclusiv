@@ -81,30 +81,30 @@ export const RefineScreen = () => {
   const editedCount = keyClaims.filter(c => c.edited).length;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col p-6 pt-20">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <Button variant="ghost" onClick={handleBack}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
+    <div className="min-h-[calc(100vh-4rem)] flex flex-col p-4 md:p-6 pt-16 md:pt-20">
+      {/* Header - Compact on mobile */}
+      <div className="flex items-center justify-between mb-4 md:mb-8">
+        <Button variant="ghost" size="sm" onClick={handleBack} className="h-9 px-2 md:px-4">
+          <ArrowLeft className="w-4 h-4 mr-1 md:mr-2" />
+          <span className="hidden sm:inline">Back</span>
         </Button>
-        <Button variant="shimmer" onClick={handleContinue}>
+        <Button variant="shimmer" size="sm" onClick={handleContinue} className="h-9 px-3 md:px-4">
           Continue
-          <ArrowRight className="w-4 h-4 ml-2" />
+          <ArrowRight className="w-4 h-4 ml-1 md:ml-2" />
         </Button>
       </div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex-1 max-w-4xl mx-auto w-full space-y-8"
+        className="flex-1 max-w-4xl mx-auto w-full space-y-4 md:space-y-8"
       >
-        {/* Title */}
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+        {/* Title - Compact on mobile */}
+        <div className="text-center space-y-1 md:space-y-2">
+          <h1 className="text-xl md:text-3xl font-bold text-foreground">
             Fine-tune your research
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm md:text-base text-muted-foreground">
             Make it yours before we build your story
           </p>
         </div>

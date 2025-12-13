@@ -118,10 +118,7 @@ export const CollaborativeComments = ({ narrativeId, sectionId, isOwner = false 
 
       setNewComment("");
       setReplyingTo(null);
-      toast({
-        title: "Comment added",
-        description: "Your feedback has been posted.",
-      });
+      // Comment appears in list via realtime - no toast needed
     } catch (err) {
       toast({
         title: "Failed to post",
@@ -141,9 +138,7 @@ export const CollaborativeComments = ({ narrativeId, sectionId, isOwner = false 
         .eq("id", commentId);
 
       if (!error) {
-        toast({
-          title: "Comment deleted",
-        });
+        // Comment disappears via realtime - no toast needed
       }
     } catch (err) {
       toast({

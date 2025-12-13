@@ -62,11 +62,7 @@ export const CompanyLogoUpload = ({
     reader.readAsDataURL(file);
 
     if (!user) {
-      toast({
-        title: "Sign in required",
-        description: "Sign in to save your logo for future sessions.",
-      });
-      // Still show preview but don't upload
+      // Still show preview but don't upload - sign in prompt visible in UI
       return;
     }
 
@@ -99,11 +95,7 @@ export const CompanyLogoUpload = ({
 
       onUpload(finalUrl);
       setPreviewUrl(null);
-      
-      toast({
-        title: "Logo uploaded",
-        description: "Your logo has been saved.",
-      });
+      // Logo visible in UI - no toast needed
     } catch (err) {
       console.error("Upload error:", err);
       toast({

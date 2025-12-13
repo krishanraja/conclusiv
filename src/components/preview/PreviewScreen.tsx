@@ -252,10 +252,7 @@ export const PreviewScreen = () => {
       extractTensions(rawText).then((tensionResult) => {
         if (tensionResult.tensions && tensionResult.tensions.length > 0) {
           setTensions(tensionResult.tensions);
-          toast({
-            title: `${tensionResult.tensions.length} insight${tensionResult.tensions.length > 1 ? 's' : ''} detected`,
-            description: "Review tensions and blind spots in the sidebar.",
-          });
+          // Tensions visible in sidebar - no disruptive toast needed
         } else if (tensionResult.error) {
           console.warn('[PreviewScreen] Failed to extract tensions:', tensionResult.error);
         }
@@ -335,28 +332,14 @@ export const PreviewScreen = () => {
         } else {
           exportToPDF(narrative, businessContext, title, { watermark: !isPro });
         }
-        toast({
-          title: "PDF Downloaded",
-          description: isPro 
-            ? useBranded 
-              ? "Your branded narrative has been exported as a PDF."
-              : "Your narrative has been exported as a PDF."
-            : "PDF exported with Conclusiv watermark. Upgrade for clean exports.",
-        });
+        // Download initiated by browser - no toast needed
       } else {
         if (useBranded) {
           await exportBrandedPPTX(narrative, businessContext, title, exportOptions);
         } else {
           exportToPPTX(narrative, businessContext, title);
         }
-        toast({
-          title: "PowerPoint Downloaded",
-          description: isPro
-            ? useBranded
-              ? "Your branded presentation has been exported."
-              : "Your narrative has been exported as a presentation."
-            : "Exported with Conclusiv branding. Upgrade for clean exports.",
-        });
+        // Download initiated by browser - no toast needed
       }
     } catch (err) {
       toast({

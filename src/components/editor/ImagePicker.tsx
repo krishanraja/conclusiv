@@ -96,18 +96,13 @@ export const ImagePicker = ({
   const handleSelectImage = (image: PexelsImage) => {
     onSelect(image.url);
     onOpenChange(false);
-    toast({
-      title: "Image added",
-      description: `Photo by ${image.photographer}`,
-    });
+    // Image visible in section - no toast needed
   };
 
   const handleRemoveImage = () => {
     onSelect(undefined);
     onOpenChange(false);
-    toast({
-      title: "Image removed",
-    });
+    // Image removal visible - no toast needed
   };
 
   return (

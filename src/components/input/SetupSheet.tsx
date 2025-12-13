@@ -10,7 +10,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { scrapeBusinessContext, fetchBrandData } from "@/lib/api";
 import { ArchetypeSelector } from "./ArchetypeSelector";
 
-const SETUP_STORAGE_KEY = "conclusiv_setup_completed";
+// Session-based key - resets every page load
+const SETUP_SESSION_KEY = "conclusiv_setup_shown_this_session";
 
 interface SetupSheetProps {
   isOpen: boolean;
@@ -103,8 +104,8 @@ export const SetupSheet = ({ isOpen, onOpenChange, onComplete }: SetupSheetProps
   };
 
   const handleSave = () => {
-    // Mark setup as completed
-    localStorage.setItem(SETUP_STORAGE_KEY, "true");
+    // Mark setup as shown for this session only (not persisted across reloads)
+    sessionStorage.setItem(SETUP_SESSION_KEY, "true");
     onOpenChange(false);
     onComplete?.();
   };
@@ -258,19 +259,17 @@ export const SetupSheet = ({ isOpen, onOpenChange, onComplete }: SetupSheetProps
   );
 };
 
-// Hook to check if setup should auto-open
+// Hook to check if setup should auto-open - opens on EVERY page load until dismissed
 export const useSetupSheet = () => {
-  const { businessContext } = useNarrativeStore();
   const [shouldAutoOpen, setShouldAutoOpen] = useState(false);
   const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
-    // Check if this is a first-time visit
-    const hasCompletedSetup = localStorage.getItem(SETUP_STORAGE_KEY);
-    const hasExistingContext = !!businessContext?.companyName;
+    // Check if already shown THIS SESSION (not persisted across page reloads)
+    const hasShownThisSession = sessionStorage.getItem(SETUP_SESSION_KEY);
     
-    // Auto-open if first time AND no context
-    if (!hasCompletedSetup && !hasExistingContext) {
+    // Auto-open if not shown this session
+    if (!hasShownThisSession) {
       // Delay slightly for smoother UX
       const timer = setTimeout(() => {
         setShouldAutoOpen(true);
@@ -280,10 +279,10 @@ export const useSetupSheet = () => {
     }
     
     setHasChecked(true);
-  }, [businessContext]);
+  }, []);
 
   const markSetupComplete = () => {
-    localStorage.setItem(SETUP_STORAGE_KEY, "true");
+    sessionStorage.setItem(SETUP_SESSION_KEY, "true");
     setShouldAutoOpen(false);
   };
 

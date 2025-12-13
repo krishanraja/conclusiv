@@ -110,10 +110,7 @@ export const InputScreen = () => {
 
   const handleResearchComplete = (content: string) => {
     setRawText(content);
-    toast({
-      title: "Research loaded",
-      description: "Your research has been added to the input",
-    });
+    // Success indicated by content appearing - no toast needed
   };
 
 
@@ -147,11 +144,7 @@ export const InputScreen = () => {
       if (result.text) {
         setRawText(result.text);
         setUploadedFileName(file.name);
-        const fileType = getFileTypeLabel(file.type);
-        toast({
-          title: `${fileType} parsed`,
-          description: `Extracted ${result.text.length.toLocaleString()} characters from ${file.name}`,
-        });
+        // Success indicated by file badge appearing - no toast needed
       }
     } catch (err) {
       console.error("Failed to parse document:", err);

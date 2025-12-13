@@ -18,19 +18,35 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
     nextSection,
     prevSection,
     setCurrentSectionIndex,
-    businessContext,
   } = useNarrativeStore();
 
   const { logoUrl, showLogo } = useBrandLogo();
   const [showNotes, setShowNotes] = useState(false);
   const [dragDirection, setDragDirection] = useState<'left' | 'right' | null>(null);
 
+  // Force fullscreen and lock body scroll
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    const originalPosition = document.body.style.position;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.position = originalPosition;
+      document.body.style.width = '';
+    };
+  }, []);
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight" || e.key === " ") {
+        e.preventDefault();
         nextSection();
       } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
         prevSection();
       } else if (e.key === "Escape") {
         onExit();
@@ -41,7 +57,7 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [nextSection, prevSection, onExit]);
 
-  // Swipe handling
+  // Swipe handling - full screen swipe
   const handleDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const threshold = 50;
     
@@ -54,9 +70,9 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
   }, [currentSectionIndex, narrative?.sections.length, nextSection, prevSection]);
 
   const handleDrag = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    if (info.offset.x < -20) {
+    if (info.offset.x < -30) {
       setDragDirection('left');
-    } else if (info.offset.x > 20) {
+    } else if (info.offset.x > 30) {
       setDragDirection('right');
     } else {
       setDragDirection(null);
@@ -67,10 +83,10 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
         <div className="text-center p-6">
-          <p className="text-muted-foreground">No content to present</p>
+          <p className="text-muted-foreground mb-4">No content to present</p>
           <button
             onClick={onExit}
-            className="mt-4 px-4 py-2 rounded-lg bg-primary text-primary-foreground"
+            className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium"
           >
             Go Back
           </button>
@@ -84,37 +100,37 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
   const progress = ((currentSectionIndex + 1) / narrative.sections.length) * 100;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background overflow-hidden touch-none">
-      {/* Header - Minimal */}
-      <div className="absolute top-0 left-0 right-0 z-20 safe-area-inset-top">
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-background to-background/95 flex flex-col touch-none">
+      {/* Header - Minimal, safe area aware */}
+      <div className="flex-shrink-0 pt-safe">
         <div className="flex items-center justify-between px-4 py-3">
           {/* Brand/Logo */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             {showLogo && logoUrl ? (
-              <img src={logoUrl} alt="" className="h-6 w-auto object-contain" />
+              <img src={logoUrl} alt="" className="h-5 w-auto object-contain max-w-[100px]" />
             ) : (
-              <img src={conclusivIcon} alt="" className="h-5 w-5 object-contain opacity-60" />
+              <img src={conclusivIcon} alt="" className="h-4 w-4 object-contain opacity-50" />
             )}
           </div>
 
           {/* Section counter */}
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground font-medium">
             {currentSectionIndex + 1} / {narrative.sections.length}
           </div>
 
           {/* Exit button */}
           <button
             onClick={onExit}
-            className="p-2 rounded-full bg-muted/50 hover:bg-muted transition-colors"
+            className="p-2 -mr-1 rounded-full hover:bg-muted/50 transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5 text-muted-foreground" />
           </button>
         </div>
 
         {/* Progress bar */}
-        <div className="h-0.5 bg-muted/30">
+        <div className="h-0.5 bg-muted/20 mx-4 rounded-full overflow-hidden">
           <motion.div
-            className="h-full bg-primary"
+            className="h-full bg-primary rounded-full"
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
             transition={{ duration: 0.3, ease: "easeOut" }}
@@ -122,40 +138,40 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
         </div>
       </div>
 
-      {/* Main Content - Swipeable */}
+      {/* Main Content - Swipeable, fills remaining space */}
       <motion.div
-        className="absolute inset-0 pt-16 pb-24 px-6 flex flex-col items-center justify-center"
+        className="flex-1 min-h-0 relative flex items-center justify-center px-6"
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.2}
+        dragElastic={0.15}
         onDrag={handleDrag}
         onDragEnd={handleDragEnd}
       >
         <AnimatePresence mode="wait">
           <motion.div
             key={currentSectionIndex}
-            initial={{ opacity: 0, x: 50 }}
+            initial={{ opacity: 0, x: 80 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
+            exit={{ opacity: 0, x: -80 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
             className="w-full max-w-sm text-center"
           >
             {/* Icon */}
             <motion.div
-              className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-primary/10 flex items-center justify-center"
+              className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-primary/10 flex items-center justify-center"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.1 }}
+              transition={{ delay: 0.05 }}
             >
               <Icon className="w-8 h-8 text-primary" />
             </motion.div>
 
             {/* Title */}
             <motion.h1
-              className="text-2xl font-bold mb-4 text-foreground"
-              initial={{ y: 10, opacity: 0 }}
+              className="text-2xl font-bold mb-4 text-foreground px-2"
+              initial={{ y: 15, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.15 }}
+              transition={{ delay: 0.1 }}
             >
               {currentSection.title}
             </motion.h1>
@@ -164,28 +180,33 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
             {currentSection.content && (
               <motion.p
                 className="text-base text-muted-foreground leading-relaxed"
-                initial={{ y: 10, opacity: 0 }}
+                initial={{ y: 15, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
+                transition={{ delay: 0.15 }}
               >
                 {currentSection.content}
               </motion.p>
             )}
 
-            {/* Items */}
+            {/* Items - Show only first 3 for cleaner mobile view */}
             {currentSection.items && currentSection.items.length > 0 && (
               <motion.ul
-                className="mt-4 text-left space-y-2"
-                initial={{ y: 10, opacity: 0 }}
+                className="mt-5 text-left space-y-2.5 mx-auto max-w-xs"
+                initial={{ y: 15, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.25 }}
+                transition={{ delay: 0.2 }}
               >
-                {currentSection.items.map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-primary shrink-0" />
-                    <span>{item}</span>
+                {currentSection.items.slice(0, 3).map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                    <span className="w-1.5 h-1.5 mt-2 rounded-full bg-primary shrink-0" />
+                    <span className="line-clamp-2">{item}</span>
                   </li>
                 ))}
+                {currentSection.items.length > 3 && (
+                  <li className="text-xs text-muted-foreground/60 pl-4">
+                    +{currentSection.items.length - 3} more
+                  </li>
+                )}
               </motion.ul>
             )}
           </motion.div>
@@ -195,65 +216,65 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
         <AnimatePresence>
           {dragDirection === 'left' && currentSectionIndex < narrative.sections.length - 1 && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
-              className="absolute right-4 top-1/2 -translate-y-1/2"
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 0.7, x: 0 }}
+              exit={{ opacity: 0, x: 10 }}
+              className="absolute right-2 top-1/2 -translate-y-1/2"
             >
-              <ChevronRight className="w-8 h-8 text-primary" />
+              <ChevronRight className="w-10 h-10 text-primary" />
             </motion.div>
           )}
           {dragDirection === 'right' && currentSectionIndex > 0 && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
-              className="absolute left-4 top-1/2 -translate-y-1/2"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 0.7, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              className="absolute left-2 top-1/2 -translate-y-1/2"
             >
-              <ChevronLeft className="w-8 h-8 text-primary" />
+              <ChevronLeft className="w-10 h-10 text-primary" />
             </motion.div>
           )}
         </AnimatePresence>
       </motion.div>
 
-      {/* Bottom Navigation */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 safe-area-inset-bottom">
-        <div className="px-4 py-4 bg-gradient-to-t from-background via-background to-transparent">
+      {/* Bottom Navigation - Fixed, safe area aware */}
+      <div className="flex-shrink-0 pb-safe">
+        <div className="px-4 py-3">
           {/* Dot navigation */}
-          <div className="flex justify-center gap-1.5 mb-4">
+          <div className="flex justify-center gap-1.5 mb-3">
             {narrative.sections.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentSectionIndex(idx)}
                 className={cn(
-                  "w-2 h-2 rounded-full transition-all duration-200",
+                  "h-2 rounded-full transition-all duration-200",
                   idx === currentSectionIndex
                     ? "w-6 bg-primary"
-                    : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                    : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
                 )}
               />
             ))}
           </div>
 
           {/* Navigation buttons */}
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-center gap-3">
             <button
               onClick={prevSection}
               disabled={currentSectionIndex === 0}
               className={cn(
-                "flex-1 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors",
+                "flex-1 max-w-[140px] py-3 rounded-xl flex items-center justify-center gap-2 transition-all font-medium",
                 currentSectionIndex === 0
-                  ? "bg-muted/30 text-muted-foreground/50"
-                  : "bg-muted text-foreground active:bg-muted/80"
+                  ? "bg-muted/30 text-muted-foreground/40"
+                  : "bg-muted text-foreground active:scale-[0.98]"
               )}
             >
               <ChevronLeft className="w-4 h-4" />
-              <span className="text-sm font-medium">Back</span>
+              <span className="text-sm">Back</span>
             </button>
 
             <button
               onClick={() => setShowNotes(!showNotes)}
-              className="p-3 rounded-xl bg-muted/50 text-muted-foreground active:bg-muted"
+              className="p-3 rounded-xl bg-muted/30 text-muted-foreground active:bg-muted/50 transition-colors"
             >
               <StickyNote className="w-5 h-5" />
             </button>
@@ -262,13 +283,13 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
               onClick={nextSection}
               disabled={currentSectionIndex === narrative.sections.length - 1}
               className={cn(
-                "flex-1 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors",
+                "flex-1 max-w-[140px] py-3 rounded-xl flex items-center justify-center gap-2 transition-all font-medium",
                 currentSectionIndex === narrative.sections.length - 1
-                  ? "bg-muted/30 text-muted-foreground/50"
-                  : "bg-primary text-primary-foreground active:bg-primary/90"
+                  ? "bg-primary/30 text-primary-foreground/40"
+                  : "bg-primary text-primary-foreground active:scale-[0.98]"
               )}
             >
-              <span className="text-sm font-medium">Next</span>
+              <span className="text-sm">Next</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -284,9 +305,9 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
             exit={{ opacity: 0, y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="absolute inset-x-0 bottom-0 z-30 bg-card border-t border-border rounded-t-2xl shadow-2xl"
-            style={{ maxHeight: "50vh" }}
+            style={{ maxHeight: "45vh" }}
           >
-            <div className="p-4">
+            <div className="p-4 pb-safe">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium flex items-center gap-2">
                   <StickyNote className="w-4 h-4 text-primary" />
@@ -294,13 +315,13 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
                 </h3>
                 <button
                   onClick={() => setShowNotes(false)}
-                  className="p-1 rounded-full hover:bg-muted"
+                  className="p-1.5 rounded-full hover:bg-muted transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
               <div className="text-sm text-muted-foreground italic">
-                Tap here to add notes in preview mode
+                {currentSection.speakerNotes || "No notes for this section. Tap to add notes in preview mode."}
               </div>
             </div>
           </motion.div>
