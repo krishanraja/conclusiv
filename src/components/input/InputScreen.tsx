@@ -16,7 +16,7 @@ import { Sparkles, AlertCircle, Crown, Check, Search, Settings2, Upload, FileTex
 import { useFeatureGate } from "@/components/subscription/FeatureGate";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useIsMobile } from "@/hooks/use-mobile";
-import conclusivLogo from "@/assets/conclusiv-logo.png";
+import { criticalImages, isImageReady, onImageReady } from "@/lib/imagePreloader";
 
 const MIN_CHARS = 50;
 const MAX_CHARS_WARNING = 50000;
@@ -47,6 +47,14 @@ export const InputScreen = () => {
   const { requireFeature, UpgradePromptComponent } = useFeatureGate();
   const { incrementBuildCount, isPro, isFirstBuild, canBuild } = useSubscription();
   const isMobile = useIsMobile();
+  
+  // Logo preload state
+  const [logoReady, setLogoReady] = useState(() => isImageReady("conclusivLogo"));
+
+  useEffect(() => {
+    if (logoReady) return;
+    return onImageReady("conclusivLogo", () => setLogoReady(true));
+  }, [logoReady]);
   
   // Auto-open setup sheet for first-time users
   const { shouldAutoOpen, hasChecked, markSetupComplete } = useSetupSheet();
@@ -289,23 +297,20 @@ export const InputScreen = () => {
         className="w-full max-w-3xl space-y-3 md:space-y-4 relative my-auto"
       >
         {/* Brand Logo with glow effect */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex items-center justify-center relative"
-        >
+        <div className="flex items-center justify-center relative h-8 md:h-10">
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-48 h-12 bg-primary/20 blur-2xl rounded-full" />
           </div>
-          <img 
-            src={conclusivLogo} 
+          <motion.img 
+            src={criticalImages.conclusivLogo} 
             alt="conclusiv" 
             className="h-8 md:h-10 w-auto relative z-10"
             style={{ aspectRatio: 'auto' }}
-            fetchPriority="high"
-            decoding="async"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: logoReady ? 1 : 0, scale: logoReady ? 1 : 0.95 }}
+            transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           />
-        </motion.div>
+        </div>
 
         {/* Hero Section - Condensed when content exists */}
         <div className="text-center">
