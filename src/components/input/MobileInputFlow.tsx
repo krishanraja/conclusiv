@@ -169,7 +169,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         <h1 className="text-2xl font-bold text-foreground leading-tight">
           Turn your business case into a{" "}
           <span className="gradient-text">demo</span>
-          {" "}in 2 minutes
+          {" "}in 2 minutes.
         </h1>
         <p className="text-sm text-muted-foreground mt-4 leading-relaxed">
           Upload, generate or paste your business plan.
