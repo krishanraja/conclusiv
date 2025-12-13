@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Zap } from "lucide-react";
-import conclusivIcon from "@/assets/conclusiv-icon.png";
+import { criticalImages, isImageReady, onImageReady } from "@/lib/imagePreloader";
 import { AccountMenu } from "./AccountMenu";
 import { CompanyBrainIndicator } from "./CompanyBrainIndicator";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,6 +14,12 @@ export const Header = () => {
   const { user } = useAuth();
   const { isPro, isTrial, limits, usage, trialDaysRemaining, isLoading } = useSubscription();
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [logoReady, setLogoReady] = useState(() => isImageReady("conclusivIcon"));
+
+  useEffect(() => {
+    if (logoReady) return;
+    return onImageReady("conclusivIcon", () => setLogoReady(true));
+  }, [logoReady]);
 
   const buildsRemaining = limits.buildsPerWeek === Infinity 
     ? null 
@@ -31,13 +37,14 @@ export const Header = () => {
       >
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center">
-            {/* C icon - responsive sizing */}
-            <img 
-              src={conclusivIcon}
+            {/* C icon - responsive sizing with fade-in */}
+            <motion.img 
+              src={criticalImages.conclusivIcon}
               alt="conclusiv" 
               className="h-7 w-7 sm:h-8 sm:w-8 object-contain"
-              fetchPriority="high"
-              decoding="async"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: logoReady ? 1 : 0 }}
+              transition={{ duration: 0.3 }}
             />
           </div>
 
