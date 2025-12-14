@@ -250,3 +250,43 @@ Use Supabase Edge Functions for all AI calls.
 ### Revisit Conditions
 - If edge function latency becomes problematic
 - If we need persistent connections (websockets)
+
+---
+
+## Post-Setup Guidance for User Flow Clarity
+
+**Date**: 2024-12-14
+**Status**: Accepted
+
+### Context
+After completing the personalization setup (adding business context, selecting story mode), users land back on the homepage with the setup drawer closed. While the Upload/Generate buttons have shimmer borders to attract attention, user testing revealed that after going through personalization, users may have forgotten that their next action is to add content. The transition from "personalize" to "add content" wasn't immediately clear.
+
+### Decision
+Add a contextual post-setup guidance message that appears after the setup sheet closes:
+1. A subtle inline "Ready. Add your content below." message with a checkmark icon
+2. Uses the gradient-text style consistent with brand design
+3. Auto-dismisses after 5 seconds OR when user starts adding content
+4. Replaces the "Tap settings to personalize" hint on mobile when setup is complete
+
+### Rationale
+- Provides clear transition from personalization to content input
+- Maintains elegant, minimalist aesthetic (not a toast)
+- Respects busy CEO users - gentle nudge, not hand-holding
+- Auto-dismisses to avoid clutter
+- Uses existing animation patterns for smooth UX
+- Works on both mobile and desktop experiences
+
+**Alternatives Considered**:
+- Toast notification (rejected: user specifically requested no toast)
+- Auto-focus on textarea (too aggressive, might trigger keyboard on mobile)
+- Highlight/pulse animation on buttons only (insufficient context)
+- Persistent hint text (too static, doesn't communicate state change)
+
+### Consequences
+- **Easier**: Clear next action after personalization, reduced confusion
+- **Harder**: Additional state to manage, slightly more complex component logic
+
+### Revisit Conditions
+- If user feedback indicates the message is redundant or annoying
+- If engagement with Upload/Generate doesn't improve
+- If we add more onboarding steps that change the flow

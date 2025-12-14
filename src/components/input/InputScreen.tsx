@@ -66,6 +66,7 @@ export const InputScreen = () => {
   const [isDraggingOnTextarea, setIsDraggingOnTextarea] = useState(false);
   const [showSuccessFlash, setShowSuccessFlash] = useState(false);
   const [showResearchAssistant, setShowResearchAssistant] = useState(false);
+  const [showPostSetupGuidance, setShowPostSetupGuidance] = useState(false);
   
   // Auto-open setup sheet on first visit
   useEffect(() => {
@@ -73,6 +74,30 @@ export const InputScreen = () => {
       setShowSetupSheet(true);
     }
   }, [hasChecked, shouldAutoOpen]);
+
+  // Handle setup completion - show post-setup guidance
+  const handleSetupComplete = () => {
+    markSetupComplete();
+    // Show post-setup guidance if no content loaded yet
+    if (!hasContent) {
+      setShowPostSetupGuidance(true);
+    }
+  };
+
+  // Auto-dismiss post-setup guidance after 5 seconds
+  useEffect(() => {
+    if (showPostSetupGuidance) {
+      const timer = setTimeout(() => setShowPostSetupGuidance(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showPostSetupGuidance]);
+
+  // Dismiss guidance when content is added
+  useEffect(() => {
+    if (hasContent && showPostSetupGuidance) {
+      setShowPostSetupGuidance(false);
+    }
+  }, [hasContent, showPostSetupGuidance]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -254,7 +279,7 @@ export const InputScreen = () => {
       <SetupSheet
         isOpen={showSetupSheet}
         onOpenChange={setShowSetupSheet}
-        onComplete={markSetupComplete}
+        onComplete={handleSetupComplete}
       />
       
       {/* Research Assistant */}
@@ -343,6 +368,26 @@ export const InputScreen = () => {
             </motion.p>
           </AnimatePresence>
         </div>
+
+        {/* Post-Setup Guidance - appears after personalization completes */}
+        <AnimatePresence>
+          {showPostSetupGuidance && !hasContent && (
+            <motion.div
+              initial={{ opacity: 0, y: 8, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              exit={{ opacity: 0, y: -8, height: 0 }}
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              className="flex items-center justify-center"
+            >
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+                <Check className="w-3.5 h-3.5 text-primary" />
+                <span className="text-sm font-medium gradient-text">
+                  Ready. Add your content below.
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Primary Action Cards - Upload & Generate */}
         <motion.div

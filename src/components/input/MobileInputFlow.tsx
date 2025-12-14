@@ -53,6 +53,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
   const [isParsingDocument, setIsParsingDocument] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [showResearchAssistant, setShowResearchAssistant] = useState(false);
+  const [showPostSetupGuidance, setShowPostSetupGuidance] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -116,7 +117,26 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
 
   const handleSetupComplete = () => {
     markSetupComplete();
+    // Show post-setup guidance if no content loaded yet
+    if (!hasContent) {
+      setShowPostSetupGuidance(true);
+    }
   };
+
+  // Auto-dismiss post-setup guidance after 5 seconds
+  useEffect(() => {
+    if (showPostSetupGuidance) {
+      const timer = setTimeout(() => setShowPostSetupGuidance(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showPostSetupGuidance]);
+
+  // Dismiss guidance when content is added
+  useEffect(() => {
+    if (hasContent && showPostSetupGuidance) {
+      setShowPostSetupGuidance(false);
+    }
+  }, [hasContent, showPostSetupGuidance]);
 
   return (
     <div className="flex flex-col h-[calc(100dvh-8rem)] overflow-hidden">
@@ -273,11 +293,35 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         </div>
       </div>
 
-      {/* Settings hint - Outside constrained container */}
-      <div className="flex-shrink-0 px-4 pb-2">
-        <p className="text-xs text-primary/70 text-center">
-          Tap settings to personalize before continuing.
-        </p>
+      {/* Contextual guidance - Dynamic based on state */}
+      <div className="flex-shrink-0 px-4 pb-2 min-h-[24px]">
+        <AnimatePresence mode="wait">
+          {showPostSetupGuidance && !hasContent ? (
+            <motion.div
+              key="post-setup"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              className="text-center"
+            >
+              <p className="text-xs font-medium gradient-text inline-flex items-center gap-1.5">
+                <Check className="w-3 h-3" />
+                Ready. Add your content above.
+              </p>
+            </motion.div>
+          ) : !businessContext && !hasContent ? (
+            <motion.p 
+              key="settings-hint"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-xs text-primary/70 text-center"
+            >
+              Tap settings to personalize before continuing.
+            </motion.p>
+          ) : null}
+        </AnimatePresence>
       </div>
 
       {/* Bottom Bar - Simplified */}

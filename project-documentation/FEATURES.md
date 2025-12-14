@@ -82,6 +82,7 @@
 | Haptic feedback | ✅ | Mobile touch feedback |
 | Mobile animations | ✅ | PulseRing, CardStack, ScrollReveal |
 | Start over option | ✅ | Reset from presentation mode |
+| Post-setup guidance | ✅ | Contextual hint after personalization completes |
 
 ## Browser Support
 
