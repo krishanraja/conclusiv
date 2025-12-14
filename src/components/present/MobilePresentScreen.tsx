@@ -1,28 +1,58 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { X, ChevronLeft, ChevronRight, StickyNote } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, StickyNote, RotateCcw } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
 import { getIcon } from "@/lib/icons";
 import { useBrandLogo } from "@/hooks/useBrandLogo";
+import { useHaptics } from "@/hooks/useHaptics";
 import conclusivIcon from "@/assets/conclusiv-icon.png";
 
 interface MobilePresentScreenProps {
   onExit: () => void;
+  onStartOver?: () => void;
 }
 
-export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
+export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreenProps) => {
   const {
     narrative,
     currentSectionIndex,
     nextSection,
     prevSection,
     setCurrentSectionIndex,
+    reset,
   } = useNarrativeStore();
 
   const { logoUrl, showLogo } = useBrandLogo();
+  const haptics = useHaptics();
   const [showNotes, setShowNotes] = useState(false);
+  const [showExitMenu, setShowExitMenu] = useState(false);
   const [dragDirection, setDragDirection] = useState<'left' | 'right' | null>(null);
+
+  const handleStartOver = () => {
+    haptics.heavy();
+    reset();
+    if (onStartOver) {
+      onStartOver();
+    } else {
+      onExit();
+    }
+  };
+
+  // Haptic navigation
+  const handleNextWithHaptics = useCallback(() => {
+    if (currentSectionIndex < (narrative?.sections.length ?? 0) - 1) {
+      haptics.light();
+      nextSection();
+    }
+  }, [currentSectionIndex, narrative?.sections.length, haptics, nextSection]);
+
+  const handlePrevWithHaptics = useCallback(() => {
+    if (currentSectionIndex > 0) {
+      haptics.light();
+      prevSection();
+    }
+  }, [currentSectionIndex, haptics, prevSection]);
 
   // Force fullscreen and lock body scroll
   useEffect(() => {
@@ -57,17 +87,19 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [nextSection, prevSection, onExit]);
 
-  // Swipe handling - full screen swipe
+  // Swipe handling - full screen swipe with haptics
   const handleDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const threshold = 50;
     
     if (info.offset.x < -threshold && currentSectionIndex < (narrative?.sections.length ?? 0) - 1) {
+      haptics.medium();
       nextSection();
     } else if (info.offset.x > threshold && currentSectionIndex > 0) {
+      haptics.medium();
       prevSection();
     }
     setDragDirection(null);
-  }, [currentSectionIndex, narrative?.sections.length, nextSection, prevSection]);
+  }, [currentSectionIndex, narrative?.sections.length, nextSection, prevSection, haptics]);
 
   const handleDrag = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (info.offset.x < -30) {
@@ -101,9 +133,9 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
 
   return (
     <div className="fixed inset-0 z-50 bg-gradient-to-b from-background to-background/95 flex flex-col touch-none">
-      {/* Header - Minimal, safe area aware */}
-      <div className="flex-shrink-0 pt-safe">
-        <div className="flex items-center justify-between px-4 py-3">
+      {/* Header - Minimal, safe area aware, separated from content */}
+      <div className="flex-shrink-0 pt-safe bg-background/90 backdrop-blur-sm z-20">
+        <div className="flex items-center justify-between px-4 py-2.5">
           {/* Brand/Logo */}
           <div className="flex items-center gap-2 min-w-0">
             {showLogo && logoUrl ? (
@@ -120,15 +152,15 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
 
           {/* Exit button */}
           <button
-            onClick={onExit}
-            className="p-2 -mr-1 rounded-full hover:bg-muted/50 transition-colors"
+            onClick={() => setShowExitMenu(true)}
+            className="p-1.5 -mr-1 rounded-full hover:bg-muted/50 transition-colors"
           >
             <X className="w-5 h-5 text-muted-foreground" />
           </button>
         </div>
 
-        {/* Progress bar */}
-        <div className="h-0.5 bg-muted/20 mx-4 rounded-full overflow-hidden">
+        {/* Progress bar - with proper spacing below header */}
+        <div className="h-1 bg-muted/20 mx-4 rounded-full overflow-hidden mb-2">
           <motion.div
             className="h-full bg-primary rounded-full"
             initial={{ width: 0 }}
@@ -138,9 +170,9 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
         </div>
       </div>
 
-      {/* Main Content - Swipeable, fills remaining space */}
+      {/* Main Content - Swipeable, fills remaining space with proper margins */}
       <motion.div
-        className="flex-1 min-h-0 relative flex items-center justify-center px-6"
+        className="flex-1 min-h-0 relative flex items-center justify-center px-6 py-4"
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.15}
@@ -156,14 +188,14 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
             transition={{ duration: 0.2, ease: "easeOut" }}
             className="w-full max-w-sm text-center"
           >
-            {/* Icon */}
+            {/* Icon - sized appropriately to avoid header overlap */}
             <motion.div
-              className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-primary/10 flex items-center justify-center"
+              className="w-14 h-14 mx-auto mb-4 rounded-xl bg-primary/10 flex items-center justify-center"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.05 }}
             >
-              <Icon className="w-8 h-8 text-primary" />
+              <Icon className="w-7 h-7 text-primary" />
             </motion.div>
 
             {/* Title */}
@@ -245,7 +277,10 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
             {narrative.sections.map((_, idx) => (
               <button
                 key={idx}
-                onClick={() => setCurrentSectionIndex(idx)}
+                onClick={() => {
+                  haptics.selection();
+                  setCurrentSectionIndex(idx);
+                }}
                 className={cn(
                   "h-2 rounded-full transition-all duration-200",
                   idx === currentSectionIndex
@@ -259,7 +294,7 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
           {/* Navigation buttons */}
           <div className="flex items-center justify-center gap-3">
             <button
-              onClick={prevSection}
+              onClick={handlePrevWithHaptics}
               disabled={currentSectionIndex === 0}
               className={cn(
                 "flex-1 max-w-[140px] py-3 rounded-xl flex items-center justify-center gap-2 transition-all font-medium",
@@ -273,14 +308,17 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
             </button>
 
             <button
-              onClick={() => setShowNotes(!showNotes)}
+              onClick={() => {
+                haptics.selection();
+                setShowNotes(!showNotes);
+              }}
               className="p-3 rounded-xl bg-muted/30 text-muted-foreground active:bg-muted/50 transition-colors"
             >
               <StickyNote className="w-5 h-5" />
             </button>
 
             <button
-              onClick={nextSection}
+              onClick={handleNextWithHaptics}
               disabled={currentSectionIndex === narrative.sections.length - 1}
               className={cn(
                 "flex-1 max-w-[140px] py-3 rounded-xl flex items-center justify-center gap-2 transition-all font-medium",
@@ -325,6 +363,57 @@ export const MobilePresentScreen = ({ onExit }: MobilePresentScreenProps) => {
               </div>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Exit menu overlay */}
+      <AnimatePresence>
+        {showExitMenu && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-40 bg-background/80 backdrop-blur-sm"
+              onClick={() => setShowExitMenu(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: "100%" }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="absolute inset-x-0 bottom-0 z-50 bg-card border-t border-border rounded-t-2xl shadow-2xl"
+            >
+              <div className="p-4 pb-safe space-y-2">
+                <div className="flex justify-center mb-2">
+                  <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+                </div>
+                
+                <button
+                  onClick={onExit}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-muted/50 text-foreground font-medium transition-colors active:bg-muted"
+                >
+                  <X className="w-5 h-5" />
+                  Exit to Preview
+                </button>
+                
+                <button
+                  onClick={handleStartOver}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-primary/10 text-primary font-medium transition-colors active:bg-primary/20"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                  Start Over
+                </button>
+                
+                <button
+                  onClick={() => setShowExitMenu(false)}
+                  className="w-full px-4 py-3 text-center text-sm text-muted-foreground"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

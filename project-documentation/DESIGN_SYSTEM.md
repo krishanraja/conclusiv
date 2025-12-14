@@ -153,6 +153,53 @@ animate={{ scale: [1, 1.1, 1] }}
 transition={{ duration: 2, repeat: Infinity }}
 ```
 
+### Mobile Animations (with Haptics)
+
+```tsx
+// Import mobile-optimized animations
+import { PulseRing, CardStackSwipe, ScrollRevealItem, MagneticButton, RadialProgress } from '@/components/mobile/MobileAnimations';
+
+// Pulse Ring - Expands with haptic on interaction
+<PulseRing isActive={true} onPulse={() => console.log('Pulsed')}>
+  <Icon />
+</PulseRing>
+
+// Card Stack Swipe - Interactive card swiping
+<CardStackSwipe 
+  items={[{ id: '1', content: <Card /> }]}
+  onSwipe={(id, direction) => console.log(id, direction)}
+/>
+
+// Scroll Reveal - Smooth scroll-triggered reveals
+<ScrollRevealItem index={0}>
+  <Content />
+</ScrollRevealItem>
+
+// Magnetic Button - Pulls toward touch
+<MagneticButton onClick={handleClick}>
+  Click me
+</MagneticButton>
+
+// Radial Progress - Circular progress with milestones
+<RadialProgress value={75} milestones={[25, 50, 75, 100]} />
+```
+
+### Haptic Feedback
+
+```tsx
+import { useHaptics } from '@/hooks/useHaptics';
+
+const haptics = useHaptics();
+
+// Haptic types
+haptics.light();      // 10ms - subtle feedback
+haptics.medium();     // 25ms - standard interaction
+haptics.heavy();      // 50ms - significant action
+haptics.success();    // Pattern for success
+haptics.error();      // Pattern for error
+haptics.selection();  // 5ms - selection change
+```
+
 ## Icons
 
 ### Icon Library

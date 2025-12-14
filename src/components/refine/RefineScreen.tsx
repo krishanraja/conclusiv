@@ -81,9 +81,9 @@ export const RefineScreen = () => {
   const editedCount = keyClaims.filter(c => c.edited).length;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col p-4 md:p-6 pt-16 md:pt-20">
-      {/* Header - Compact on mobile */}
-      <div className="flex items-center justify-between mb-4 md:mb-8">
+    <div className="min-h-[calc(100vh-4rem)] flex flex-col p-4 md:p-6 pt-4 md:pt-6">
+      {/* Header - Compact on mobile, no extra gap */}
+      <div className="flex items-center justify-between mb-4 md:mb-6">
         <Button variant="ghost" size="sm" onClick={handleBack} className="h-9 px-2 md:px-4">
           <ArrowLeft className="w-4 h-4 mr-1 md:mr-2" />
           <span className="hidden sm:inline">Back</span>
