@@ -144,13 +144,33 @@ exit={{ opacity: 0, y: -10 }}
 ### Loading Animation
 
 ```tsx
-// Spinner rotation
-animate={{ rotate: 360 }}
-transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+// Branded loading - C logo rotates in center of progress ring
+<div className="relative flex items-center justify-center">
+  {/* Progress ring */}
+  <svg className="w-32 h-32" viewBox="0 0 128 128">
+    <motion.circle
+      stroke="url(#loading-gradient)"
+      strokeDasharray={`${(progress / 100) * 352} 352`}
+    />
+  </svg>
+  
+  {/* Rotating C logo */}
+  <motion.div
+    animate={{ rotate: 360 }}
+    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+  >
+    <img src={criticalImages.conclusivIcon} className="w-14 h-14" />
+  </motion.div>
+</div>
 
-// Pulse effect
-animate={{ scale: [1, 1.1, 1] }}
-transition={{ duration: 2, repeat: Infinity }}
+// Use LoadingOverlay for consistent branded loading
+import { LoadingOverlay } from "@/components/ui/loading";
+
+// Simple loading
+<LoadingOverlay message="Processing..." />
+
+// Staged loading with progress
+<LoadingOverlay stage={2} progress={45} inputLength={5000} />
 ```
 
 ### Mobile Animations (with Haptics)

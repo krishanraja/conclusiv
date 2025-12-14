@@ -290,3 +290,103 @@ Add a contextual post-setup guidance message that appears after the setup sheet 
 - If user feedback indicates the message is redundant or annoying
 - If engagement with Upload/Generate doesn't improve
 - If we add more onboarding steps that change the flow
+
+---
+
+## Unified Branded Loading Experience
+
+**Date**: 2024-12-14
+**Status**: Accepted
+
+### Context
+The app had two different loading screen formats that would switch midway through the loading process. This created a jarring, unprofessional experience. The loading stages showed different icons for each stage (Search, Sparkles, Layout, FileText, Loader2) which caused visual discontinuity.
+
+### Decision
+Consolidate to a single, branded loading experience:
+1. Use the C logo (conclusiv icon) as the central element
+2. Rotate the C logo smoothly at 3s intervals
+3. Surround with a progress ring that fills based on actual progress
+4. Show stage text below (label + description)
+5. Use consistent animation throughout - no switching formats
+
+### Rationale
+- **Brand consistency**: The C logo is recognizable and reinforces brand identity
+- **Visual continuity**: Single animation style prevents jarring transitions
+- **Premium feel**: Smooth, consistent animation conveys quality
+- **User confidence**: Clear progress indication without format changes
+
+**Alternatives Considered**:
+- Multiple icons per stage (rejected: too distracting, causes visual discontinuity)
+- Simple spinner only (rejected: less branded, no progress indication)
+- Percentage text (rejected: can feel slow when percentage updates slowly)
+
+### Consequences
+- **Easier**: Consistent UX, easier to maintain single loading component
+- **Harder**: Less visual variety (but this is intentional for premium feel)
+
+### Revisit Conditions
+- If users find the animation repetitive for long-running operations
+- If we need to convey more specific stage information visually
+
+---
+
+## Mobile Sidebar Edge Buttons
+
+**Date**: 2024-12-14
+**Status**: Accepted
+
+### Context
+On mobile preview screen, users couldn't easily discover or access the sidebar panels for narrative analysis and quick adjustments. The header icons (BarChart3, Sliders) were small and not immediately obvious.
+
+### Decision
+Add always-visible edge buttons on left and right sides of the screen:
+1. Left edge: PanelLeftOpen icon → Opens analysis panel (score, summary, improvements)
+2. Right edge: PanelRightOpen icon → Opens adjustments panel (themes, template)
+3. Buttons animate in after 0.5s delay
+4. Buttons have subtle card styling with blur backdrop
+5. Both header icons AND edge buttons work (multiple access points)
+
+### Rationale
+- **Discoverability**: Edge buttons are visible even during content navigation
+- **Thumb-friendly**: Position at vertical center is easy to reach
+- **Non-intrusive**: Small footprint doesn't block content
+- **Consistent with patterns**: Similar to slide-out drawer hints in Google apps
+
+### Consequences
+- **Easier**: Users can always see and access sidebar controls
+- **Harder**: Slightly more visual elements on screen
+
+### Revisit Conditions
+- If users find edge buttons distracting during content review
+- If we add more sidebar panels that need access
+
+---
+
+## RefineScreen Three-Tab Design
+
+**Date**: 2024-12-14
+**Status**: Accepted
+
+### Context
+The RefineScreen had 4 tabs: Claims, Highlight, Voice, and Mapping. The Mapping tab was always disabled until a narrative was built, which confused users about its purpose. Users also weren't clear about what each tab offered.
+
+### Decision
+1. Remove the Mapping tab entirely (it's not useful pre-build)
+2. Redesign remaining 3 tabs with vertical icon+label layout
+3. Add animated contextual hint: "Choose how you'd like to refine your content"
+4. Show dynamic description below tabs based on active selection
+5. Use haptic feedback on tab changes
+
+### Rationale
+- **Clarity**: 3 functional options is clearer than 3 + 1 disabled
+- **Better affordance**: Vertical layout with labels explains each option
+- **Guided experience**: Hint and descriptions reduce cognitive load
+- **Mobile-optimized**: Vertical tabs work better on narrow screens
+
+### Consequences
+- **Easier**: Users understand their options immediately
+- **Harder**: Mapping functionality needs alternate access point post-build (if needed)
+
+### Revisit Conditions
+- If Mapping becomes essential pre-build
+- If users want more than 3 refinement methods

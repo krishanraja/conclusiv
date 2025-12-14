@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { 
   ChevronLeft, 
@@ -10,7 +10,9 @@ import {
   Sliders,
   ArrowLeft,
   X,
-  Edit3
+  Edit3,
+  PanelLeftOpen,
+  PanelRightOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NarrativeQualityScore } from "@/components/intelligence/NarrativeQualityScore";
@@ -123,6 +125,37 @@ export const MobilePreviewLayout = ({
           transition={{ duration: 0.3, ease: "easeOut" }}
         />
       </div>
+
+      {/* Edge Arrow Buttons - Always visible for opening sidebars */}
+      <motion.button
+        onClick={() => {
+          haptics.light();
+          setLeftPanelOpen(true);
+        }}
+        className="fixed left-0 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-8 h-16 bg-card/80 backdrop-blur-sm border border-border/30 rounded-r-xl shadow-lg"
+        initial={{ x: -32, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ delay: 0.5, type: "spring", stiffness: 300, damping: 25 }}
+        whileTap={{ scale: 0.95 }}
+        aria-label="Open analysis panel"
+      >
+        <PanelLeftOpen className="w-4 h-4 text-primary" />
+      </motion.button>
+      
+      <motion.button
+        onClick={() => {
+          haptics.light();
+          setRightPanelOpen(true);
+        }}
+        className="fixed right-0 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-8 h-16 bg-card/80 backdrop-blur-sm border border-border/30 rounded-l-xl shadow-lg"
+        initial={{ x: 32, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ delay: 0.5, type: "spring", stiffness: 300, damping: 25 }}
+        whileTap={{ scale: 0.95 }}
+        aria-label="Open adjustments panel"
+      >
+        <PanelRightOpen className="w-4 h-4 text-primary" />
+      </motion.button>
 
       {/* Main Preview Area - Full swipe */}
       <motion.div 
