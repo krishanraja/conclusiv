@@ -6,6 +6,11 @@ interface SplashScreenProps {
   onComplete: () => void;
 }
 
+// Animation duration in ms
+const ANIMATION_DURATION = 1600;
+// Fallback timeout (animation duration + buffer)
+const FALLBACK_TIMEOUT = ANIMATION_DURATION + 400;
+
 export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
   const [imageReady, setImageReady] = useState(() => isImageReady("conclusivIcon"));
   const [animationComplete, setAnimationComplete] = useState(false);
@@ -16,6 +21,20 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
     if (imageReady) return;
     return onImageReady("conclusivIcon", () => setImageReady(true));
   }, [imageReady]);
+
+  // Fallback timeout - ensures splash completes even if animation callback doesn't fire
+  // This handles edge cases with framer-motion SVG animations
+  useEffect(() => {
+    if (!imageReady) return;
+    
+    const fallbackTimer = setTimeout(() => {
+      if (!animationComplete) {
+        setAnimationComplete(true);
+      }
+    }, FALLBACK_TIMEOUT);
+    
+    return () => clearTimeout(fallbackTimer);
+  }, [imageReady, animationComplete]);
 
   // Trigger completion when both conditions are met
   useEffect(() => {
@@ -59,8 +78,12 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           className="absolute w-32 h-32 rounded-full bg-primary/10 blur-xl"
         />
         
-        {/* Loading ring */}
-        <svg className="absolute w-28 h-28" viewBox="0 0 100 100">
+        {/* Loading ring - rotated via CSS transform on parent */}
+        <svg 
+          className="absolute w-28 h-28" 
+          viewBox="0 0 100 100"
+          style={{ transform: 'rotate(-90deg)' }}
+        >
           {/* Background circle */}
           <circle
             cx="50"
@@ -84,13 +107,11 @@ export const SplashScreen = ({ onComplete }: SplashScreenProps) => {
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
             transition={{ 
-              duration: 1.6, 
+              duration: ANIMATION_DURATION / 1000, 
               ease: [0.4, 0, 0.2, 1],
             }}
             onAnimationComplete={handleAnimationComplete}
             style={{ 
-              rotate: -90,
-              transformOrigin: "center",
               filter: "drop-shadow(0 0 6px hsl(var(--primary) / 0.4))"
             }}
           />
