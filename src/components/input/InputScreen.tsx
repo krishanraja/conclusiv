@@ -67,6 +67,10 @@ export const InputScreen = () => {
   const [showSuccessFlash, setShowSuccessFlash] = useState(false);
   const [showResearchAssistant, setShowResearchAssistant] = useState(false);
   const [showPostSetupGuidance, setShowPostSetupGuidance] = useState(false);
+
+  // Derived state - must be defined before hooks that reference them
+  const charCount = rawText.length;
+  const hasContent = charCount > 0;
   
   // Auto-open setup sheet on first visit
   useEffect(() => {
@@ -250,8 +254,6 @@ export const InputScreen = () => {
     setCurrentStep("refine");
   }, [rawText, toast, requireFeature, incrementBuildCount, setCurrentStep]);
 
-  const charCount = rawText.length;
-  const hasContent = charCount > 0;
   const isLongInput = charCount > 15000;
   const isVeryLongInput = charCount > MAX_CHARS_WARNING;
   const isTooShort = charCount > 0 && charCount < MIN_CHARS;
