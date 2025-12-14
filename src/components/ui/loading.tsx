@@ -18,8 +18,8 @@ export const LoadingOverlay = ({
 }: LoadingOverlayProps) => {
   const [logoReady, setLogoReady] = useState(() => isImageReady("conclusivIcon"));
   
-  // Use staged loading for narrative building, simple spinner otherwise
-  const useStages = stage > 0 || progress > 0;
+  // Use staged loading for narrative building (when we have explicit stages)
+  const useStages = stage > 0;
 
   useEffect(() => {
     if (logoReady) return;
@@ -31,44 +31,47 @@ export const LoadingOverlay = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.6, ease: "easeInOut" }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm overflow-hidden"
     >
       {useStages ? (
         <LoadingStages stage={stage} progress={progress} inputLength={inputLength} />
       ) : (
         <div className="flex flex-col items-center gap-6">
-          {/* Simple branded loader with C logo */}
+          {/* Simple branded loader with C logo - matches staged loading style exactly */}
           <div className="relative flex items-center justify-center">
-            {/* Glow effect */}
+            {/* Glow effect - same as staged loading */}
             <motion.div
-              className="absolute w-20 h-20 rounded-full bg-shimmer-start/10 blur-xl"
-              animate={{ opacity: [0.3, 0.5, 0.3] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute w-28 h-28 rounded-full bg-shimmer-start/10 blur-xl"
+              initial={{ opacity: 0.3, scale: 0.95 }}
+              animate={{ opacity: [0.3, 0.4, 0.3], scale: [0.95, 1, 0.95] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             />
             
-            {/* Progress ring */}
-            <svg className="w-16 h-16" viewBox="0 0 64 64">
+            {/* Progress ring - indeterminate spinner matching staged loading dimensions */}
+            <svg className="w-24 h-24" viewBox="0 0 96 96" style={{ transform: 'rotate(-90deg)' }}>
+              {/* Background circle */}
               <circle
-                cx="32"
-                cy="32"
-                r="28"
+                cx="48"
+                cy="48"
+                r="42"
                 stroke="currentColor"
                 strokeWidth="3"
                 fill="none"
                 className="text-muted/20"
               />
+              {/* Spinning arc */}
               <motion.circle
-                cx="32"
-                cy="32"
-                r="28"
+                cx="48"
+                cy="48"
+                r="42"
                 stroke="url(#simple-gradient)"
                 strokeWidth="3"
                 fill="none"
                 strokeLinecap="round"
-                strokeDasharray="44 176"
+                strokeDasharray="66 264"
                 animate={{ rotate: 360 }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
                 style={{ transformOrigin: "center" }}
               />
               <defs>
@@ -79,27 +82,37 @@ export const LoadingOverlay = ({
               </defs>
             </svg>
             
-            {/* Rotating C logo */}
-            <motion.div
-              className="absolute inset-0 flex items-center justify-center"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-            >
-              <motion.img
-                src={criticalImages.conclusivIcon}
-                alt=""
-                className="w-8 h-8 object-contain"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: logoReady ? 1 : 0 }}
-                transition={{ duration: 0.3 }}
-              />
-            </motion.div>
+            {/* Rotating C logo - same size and style as staged loading */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                className="relative"
+              >
+                {/* Subtle glow behind logo */}
+                <motion.div
+                  className="absolute inset-0 w-10 h-10 bg-shimmer-start/20 rounded-full blur-lg"
+                  style={{ transform: 'translate(-5px, -5px)' }}
+                  animate={{ opacity: [0.4, 0.6, 0.4] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                />
+                {/* C logo */}
+                <motion.img
+                  src={criticalImages.conclusivIcon}
+                  alt=""
+                  className="w-10 h-10 object-contain relative z-10"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: logoReady ? 1 : 0, scale: logoReady ? 1 : 0.8 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                />
+              </motion.div>
+            </div>
           </div>
           
           <motion.p
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
+            transition={{ delay: 0.2, duration: 0.4 }}
             className="text-sm text-muted-foreground"
           >
             {message}

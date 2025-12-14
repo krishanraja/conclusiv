@@ -8,13 +8,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HighlightableText } from "./HighlightableText";
 import { ClaimCard } from "./ClaimCard";
 import { VoiceRefinement } from "./VoiceRefinement";
-import { ArrowLeft, ArrowRight, Highlighter, MessageCircleQuestion, Mic, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Highlighter, MessageCircleQuestion, Mic, Loader2, Sparkles, Check, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export const RefineScreen = () => {
   const { toast } = useToast();
   const haptics = useHaptics();
+  const isMobile = useIsMobile();
   const {
     rawText,
     setCurrentStep,
@@ -33,6 +35,7 @@ export const RefineScreen = () => {
   const [isExtractingClaims, setIsExtractingClaims] = useState(false);
   const [claimsLoaded, setClaimsLoaded] = useState(false);
   const [showHint, setShowHint] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(true);
 
   // Auto-hide hint after interaction or timeout
   useEffect(() => {
@@ -40,11 +43,25 @@ export const RefineScreen = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Auto-hide onboarding after first tab interaction
+  useEffect(() => {
+    const hasSeenOnboarding = localStorage.getItem('conclusiv_refine_onboarding_seen');
+    if (hasSeenOnboarding) {
+      setShowOnboarding(false);
+    }
+  }, []);
+
   // Extract claims when switching to claims tab
   const handleTabChange = async (value: string) => {
     haptics.selection();
     setActiveTab(value);
     setShowHint(false); // Hide hint on any tab interaction
+    
+    // Dismiss onboarding on first interaction
+    if (showOnboarding) {
+      setShowOnboarding(false);
+      localStorage.setItem('conclusiv_refine_onboarding_seen', 'true');
+    }
     
     if (value === "claims" && !claimsLoaded && keyClaims.length === 0) {
       setIsExtractingClaims(true);
@@ -129,9 +146,56 @@ export const RefineScreen = () => {
 
         {/* Tabs - 3 options with better visual guidance */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          {/* Animated hint for first-time users */}
+          {/* Onboarding overlay for first-time users - shows the three options clearly */}
           <AnimatePresence>
-            {showHint && (
+            {showOnboarding && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="mb-4 p-4 rounded-xl bg-primary/5 border border-primary/20"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Info className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground mb-2">
+                      Three ways to refine your story
+                    </p>
+                    <div className="space-y-1.5 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <MessageCircleQuestion className="w-3.5 h-3.5 text-primary" />
+                        <span><strong>Review</strong> — Approve or edit AI-extracted claims</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Highlighter className="w-3.5 h-3.5 text-primary" />
+                        <span><strong>Highlight</strong> — Select key passages to emphasize</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Mic className="w-3.5 h-3.5 text-primary" />
+                        <span><strong>Voice</strong> — Record verbal notes for context</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowOnboarding(false);
+                        localStorage.setItem('conclusiv_refine_onboarding_seen', 'true');
+                      }}
+                      className="mt-3 text-xs text-primary hover:underline"
+                    >
+                      Got it, don't show again
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Animated hint for returning users (shorter, simpler) */}
+          <AnimatePresence>
+            {showHint && !showOnboarding && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -144,45 +208,73 @@ export const RefineScreen = () => {
             )}
           </AnimatePresence>
 
-          <TabsList className="grid w-full grid-cols-3 mb-4 h-auto p-1 bg-muted/50">
+          {/* Tabs - Clear 3-option layout with visual distinction */}
+          <TabsList className="grid w-full grid-cols-3 mb-4 h-auto p-1.5 bg-muted/50 rounded-xl">
             <TabsTrigger 
               value="claims" 
               className={cn(
-                "flex flex-col items-center gap-1.5 py-3 px-2 data-[state=active]:bg-card data-[state=active]:shadow-sm",
+                "flex flex-col items-center gap-1.5 py-3 px-2 rounded-lg",
+                "data-[state=active]:bg-card data-[state=active]:shadow-md data-[state=active]:border data-[state=active]:border-primary/20",
                 "transition-all duration-200"
               )}
             >
-              <MessageCircleQuestion className={cn(
-                "w-5 h-5 transition-colors",
-                activeTab === "claims" ? "text-primary" : "text-muted-foreground"
-              )} />
-              <span className="text-xs font-medium">Review</span>
+              <div className={cn(
+                "w-9 h-9 rounded-full flex items-center justify-center transition-colors",
+                activeTab === "claims" ? "bg-primary/10" : "bg-transparent"
+              )}>
+                <MessageCircleQuestion className={cn(
+                  "w-5 h-5 transition-colors",
+                  activeTab === "claims" ? "text-primary" : "text-muted-foreground"
+                )} />
+              </div>
+              <span className={cn(
+                "text-xs font-medium transition-colors",
+                activeTab === "claims" ? "text-foreground" : "text-muted-foreground"
+              )}>Review</span>
             </TabsTrigger>
             <TabsTrigger 
               value="highlight" 
               className={cn(
-                "flex flex-col items-center gap-1.5 py-3 px-2 data-[state=active]:bg-card data-[state=active]:shadow-sm",
+                "flex flex-col items-center gap-1.5 py-3 px-2 rounded-lg",
+                "data-[state=active]:bg-card data-[state=active]:shadow-md data-[state=active]:border data-[state=active]:border-primary/20",
                 "transition-all duration-200"
               )}
             >
-              <Highlighter className={cn(
-                "w-5 h-5 transition-colors",
-                activeTab === "highlight" ? "text-primary" : "text-muted-foreground"
-              )} />
-              <span className="text-xs font-medium">Highlight</span>
+              <div className={cn(
+                "w-9 h-9 rounded-full flex items-center justify-center transition-colors",
+                activeTab === "highlight" ? "bg-primary/10" : "bg-transparent"
+              )}>
+                <Highlighter className={cn(
+                  "w-5 h-5 transition-colors",
+                  activeTab === "highlight" ? "text-primary" : "text-muted-foreground"
+                )} />
+              </div>
+              <span className={cn(
+                "text-xs font-medium transition-colors",
+                activeTab === "highlight" ? "text-foreground" : "text-muted-foreground"
+              )}>Highlight</span>
             </TabsTrigger>
             <TabsTrigger 
               value="voice" 
               className={cn(
-                "flex flex-col items-center gap-1.5 py-3 px-2 data-[state=active]:bg-card data-[state=active]:shadow-sm",
+                "flex flex-col items-center gap-1.5 py-3 px-2 rounded-lg",
+                "data-[state=active]:bg-card data-[state=active]:shadow-md data-[state=active]:border data-[state=active]:border-primary/20",
                 "transition-all duration-200"
               )}
             >
-              <Mic className={cn(
-                "w-5 h-5 transition-colors",
-                activeTab === "voice" ? "text-primary" : "text-muted-foreground"
-              )} />
-              <span className="text-xs font-medium">Voice</span>
+              <div className={cn(
+                "w-9 h-9 rounded-full flex items-center justify-center transition-colors",
+                activeTab === "voice" ? "bg-primary/10" : "bg-transparent"
+              )}>
+                <Mic className={cn(
+                  "w-5 h-5 transition-colors",
+                  activeTab === "voice" ? "text-primary" : "text-muted-foreground"
+                )} />
+              </div>
+              <span className={cn(
+                "text-xs font-medium transition-colors",
+                activeTab === "voice" ? "text-foreground" : "text-muted-foreground"
+              )}>Voice</span>
             </TabsTrigger>
           </TabsList>
 

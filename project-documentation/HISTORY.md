@@ -25,6 +25,30 @@ Changelog and version history for conclusiv.
 
 ---
 
+## [0.4.2] - 2024-12-14
+
+### Added
+- **Presentation Mode Edge Buttons**: Added always-visible edge buttons in MobilePresentScreen for accessing section navigation and speaker notes panels
+- **Narrative Section Panel**: Left slide-out panel in presentation mode showing all sections with visual indicators for current position
+- **Speaker Notes Panel**: Right slide-out panel in presentation mode for viewing speaker notes during presentation
+- **Refine Screen Onboarding Modal**: First-time user onboarding explaining the 3 refinement options (Review, Highlight, Voice) with clear descriptions
+
+### Changed
+- **Loading Screen Stability**: Fixed progress animation to only animate forward (never backwards) preventing visual glitches during loading
+- **Loading Screen Consistency**: Unified simple and staged loading to use identical visual style (same dimensions, animations, C logo treatment)
+- **AccountMenu z-index**: Fixed z-index issues to ensure proper layering (z-100 for backdrop, z-101 for menu) preventing sign-out appearing in wrong position
+- **AccountMenu Body Scroll Lock**: Added body scroll lock when mobile menu is open to prevent background scrolling
+- **RefineScreen Tab Design**: Enhanced tab buttons with circular icon containers and improved active state styling
+
+### Technical
+- LoadingStages uses useRef to track progress and prevent backwards animation
+- LoadingOverlay matches LoadingStages dimensions (w-24 h-24 ring, w-10 h-10 logo)
+- AccountMenu uses AnimatePresence mode="wait" with key props for proper animation sequencing
+- MobilePresentScreen imports new icons (List, PanelLeftOpen, PanelRightOpen, Edit3)
+- Added localStorage persistence for refine screen onboarding state
+
+---
+
 ## [0.4.1] - 2024-12-14
 
 ### Added

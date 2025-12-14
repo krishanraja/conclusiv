@@ -143,14 +143,28 @@ exit={{ opacity: 0, y: -10 }}
 
 ### Loading Animation
 
+The branded loading experience uses a single, consistent design throughout:
+- C logo rotates continuously in the center
+- Progress ring surrounds the logo (indeterminate for simple loading, determinate for staged)
+- Progress only animates forward (never backwards) for stability
+- Subtle glow effects for premium feel
+
 ```tsx
 // Branded loading - C logo rotates in center of progress ring
 <div className="relative flex items-center justify-center">
+  {/* Outer glow */}
+  <motion.div
+    className="absolute w-28 h-28 rounded-full bg-shimmer-start/10 blur-xl"
+    animate={{ opacity: [0.3, 0.4, 0.3] }}
+  />
+  
   {/* Progress ring */}
-  <svg className="w-32 h-32" viewBox="0 0 128 128">
+  <svg className="w-24 h-24" viewBox="0 0 96 96">
+    <circle r="42" className="text-muted/20" /> {/* Background */}
     <motion.circle
       stroke="url(#loading-gradient)"
-      strokeDasharray={`${(progress / 100) * 352} 352`}
+      strokeDasharray="66 264" /* Indeterminate */
+      animate={{ rotate: 360 }}
     />
   </svg>
   
@@ -159,19 +173,25 @@ exit={{ opacity: 0, y: -10 }}
     animate={{ rotate: 360 }}
     transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
   >
-    <img src={criticalImages.conclusivIcon} className="w-14 h-14" />
+    <img src={criticalImages.conclusivIcon} className="w-10 h-10" />
   </motion.div>
 </div>
 
 // Use LoadingOverlay for consistent branded loading
 import { LoadingOverlay } from "@/components/ui/loading";
 
-// Simple loading
+// Simple loading (indeterminate spinner)
 <LoadingOverlay message="Processing..." />
 
-// Staged loading with progress
+// Staged loading with progress (determinate ring)
 <LoadingOverlay stage={2} progress={45} inputLength={5000} />
 ```
+
+**Key Rules:**
+- Never show two different loading formats - always use C logo in center
+- Progress only moves forward - track previous value and ignore backwards changes
+- Use consistent dimensions: 24x24 ring with 10x10 logo (simple) or 32x32 ring with 14x14 logo (staged)
+- Glow effect uses shimmer-start color at low opacity
 
 ### Mobile Animations (with Haptics)
 

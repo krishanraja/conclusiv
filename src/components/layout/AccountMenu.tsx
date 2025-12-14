@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, LogOut, CreditCard, Sparkles, Loader2, X } from 'lucide-react';
+import { User, LogOut, CreditCard, Sparkles, Loader2, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -17,6 +17,18 @@ export const AccountMenu = () => {
   const haptics = useHaptics();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
+  // Lock body scroll when menu is open on mobile
+  useEffect(() => {
+    if (isOpen && isMobile) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen, isMobile]);
 
   if (!user) {
     return (
@@ -33,18 +45,24 @@ export const AccountMenu = () => {
 
   const handleOpen = () => {
     haptics.light();
+    setIsClosing(false);
     setIsOpen(true);
   };
 
   const handleClose = () => {
     haptics.selection();
-    setIsOpen(false);
+    setIsClosing(true);
+    // Wait for exit animation before fully closing
+    setTimeout(() => {
+      setIsOpen(false);
+      setIsClosing(false);
+    }, 200);
   };
 
   const handleSignOut = async () => {
     haptics.medium();
-    await signOut();
     setIsOpen(false);
+    await signOut();
     navigate('/');
   };
 
@@ -95,14 +113,17 @@ export const AccountMenu = () => {
 
   return (
     <div className="relative">
+      {/* Profile button - same on mobile and desktop */}
       <button
         onClick={handleOpen}
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        aria-expanded={isOpen}
+        aria-haspopup="true"
       >
         <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
           <User className="w-4 h-4 text-primary" />
         </div>
-        <span className="hidden sm:inline">{displayName}</span>
+        {!isMobile && <span className="hidden sm:inline">{displayName}</span>}
         {isPro && (
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
             PRO
@@ -110,28 +131,32 @@ export const AccountMenu = () => {
         )}
       </button>
 
-      <AnimatePresence>
-        {isOpen && (
+      {/* Account Menu - renders via portal-like fixed positioning */}
+      <AnimatePresence mode="wait">
+        {isOpen && !isClosing && (
           <>
-            {/* Backdrop */}
+            {/* Backdrop - always rendered first */}
             <motion.div
+              key="backdrop"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
+              className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm"
               onClick={handleClose}
+              aria-hidden="true"
             />
 
             {/* Menu - Bottom sheet on mobile, dropdown on desktop */}
             {isMobile ? (
-              // MOBILE: Bottom sheet with proper animation
+              // MOBILE: Bottom sheet with proper animation and high z-index
               <motion.div
+                key="mobile-menu"
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 30, stiffness: 350 }}
-                className="fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl border-t border-border shadow-2xl overflow-hidden"
+                className="fixed bottom-0 left-0 right-0 z-[101] bg-card rounded-t-3xl border-t border-border shadow-2xl overflow-hidden"
               >
                 {/* Drag handle indicator */}
                 <div className="flex justify-center pt-3 pb-2">
@@ -247,13 +272,14 @@ export const AccountMenu = () => {
                 </div>
               </motion.div>
             ) : (
-              // DESKTOP: Dropdown menu
+              // DESKTOP: Dropdown menu with proper z-index
               <motion.div
+                key="desktop-menu"
                 initial={{ opacity: 0, y: 8, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 8, scale: 0.95 }}
                 transition={{ duration: 0.15, ease: "easeOut" }}
-                className="absolute right-0 top-full mt-2 w-64 bg-card rounded-xl border border-border shadow-xl z-50 overflow-hidden"
+                className="absolute right-0 top-full mt-2 w-64 bg-card rounded-xl border border-border shadow-xl z-[101] overflow-hidden"
               >
                 {/* User info */}
                 <div className="p-4 border-b border-border/30">

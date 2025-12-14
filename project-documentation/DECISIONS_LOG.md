@@ -390,3 +390,101 @@ The RefineScreen had 4 tabs: Claims, Highlight, Voice, and Mapping. The Mapping 
 ### Revisit Conditions
 - If Mapping becomes essential pre-build
 - If users want more than 3 refinement methods
+
+---
+
+## Presentation Mode Sidebar Access
+
+**Date**: 2024-12-14
+**Status**: Accepted
+
+### Context
+Users in presentation mode on mobile couldn't easily access the narrative overview or speaker notes. The only way to navigate was linear swiping or using the bottom dots. Users requested the same sidebar accessibility that exists in preview mode.
+
+### Decision
+1. Add edge buttons (PanelLeftOpen, PanelRightOpen) to MobilePresentScreen
+2. Left button opens narrative section list (all sections with current position indicator)
+3. Right button opens speaker notes panel for current section
+4. Buttons animate in after 1 second delay to not distract from initial presentation
+5. Panels use same spring animation style as preview mode
+
+### Rationale
+- **Consistency**: Same interaction pattern as preview mode
+- **Non-linear navigation**: Presenters can jump to any section during Q&A
+- **Notes access**: Speaker notes always accessible without disrupting presentation flow
+- **Discoverability**: Edge buttons are visible but non-intrusive
+
+**Alternatives Considered**:
+- Header buttons only (rejected: too small, not obvious during presentation)
+- Gesture-only navigation (rejected: not discoverable for new users)
+- Always-visible section list (rejected: too distracting during presentation)
+
+### Consequences
+- **Easier**: Presenters can navigate freely during Q&A, access notes anytime
+- **Harder**: Slightly more visual elements on screen
+
+### Revisit Conditions
+- If users find edge buttons distracting during presentation
+- If we add audience-facing presentation mode where controls should be hidden
+
+---
+
+## Loading Screen Forward-Only Progress
+
+**Date**: 2024-12-14
+**Status**: Accepted
+
+### Context
+The loading progress bar would sometimes appear to go backwards or glitch when stage transitions occurred, creating an unprofessional appearance and reducing user confidence.
+
+### Decision
+1. Track last progress value using useRef
+2. Only update displayed progress when new value is >= previous value
+3. Use smooth CSS transitions for progress bar movement
+4. Never animate backwards - only forward progression
+
+### Rationale
+- **Visual stability**: Progress bar only moves forward, never backwards
+- **User confidence**: Consistent forward movement feels like steady progress
+- **Premium feel**: No jarring visual glitches or resets
+
+### Consequences
+- **Easier**: Smoother, more professional loading experience
+- **Harder**: None significant
+
+### Revisit Conditions
+- If accurate progress is critical and we need to show actual stage progress even if it means occasional backwards movement
+
+---
+
+## RefineScreen First-Time User Onboarding
+
+**Date**: 2024-12-14
+**Status**: Accepted
+
+### Context
+Users landing on the RefineScreen weren't immediately clear about what the three tab options (Review, Highlight, Voice) did or why they might use each one.
+
+### Decision
+1. Add first-time user onboarding card with clear explanation of all 3 options
+2. Card appears above tabs with Info icon and dismissible button
+3. Store dismissal state in localStorage to not show again
+4. Keep brief animated hint for returning users
+
+### Rationale
+- **Immediate clarity**: New users understand all options at once
+- **Respectful of time**: One-time display, dismissible, doesn't block workflow
+- **Builds confidence**: Users know what to expect from each option
+
+**Alternatives Considered**:
+- Tooltip on hover (rejected: doesn't work well on mobile)
+- Forced tutorial (rejected: too intrusive for experienced users)
+- Help icon with modal (rejected: hidden, users might not click)
+
+### Consequences
+- **Easier**: Users understand the refinement options immediately
+- **Harder**: Additional localStorage state to manage
+
+### Revisit Conditions
+- If user feedback indicates onboarding is redundant
+- If we change the refinement options

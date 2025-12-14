@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { X, ChevronLeft, ChevronRight, StickyNote, RotateCcw } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, StickyNote, RotateCcw, List, PanelLeftOpen, PanelRightOpen, Edit3 } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
 import { getIcon } from "@/lib/icons";
@@ -27,6 +27,8 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
   const haptics = useHaptics();
   const [showNotes, setShowNotes] = useState(false);
   const [showExitMenu, setShowExitMenu] = useState(false);
+  const [showNarrativePanel, setShowNarrativePanel] = useState(false);
+  const [showNotesPanel, setShowNotesPanel] = useState(false);
   const [dragDirection, setDragDirection] = useState<'left' | 'right' | null>(null);
 
   const handleStartOver = () => {
@@ -169,6 +171,37 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
           />
         </div>
       </div>
+
+      {/* Edge Arrow Buttons - Always visible for opening sidebars */}
+      <motion.button
+        onClick={() => {
+          haptics.light();
+          setShowNarrativePanel(true);
+        }}
+        className="fixed left-0 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center w-8 h-16 bg-card/80 backdrop-blur-sm border border-border/30 rounded-r-xl shadow-lg"
+        initial={{ x: -32, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ delay: 1, type: "spring", stiffness: 300, damping: 25 }}
+        whileTap={{ scale: 0.95 }}
+        aria-label="View all sections"
+      >
+        <PanelLeftOpen className="w-4 h-4 text-primary" />
+      </motion.button>
+      
+      <motion.button
+        onClick={() => {
+          haptics.light();
+          setShowNotesPanel(true);
+        }}
+        className="fixed right-0 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center w-8 h-16 bg-card/80 backdrop-blur-sm border border-border/30 rounded-l-xl shadow-lg"
+        initial={{ x: 32, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ delay: 1, type: "spring", stiffness: 300, damping: 25 }}
+        whileTap={{ scale: 0.95 }}
+        aria-label="View speaker notes"
+      >
+        <PanelRightOpen className="w-4 h-4 text-primary" />
+      </motion.button>
 
       {/* Main Content - Swipeable, fills remaining space with proper margins */}
       <motion.div
@@ -334,7 +367,169 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
         </div>
       </div>
 
-      {/* Notes overlay */}
+      {/* Left Slide-in Panel - Narrative Sections */}
+      <AnimatePresence>
+        {showNarrativePanel && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                haptics.selection();
+                setShowNarrativePanel(false);
+              }}
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+            />
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed top-0 left-0 bottom-0 w-[85vw] max-w-[320px] bg-card border-r border-border z-50 overflow-hidden flex flex-col shadow-2xl"
+            >
+              {/* Panel Header */}
+              <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card pt-safe">
+                <div className="flex items-center gap-2">
+                  <List className="w-4 h-4 text-primary" />
+                  <h3 className="font-semibold text-base">All Sections</h3>
+                </div>
+                <button 
+                  onClick={() => {
+                    haptics.selection();
+                    setShowNarrativePanel(false);
+                  }}
+                  className="p-1.5 rounded-full hover:bg-muted transition-colors"
+                >
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+              
+              {/* Section List - Scrollable */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-1 pb-safe">
+                {narrative.sections.map((section, idx) => {
+                  const SectionIcon = getIcon(section.icon);
+                  const isActive = idx === currentSectionIndex;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        haptics.medium();
+                        setCurrentSectionIndex(idx);
+                        setShowNarrativePanel(false);
+                      }}
+                      className={cn(
+                        "w-full flex items-start gap-3 p-3 rounded-xl text-left transition-all",
+                        isActive 
+                          ? "bg-primary/10 border border-primary/30" 
+                          : "hover:bg-muted/50 active:bg-muted"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                        isActive ? "bg-primary/20" : "bg-muted"
+                      )}>
+                        <SectionIcon className={cn(
+                          "w-4 h-4",
+                          isActive ? "text-primary" : "text-muted-foreground"
+                        )} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn(
+                          "text-sm font-medium truncate",
+                          isActive ? "text-foreground" : "text-muted-foreground"
+                        )}>
+                          {section.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground/70 mt-0.5">
+                          Section {idx + 1}
+                        </p>
+                      </div>
+                      {isActive && (
+                        <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Right Slide-in Panel - Speaker Notes */}
+      <AnimatePresence>
+        {showNotesPanel && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                haptics.selection();
+                setShowNotesPanel(false);
+              }}
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed top-0 right-0 bottom-0 w-[85vw] max-w-[320px] bg-card border-l border-border z-50 overflow-hidden flex flex-col shadow-2xl"
+            >
+              {/* Panel Header */}
+              <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card pt-safe">
+                <div className="flex items-center gap-2">
+                  <StickyNote className="w-4 h-4 text-primary" />
+                  <h3 className="font-semibold text-base">Speaker Notes</h3>
+                </div>
+                <button 
+                  onClick={() => {
+                    haptics.selection();
+                    setShowNotesPanel(false);
+                  }}
+                  className="p-1.5 rounded-full hover:bg-muted transition-colors"
+                >
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+              
+              {/* Notes Content - Scrollable */}
+              <div className="flex-1 overflow-y-auto p-4 pb-safe">
+                <div className="mb-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
+                    Current Section
+                  </p>
+                  <p className="text-sm font-medium text-foreground">
+                    {currentSection.title}
+                  </p>
+                </div>
+                
+                <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
+                  {currentSection.speakerNotes ? (
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {currentSection.speakerNotes}
+                    </p>
+                  ) : (
+                    <div className="text-center py-4">
+                      <StickyNote className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground/70 italic">
+                        No notes for this section
+                      </p>
+                      <p className="text-xs text-muted-foreground/50 mt-1">
+                        Add notes in preview mode
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Notes overlay (legacy - keeping for bottom button) */}
       <AnimatePresence>
         {showNotes && (
           <motion.div

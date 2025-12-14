@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { criticalImages, isImageReady, onImageReady } from "@/lib/imagePreloader";
 
@@ -19,6 +19,8 @@ const stages = [
 
 export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStagesProps) => {
   const [logoReady, setLogoReady] = useState(() => isImageReady("conclusivIcon"));
+  const [displayedProgress, setDisplayedProgress] = useState(progress);
+  const lastProgress = useRef(progress);
   const estimatedSeconds = Math.max(10, Math.ceil(inputLength / 2000) * 5);
   const currentStage = stages[Math.min(stage, stages.length - 1)];
 
@@ -27,20 +29,34 @@ export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStage
     return onImageReady("conclusivIcon", () => setLogoReady(true));
   }, [logoReady]);
 
+  // Smooth progress animation - never go backwards, only forward
+  useEffect(() => {
+    // Only update if progress is going forward (no glitches/resets)
+    if (progress >= lastProgress.current) {
+      lastProgress.current = progress;
+      setDisplayedProgress(progress);
+    }
+  }, [progress]);
+
+  // Calculate stroke dasharray for smooth animation
+  const circumference = 2 * Math.PI * 56; // r=56
+  const strokeDasharray = `${Math.max(10, (displayedProgress / 100) * circumference)} ${circumference}`;
+
   return (
     <div className="flex flex-col items-center gap-6 md:gap-8 w-full max-w-md px-6 overflow-hidden">
-      {/* Main progress ring with C logo */}
+      {/* Main progress ring with C logo - Single unified design */}
       <div className="relative flex items-center justify-center">
-        {/* Outer glow effect */}
+        {/* Outer glow effect - subtle and consistent */}
         <motion.div
           className="absolute w-36 h-36 rounded-full bg-shimmer-start/10 blur-2xl"
-          animate={{ opacity: [0.3, 0.5, 0.3], scale: [0.95, 1.05, 0.95] }}
+          initial={{ opacity: 0.3, scale: 0.95 }}
+          animate={{ opacity: [0.3, 0.4, 0.3], scale: [0.95, 1, 0.95] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         />
         
-        {/* Progress ring SVG - fixed position, only stroke animates */}
+        {/* Progress ring SVG - stable, no format changes */}
         <svg className="w-32 h-32" viewBox="0 0 128 128" style={{ transform: 'rotate(-90deg)' }}>
-          {/* Background circle */}
+          {/* Background circle - always visible */}
           <circle
             cx="64"
             cy="64"
@@ -50,30 +66,29 @@ export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStage
             fill="none"
             className="text-muted/20"
           />
-          {/* Animated progress arc */}
+          {/* Progress arc - smooth transitions only */}
           <motion.circle
             cx="64"
             cy="64"
             r="56"
-            stroke="url(#loading-gradient)"
+            stroke="url(#loading-gradient-stages)"
             strokeWidth="4"
             fill="none"
             strokeLinecap="round"
-            initial={{ strokeDasharray: "0 352", strokeDashoffset: 0 }}
-            animate={{ 
-              strokeDasharray: `${Math.max(10, (progress / 100) * 352)} 352`
-            }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
+            style={{ strokeDasharray, strokeDashoffset: 0 }}
+            initial={false}
+            animate={{ strokeDasharray }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
           />
           <defs>
-            <linearGradient id="loading-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <linearGradient id="loading-gradient-stages" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="hsl(var(--shimmer-start))" />
               <stop offset="100%" stopColor="hsl(var(--shimmer-end))" />
             </linearGradient>
           </defs>
         </svg>
         
-        {/* Rotating C logo in center */}
+        {/* Rotating C logo in center - consistent animation */}
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.div
             animate={{ rotate: 360 }}
@@ -84,33 +99,47 @@ export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStage
             <motion.div
               className="absolute inset-0 w-14 h-14 bg-shimmer-start/20 rounded-full blur-lg"
               style={{ transform: 'translate(-7px, -7px)' }}
-              animate={{ opacity: [0.4, 0.7, 0.4] }}
+              animate={{ opacity: [0.4, 0.6, 0.4] }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
             />
-            {/* C logo */}
+            {/* C logo - fade in once ready, then stay visible */}
             <motion.img
               src={criticalImages.conclusivIcon}
               alt=""
               className="w-14 h-14 object-contain relative z-10"
               initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: logoReady ? 1 : 0, scale: 1 }}
-              transition={{ duration: 0.3 }}
+              animate={{ opacity: logoReady ? 1 : 0, scale: logoReady ? 1 : 0.8 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
             />
           </motion.div>
         </div>
       </div>
 
-      {/* Stage info - smooth text transitions */}
-      <motion.div
-        key={stage}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        className="text-center space-y-2"
-      >
-        <p className="text-lg font-medium text-foreground">{currentStage.label}</p>
-        <p className="text-sm text-muted-foreground">{currentStage.description}</p>
-      </motion.div>
+      {/* Stage info - smooth text transitions with AnimatePresence */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={stage}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="text-center space-y-2"
+        >
+          <p className="text-lg font-medium text-foreground">{currentStage.label}</p>
+          <p className="text-sm text-muted-foreground">{currentStage.description}</p>
+          {/* Show "Still working..." after stage stays same for a while */}
+          {stage === 4 && displayedProgress > 80 && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 3 }}
+              className="text-xs text-muted-foreground/70"
+            >
+              Still working...
+            </motion.p>
+          )}
+        </motion.div>
+      </AnimatePresence>
 
       {/* Progress dots - smooth fill animation */}
       <div className="flex items-center gap-2">
@@ -118,10 +147,10 @@ export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStage
           <motion.div
             key={i}
             className={cn(
-              "w-2 h-2 rounded-full transition-colors duration-700",
-              i < stage ? "bg-shimmer-start" :
-              i === stage ? "bg-shimmer-end" :
-              "bg-muted/30"
+              "rounded-full transition-all duration-500",
+              i < stage ? "w-2 h-2 bg-shimmer-start" :
+              i === stage ? "w-4 h-2 bg-shimmer-end" :
+              "w-2 h-2 bg-muted/30"
             )}
             animate={i === stage ? { opacity: [0.7, 1, 0.7] } : { opacity: 1 }}
             transition={i === stage ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" } : {}}
@@ -141,11 +170,11 @@ export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStage
         </motion.p>
       )}
 
-      {/* Helpful tips */}
+      {/* Helpful tips - appears after initial focus on loading */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 2, duration: 0.8 }}
+        transition={{ delay: 3, duration: 0.8 }}
         className="text-xs text-muted-foreground/70 text-center max-w-xs"
       >
         <TipCarousel />
