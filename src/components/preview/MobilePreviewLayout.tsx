@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { 
   ChevronLeft, 
@@ -8,7 +8,9 @@ import {
   Download,
   BarChart3,
   Sliders,
-  ArrowLeft
+  ArrowLeft,
+  X,
+  Edit3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NarrativeQualityScore } from "@/components/intelligence/NarrativeQualityScore";
@@ -18,6 +20,7 @@ import { QuickAdjustments } from "./QuickAdjustments";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
 import { getIcon } from "@/lib/icons";
+import { useHaptics } from "@/hooks/useHaptics";
 
 interface MobilePreviewLayoutProps {
   onBack: () => void;
@@ -33,12 +36,13 @@ export const MobilePreviewLayout = ({
   onExport,
 }: MobilePreviewLayoutProps) => {
   const { narrative, businessContext } = useNarrativeStore();
+  const haptics = useHaptics();
   const [leftPanelOpen, setLeftPanelOpen] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dragDirection, setDragDirection] = useState<'left' | 'right' | null>(null);
 
-  // Swipe to navigate between sections
+  // Swipe to navigate between sections with haptic feedback
   const handleDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const threshold = 50;
     
@@ -46,12 +50,14 @@ export const MobilePreviewLayout = ({
     
     // Navigate sections with swipe
     if (info.offset.x < -threshold && currentIndex < narrative.sections.length - 1) {
+      haptics.light();
       setCurrentIndex(prev => prev + 1);
     } else if (info.offset.x > threshold && currentIndex > 0) {
+      haptics.light();
       setCurrentIndex(prev => prev - 1);
     }
     setDragDirection(null);
-  }, [currentIndex, narrative]);
+  }, [currentIndex, narrative, haptics]);
 
   const handleDrag = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (info.offset.x < -30) {
@@ -236,29 +242,38 @@ export const MobilePreviewLayout = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setLeftPanelOpen(false)}
-              className="fixed inset-0 bg-black/50 z-30"
+              onClick={() => {
+                haptics.selection();
+                setLeftPanelOpen(false);
+              }}
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30"
             />
             <motion.div
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-0 left-0 bottom-0 w-[85vw] max-w-[320px] bg-background border-r border-border z-40 overflow-y-auto"
+              className="fixed top-0 left-0 bottom-0 w-[90vw] max-w-[340px] bg-card border-r border-border z-40 overflow-hidden flex flex-col shadow-2xl"
             >
-              <div className="p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm">Narrative Analysis</h3>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setLeftPanelOpen(false)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
+              {/* Panel Header */}
+              <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-primary" />
+                  <h3 className="font-semibold text-base">Narrative Analysis</h3>
                 </div>
-                
+                <button 
+                  onClick={() => {
+                    haptics.selection();
+                    setLeftPanelOpen(false);
+                  }}
+                  className="p-1.5 rounded-full hover:bg-muted transition-colors"
+                >
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+              
+              {/* Panel Content - Scrollable */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-safe">
                 <NarrativeQualityScore />
                 <ImproveMyScore />
                 <ExecutiveSummary />
@@ -276,29 +291,38 @@ export const MobilePreviewLayout = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setRightPanelOpen(false)}
-              className="fixed inset-0 bg-black/50 z-30"
+              onClick={() => {
+                haptics.selection();
+                setRightPanelOpen(false);
+              }}
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30"
             />
             <motion.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 w-[85vw] max-w-[320px] bg-background border-l border-border z-40 overflow-y-auto"
+              className="fixed top-0 right-0 bottom-0 w-[90vw] max-w-[340px] bg-card border-l border-border z-40 overflow-hidden flex flex-col shadow-2xl"
             >
-              <div className="p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm">Quick Adjustments</h3>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setRightPanelOpen(false)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
+              {/* Panel Header */}
+              <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card">
+                <div className="flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 text-primary" />
+                  <h3 className="font-semibold text-base">Quick Adjustments</h3>
                 </div>
-                
+                <button 
+                  onClick={() => {
+                    haptics.selection();
+                    setRightPanelOpen(false);
+                  }}
+                  className="p-1.5 rounded-full hover:bg-muted transition-colors"
+                >
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+              
+              {/* Panel Content - Scrollable */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-safe">
                 <QuickAdjustments />
               </div>
             </motion.div>
@@ -307,11 +331,14 @@ export const MobilePreviewLayout = ({
       </AnimatePresence>
 
       {/* Bottom Action Bar - Fixed height, safe area aware */}
-      <div className="flex-shrink-0 flex items-center justify-around px-2 py-2 border-t border-border/30 bg-background z-20 pb-safe">
+      <div className="flex-shrink-0 flex items-center justify-around px-2 py-2 border-t border-border/30 bg-card z-20 pb-safe">
         <Button
           variant="ghost"
           size="sm"
-          onClick={onExport}
+          onClick={() => {
+            haptics.light();
+            onExport();
+          }}
           className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-3"
         >
           <Download className="w-5 h-5" />
@@ -321,7 +348,10 @@ export const MobilePreviewLayout = ({
         <Button
           variant="shimmer"
           size="lg"
-          onClick={onPresent}
+          onClick={() => {
+            haptics.medium();
+            onPresent();
+          }}
           className="px-6 h-10"
         >
           <Play className="w-4 h-4 mr-1.5" />
@@ -331,7 +361,10 @@ export const MobilePreviewLayout = ({
         <Button
           variant="ghost"
           size="sm"
-          onClick={onShare}
+          onClick={() => {
+            haptics.light();
+            onShare();
+          }}
           className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-3"
         >
           <Share2 className="w-5 h-5" />

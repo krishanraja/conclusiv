@@ -146,13 +146,17 @@ src/
 │   │   └── QuickAdjustments.tsx # Theme/template tweaks
 │   ├── present/
 │   │   └── PresentScreen.tsx    # Fullscreen presentation
-│   └── ui/
-│       ├── button.tsx           # Shimmer button variant
-│       ├── loading.tsx          # Loading overlay
-│       └── error-recovery.tsx   # Error handling UI
+│   ├── ui/
+│   │   ├── button.tsx           # Shimmer button variant
+│   │   ├── loading.tsx          # Loading overlay
+│   │   ├── error-recovery.tsx   # Error handling UI
+│   │   └── InlineNotification.tsx # Professional notification system
+│   └── mobile/
+│       └── MobileAnimations.tsx # Haptic-enabled mobile animations
 ├── hooks/
 │   ├── useVoiceRecorder.ts      # Web Speech API hook
-│   └── use-toast.ts             # Toast notifications
+│   ├── useHaptics.ts            # Haptic feedback (vibration)
+│   └── use-toast.ts             # Legacy toast bridge → InlineNotification
 ├── store/
 │   └── narrativeStore.ts        # Zustand store
 ├── lib/

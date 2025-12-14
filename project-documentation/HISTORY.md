@@ -25,6 +25,36 @@ Changelog and version history for conclusiv.
 
 ---
 
+## [0.4.0] - 2024-12-14
+
+### Added
+- **Mobile UX Polish**: Comprehensive mobile-first experience improvements
+- **Haptic Feedback System**: New `useHaptics` hook providing tactile feedback on mobile interactions
+- **Mobile Animation Library**: Stunning, performant animations optimized for mobile (PulseRing, CardStackSwipe, ScrollRevealItem, MagneticButton, RadialProgress)
+- **Inline Notification System**: Professional notification system replacing toast popups
+- **Start Over Functionality**: Users can restart from presentation mode
+- **Exit Menu in Presentation**: Mobile users can choose to exit to preview or start fresh
+
+### Changed
+- **UpgradePrompt**: Now displays as full-width bottom sheet on mobile with proper safe areas
+- **RefineScreen**: Removed awkward top gap above Continue button for cleaner mobile layout
+- **AccountMenu**: Solid background on mobile instead of translucent overlay
+- **MobilePresentScreen**: Icon and content no longer encroach on progress bar
+- **MobilePreviewLayout**: Enhanced sidebars with proper headers, close buttons, and haptic feedback
+- **Toast System**: Replaced ALL toast popups with professional inline notifications
+
+### Removed
+- **Toaster Components**: Removed radix-ui toast popup system in favor of inline notifications
+
+### Technical
+- Created `useHaptics` hook for cross-browser vibration API support
+- Created `MobileAnimations.tsx` with 5 reusable mobile animation components
+- Created `InlineNotification.tsx` with NotificationProvider and useNotification hook
+- Updated `use-toast.ts` to bridge legacy toast calls to new notification system
+- Added haptic feedback to navigation buttons, swipe gestures, and panel interactions
+
+---
+
 ## [0.3.0] - 2024-01-15
 
 ### Added

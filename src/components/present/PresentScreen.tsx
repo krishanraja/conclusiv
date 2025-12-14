@@ -443,7 +443,12 @@ export const PresentScreen = () => {
 
   // Use mobile-optimized presentation on mobile devices
   if (isMobile) {
-    return <MobilePresentScreen onExit={() => setCurrentStep("preview")} />;
+    return (
+      <MobilePresentScreen 
+        onExit={() => setCurrentStep("preview")} 
+        onStartOver={() => setCurrentStep("input")}
+      />
+    );
   }
 
   // Simplified rendering for reduced motion preference
