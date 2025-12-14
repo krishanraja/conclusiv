@@ -25,6 +25,30 @@ Changelog and version history for conclusiv.
 
 ---
 
+## [0.4.1] - 2024-12-14
+
+### Added
+- **Branded Loading Experience**: Unified loading screen with rotating C logo in center of progress ring, replacing two separate loading formats
+- **Mobile Sidebar Edge Buttons**: Always-visible arrow buttons on screen edges for quick access to analysis and adjustment panels
+- **Refine Screen Onboarding**: Contextual hint and dynamic descriptions for the 3 refinement options
+
+### Changed
+- **Loading Screen**: Single consistent branded experience - C logo rotates smoothly in center of progress ring throughout all loading states
+- **AccountMenu**: Complete UX overhaul on mobile - proper bottom sheet with drag handle, staggered animations, and refined visual hierarchy
+- **RefineScreen Tabs**: Redesigned from 4 icons to 3 (removed mapping tab), with vertical layout showing icon + label for better clarity
+- **MobilePreviewLayout**: Added edge arrow buttons (PanelLeftOpen, PanelRightOpen) for easy sidebar access
+
+### Removed
+- **Mapping Tab**: Removed from RefineScreen as it was non-functional until narrative was built
+
+### Technical
+- LoadingStages now uses `criticalImages.conclusivIcon` for branded loading
+- LoadingOverlay uses same branded spinner for simple loading states
+- AccountMenu uses separate render paths for mobile vs desktop with proper spring animations
+- RefineScreen uses AnimatePresence for smooth hint fade-out
+
+---
+
 ## [0.4.0] - 2024-12-14
 
 ### Added

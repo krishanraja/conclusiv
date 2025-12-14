@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Sparkles, Layout, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { criticalImages, isImageReady, onImageReady } from "@/lib/imagePreloader";
 
 interface LoadingStagesProps {
   stage: number;
@@ -10,133 +10,138 @@ interface LoadingStagesProps {
 }
 
 const stages = [
-  { icon: Search, label: "Analyzing research", description: "Reading through your content" },
-  { icon: Sparkles, label: "Extracting themes", description: "Identifying key insights" },
-  { icon: Layout, label: "Building structure", description: "Creating narrative flow" },
-  { icon: FileText, label: "Generating content", description: "Writing section content" },
-  { icon: Loader2, label: "Finalizing", description: "Almost done — this may take a moment" },
+  { label: "Analyzing research", description: "Reading through your content" },
+  { label: "Extracting themes", description: "Identifying key insights" },
+  { label: "Building structure", description: "Creating narrative flow" },
+  { label: "Generating content", description: "Writing section content" },
+  { label: "Finalizing", description: "Almost done — this may take a moment" },
 ];
 
 export const LoadingStages = ({ stage, progress, inputLength = 0 }: LoadingStagesProps) => {
+  const [logoReady, setLogoReady] = useState(() => isImageReady("conclusivIcon"));
   const estimatedSeconds = Math.max(10, Math.ceil(inputLength / 2000) * 5);
   const currentStage = stages[Math.min(stage, stages.length - 1)];
-  const StageIcon = currentStage.icon;
-  const isFinalizing = stage >= stages.length - 1;
+
+  useEffect(() => {
+    if (logoReady) return;
+    return onImageReady("conclusivIcon", () => setLogoReady(true));
+  }, [logoReady]);
 
   return (
     <div className="flex flex-col items-center gap-6 md:gap-8 w-full max-w-md px-6 overflow-hidden">
-      {/* Main progress ring */}
-      <div className="relative">
-        <motion.svg 
-          className="w-32 h-32"
-          animate={isFinalizing ? { rotate: 360 } : { rotate: -90 }}
-          transition={isFinalizing ? { duration: 3, repeat: Infinity, ease: "linear" } : { duration: 0 }}
-          style={{ transform: isFinalizing ? undefined : 'rotate(-90deg)' }}
-        >
+      {/* Main progress ring with C logo */}
+      <div className="relative flex items-center justify-center">
+        {/* Outer glow effect */}
+        <motion.div
+          className="absolute w-36 h-36 rounded-full bg-shimmer-start/10 blur-2xl"
+          animate={{ opacity: [0.3, 0.5, 0.3], scale: [0.95, 1.05, 0.95] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        />
+        
+        {/* Progress ring SVG - fixed position, only stroke animates */}
+        <svg className="w-32 h-32" viewBox="0 0 128 128" style={{ transform: 'rotate(-90deg)' }}>
+          {/* Background circle */}
           <circle
             cx="64"
             cy="64"
             r="56"
             stroke="currentColor"
-            strokeWidth="8"
+            strokeWidth="4"
             fill="none"
             className="text-muted/20"
           />
+          {/* Animated progress arc */}
           <motion.circle
             cx="64"
             cy="64"
             r="56"
-            stroke="url(#gradient)"
-            strokeWidth="8"
+            stroke="url(#loading-gradient)"
+            strokeWidth="4"
             fill="none"
             strokeLinecap="round"
-            initial={{ strokeDasharray: "0 352" }}
+            initial={{ strokeDasharray: "0 352", strokeDashoffset: 0 }}
             animate={{ 
-              strokeDasharray: isFinalizing 
-                ? "88 352" // Quarter circle for spinning effect
-                : `${(progress / 100) * 352} 352` 
+              strokeDasharray: `${Math.max(10, (progress / 100) * 352)} 352`
             }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
           />
           <defs>
-            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <linearGradient id="loading-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="hsl(var(--shimmer-start))" />
               <stop offset="100%" stopColor="hsl(var(--shimmer-end))" />
             </linearGradient>
           </defs>
-        </motion.svg>
+        </svg>
         
-        {/* Center icon with gentle breathing glow */}
+        {/* Rotating C logo in center */}
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.div
-            key={stage}
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
+            animate={{ rotate: 360 }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
             className="relative"
           >
-            {/* Breathing glow behind icon */}
+            {/* Subtle glow behind logo */}
             <motion.div
-              className="absolute inset-0 w-10 h-10 bg-shimmer-start/30 rounded-full blur-xl"
-              animate={{ opacity: [0.3, 0.6, 0.3] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute inset-0 w-14 h-14 bg-shimmer-start/20 rounded-full blur-lg"
+              style={{ transform: 'translate(-7px, -7px)' }}
+              animate={{ opacity: [0.4, 0.7, 0.4] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
             />
-            <StageIcon 
-              className={cn(
-                "w-10 h-10 text-shimmer-start relative z-10",
-                isFinalizing && "animate-spin"
-              )} 
+            {/* C logo */}
+            <motion.img
+              src={criticalImages.conclusivIcon}
+              alt=""
+              className="w-14 h-14 object-contain relative z-10"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: logoReady ? 1 : 0, scale: 1 }}
+              transition={{ duration: 0.3 }}
             />
           </motion.div>
         </div>
       </div>
 
-      {/* Stage info */}
+      {/* Stage info - smooth text transitions */}
       <motion.div
         key={stage}
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
         className="text-center space-y-2"
       >
         <p className="text-lg font-medium text-foreground">{currentStage.label}</p>
         <p className="text-sm text-muted-foreground">{currentStage.description}</p>
-        {isFinalizing && (
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-xs text-muted-foreground/70"
-          >
-            Still working...
-          </motion.p>
-        )}
       </motion.div>
 
-      {/* Stage indicators - gentle opacity pulse instead of jarring scale */}
+      {/* Progress dots - smooth fill animation */}
       <div className="flex items-center gap-2">
-        {stages.map((s, i) => (
+        {stages.map((_, i) => (
           <motion.div
             key={i}
             className={cn(
-              "w-2 h-2 rounded-full transition-colors duration-500",
+              "w-2 h-2 rounded-full transition-colors duration-700",
               i < stage ? "bg-shimmer-start" :
               i === stage ? "bg-shimmer-end" :
               "bg-muted/30"
             )}
-            animate={i === stage ? { opacity: [0.6, 1, 0.6] } : { opacity: 1 }}
-            transition={i === stage ? { duration: 2, repeat: Infinity, ease: "easeInOut" } : {}}
+            animate={i === stage ? { opacity: [0.7, 1, 0.7] } : { opacity: 1 }}
+            transition={i === stage ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" } : {}}
           />
         ))}
       </div>
 
-      {/* Estimated time */}
+      {/* Estimated time - only show for longer documents */}
       {inputLength > 5000 && (
-        <p className="text-xs text-muted-foreground">
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+          className="text-xs text-muted-foreground"
+        >
           Estimated time: ~{estimatedSeconds}s for {(inputLength / 1000).toFixed(0)}k characters
-        </p>
+        </motion.p>
       )}
 
-      {/* Tips carousel */}
+      {/* Helpful tips */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

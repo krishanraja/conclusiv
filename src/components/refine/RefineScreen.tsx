@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
 import { extractKeyClaims } from "@/lib/api";
@@ -8,11 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HighlightableText } from "./HighlightableText";
 import { ClaimCard } from "./ClaimCard";
 import { VoiceRefinement } from "./VoiceRefinement";
-import { ClaimToSlideMapping } from "./ClaimToSlideMapping";
-import { ArrowLeft, ArrowRight, Highlighter, MessageCircleQuestion, Mic, Loader2, Presentation } from "lucide-react";
+import { ArrowLeft, ArrowRight, Highlighter, MessageCircleQuestion, Mic, Loader2, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useHaptics } from "@/hooks/useHaptics";
 
 export const RefineScreen = () => {
   const { toast } = useToast();
+  const haptics = useHaptics();
   const {
     rawText,
     setCurrentStep,
@@ -25,17 +27,24 @@ export const RefineScreen = () => {
     updateClaim,
     voiceFeedback,
     setVoiceFeedback,
-    setIsLoading,
-    narrative,
   } = useNarrativeStore();
 
   const [activeTab, setActiveTab] = useState<string>("claims");
   const [isExtractingClaims, setIsExtractingClaims] = useState(false);
   const [claimsLoaded, setClaimsLoaded] = useState(false);
+  const [showHint, setShowHint] = useState(true);
+
+  // Auto-hide hint after interaction or timeout
+  useEffect(() => {
+    const timer = setTimeout(() => setShowHint(false), 6000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Extract claims when switching to claims tab
   const handleTabChange = async (value: string) => {
+    haptics.selection();
     setActiveTab(value);
+    setShowHint(false); // Hide hint on any tab interaction
     
     if (value === "claims" && !claimsLoaded && keyClaims.length === 0) {
       setIsExtractingClaims(true);
@@ -68,10 +77,12 @@ export const RefineScreen = () => {
   }, [claimsLoaded, keyClaims.length]);
 
   const handleBack = () => {
+    haptics.light();
     setCurrentStep("input");
   };
 
   const handleContinue = () => {
+    haptics.medium();
     setCurrentStep("preview");
   };
 
@@ -79,6 +90,13 @@ export const RefineScreen = () => {
   const approvedCount = keyClaims.filter(c => c.approved === true).length;
   const rejectedCount = keyClaims.filter(c => c.approved === false).length;
   const editedCount = keyClaims.filter(c => c.edited).length;
+
+  // Tab descriptions for better guidance
+  const tabDescriptions: Record<string, string> = {
+    claims: "Review AI-extracted claims and approve or edit",
+    highlight: "Select key passages to emphasize",
+    voice: "Record voice notes for additional context",
+  };
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex flex-col p-4 md:p-6 pt-4 md:pt-6">
@@ -97,7 +115,7 @@ export const RefineScreen = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex-1 max-w-4xl mx-auto w-full space-y-4 md:space-y-8"
+        className="flex-1 max-w-4xl mx-auto w-full space-y-4 md:space-y-6"
       >
         {/* Title - Compact on mobile */}
         <div className="text-center space-y-1 md:space-y-2">
@@ -109,26 +127,74 @@ export const RefineScreen = () => {
           </p>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs - 3 options with better visual guidance */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
-            <TabsTrigger value="claims" className="flex items-center gap-2">
-              <MessageCircleQuestion className="w-4 h-4" />
-              <span className="hidden sm:inline">Quick Q's</span>
+          {/* Animated hint for first-time users */}
+          <AnimatePresence>
+            {showHint && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="flex items-center justify-center gap-2 mb-3 text-xs text-primary"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Choose how you'd like to refine your content</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <TabsList className="grid w-full grid-cols-3 mb-4 h-auto p-1 bg-muted/50">
+            <TabsTrigger 
+              value="claims" 
+              className={cn(
+                "flex flex-col items-center gap-1.5 py-3 px-2 data-[state=active]:bg-card data-[state=active]:shadow-sm",
+                "transition-all duration-200"
+              )}
+            >
+              <MessageCircleQuestion className={cn(
+                "w-5 h-5 transition-colors",
+                activeTab === "claims" ? "text-primary" : "text-muted-foreground"
+              )} />
+              <span className="text-xs font-medium">Review</span>
             </TabsTrigger>
-            <TabsTrigger value="highlight" className="flex items-center gap-2">
-              <Highlighter className="w-4 h-4" />
-              <span className="hidden sm:inline">Highlight</span>
+            <TabsTrigger 
+              value="highlight" 
+              className={cn(
+                "flex flex-col items-center gap-1.5 py-3 px-2 data-[state=active]:bg-card data-[state=active]:shadow-sm",
+                "transition-all duration-200"
+              )}
+            >
+              <Highlighter className={cn(
+                "w-5 h-5 transition-colors",
+                activeTab === "highlight" ? "text-primary" : "text-muted-foreground"
+              )} />
+              <span className="text-xs font-medium">Highlight</span>
             </TabsTrigger>
-            <TabsTrigger value="voice" className="flex items-center gap-2">
-              <Mic className="w-4 h-4" />
-              <span className="hidden sm:inline">Voice</span>
-            </TabsTrigger>
-            <TabsTrigger value="mapping" className="flex items-center gap-2" disabled={!narrative}>
-              <Presentation className="w-4 h-4" />
-              <span className="hidden sm:inline">Mapping</span>
+            <TabsTrigger 
+              value="voice" 
+              className={cn(
+                "flex flex-col items-center gap-1.5 py-3 px-2 data-[state=active]:bg-card data-[state=active]:shadow-sm",
+                "transition-all duration-200"
+              )}
+            >
+              <Mic className={cn(
+                "w-5 h-5 transition-colors",
+                activeTab === "voice" ? "text-primary" : "text-muted-foreground"
+              )} />
+              <span className="text-xs font-medium">Voice</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* Dynamic description based on active tab */}
+          <motion.p
+            key={activeTab}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center text-sm text-muted-foreground mb-4"
+          >
+            {tabDescriptions[activeTab]}
+          </motion.p>
 
           {/* Claims Tab */}
           <TabsContent value="claims" className="space-y-4">
@@ -198,11 +264,6 @@ export const RefineScreen = () => {
               feedback={voiceFeedback}
               onFeedbackChange={setVoiceFeedback}
             />
-          </TabsContent>
-
-          {/* Mapping Tab */}
-          <TabsContent value="mapping">
-            <ClaimToSlideMapping />
           </TabsContent>
         </Tabs>
       </motion.div>
