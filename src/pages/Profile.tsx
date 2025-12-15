@@ -290,60 +290,104 @@ export default function Profile() {
 
           {/* Saved Demos Section */}
           <div className="glass-strong rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Saved Demos</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-foreground">Saved Demos</h2>
+              {narratives.length > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  {narratives.length} {narratives.length === 1 ? 'demo' : 'demos'}
+                </span>
+              )}
+            </div>
             
             {isLoading ? (
-              <div className="flex items-center justify-center py-12">
+              <div className="flex items-center justify-center py-16">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
             ) : narratives.length === 0 ? (
-              <div className="text-center py-12">
-                <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No saved demos yet</p>
-                <p className="text-sm text-muted-foreground mt-2">
+              <div className="text-center py-16">
+                <div className="w-20 h-20 rounded-2xl bg-muted/30 flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-10 h-10 text-muted-foreground" />
+                </div>
+                <p className="text-foreground font-medium mb-2">No saved demos yet</p>
+                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
                   Create and share your first demo to see it here
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {narratives.map((narrative) => (
-                  <div
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {narratives.map((narrative, index) => (
+                  <motion.div
                     key={narrative.id}
-                    className="p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="group relative"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-foreground truncate">
-                          {narrative.title || 'Untitled Demo'}
-                        </h3>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1.5">
-                            <Calendar className="w-4 h-4" />
-                            {formattedDate(narrative.created_at)}
-                          </div>
-                          {narrative.share_id && (
+                    <div 
+                      onClick={() => handleView(narrative)}
+                      className="glass-strong rounded-xl p-5 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 cursor-pointer h-full flex flex-col"
+                    >
+                      {/* Card Header */}
+                      <div className="flex items-start justify-between gap-3 mb-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-foreground text-lg mb-1 truncate group-hover:text-primary transition-colors">
+                            {narrative.title || 'Untitled Demo'}
+                          </h3>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             <div className="flex items-center gap-1.5">
-                              <ExternalLink className="w-4 h-4" />
-                              Shared
+                              <Calendar className="w-3.5 h-3.5" />
+                              <span>{formattedDate(narrative.created_at)}</span>
                             </div>
-                          )}
+                            {narrative.share_id && (
+                              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                                <ExternalLink className="w-3 h-3" />
+                                <span className="font-medium">Shared</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                          <FileText className="w-5 h-5 text-primary" />
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+
+                      {/* Preview snippet - if narrative has sections */}
+                      {narrative.narrative_data?.sections && narrative.narrative_data.sections.length > 0 && (
+                        <div className="mb-4 flex-1 min-h-[2.5rem]">
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {(() => {
+                              const content = narrative.narrative_data.sections[0]?.content || '';
+                              const preview = content.substring(0, 120);
+                              return preview + (content.length > 120 ? '...' : '');
+                            })()}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2 pt-4 border-t border-border/30">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleView(narrative)}
-                          className="h-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleView(narrative);
+                          }}
+                          className="flex-1 h-9 text-xs hover:bg-primary/10 hover:text-primary"
                         >
-                          <ExternalLink className="w-4 h-4" />
+                          <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                          Open
                         </Button>
                         {narrative.share_id && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleCopyShareId(narrative.share_id, narrative.id)}
-                            className="h-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyShareId(narrative.share_id, narrative.id);
+                            }}
+                            className="h-9 w-9 p-0 hover:bg-primary/10 hover:text-primary"
+                            title="Copy share link"
                           >
                             {copiedId === narrative.id ? (
                               <Check className="w-4 h-4 text-primary" />
@@ -355,9 +399,13 @@ export default function Profile() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(narrative.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(narrative.id);
+                          }}
                           disabled={isDeleting === narrative.id}
-                          className="h-8 text-destructive hover:text-destructive"
+                          className="h-9 w-9 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          title="Delete demo"
                         >
                           {isDeleting === narrative.id ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -367,7 +415,7 @@ export default function Profile() {
                         </Button>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             )}
