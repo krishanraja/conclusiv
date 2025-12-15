@@ -54,12 +54,17 @@ export const AccountMenu = () => {
 
   const handleProfileClick = () => {
     haptics.light();
+    setIsOpen(false);
+    navigate('/profile');
+  };
+
+  // On mobile, clicking profile icon should go directly to profile page
+  const handleProfileIconClick = () => {
     if (isMobile) {
-      setIsOpen(false);
+      haptics.light();
       navigate('/profile');
     } else {
-      setIsOpen(false);
-      navigate('/profile');
+      handleOpen();
     }
   };
 
@@ -117,12 +122,12 @@ export const AccountMenu = () => {
 
   return (
     <div className="relative">
-      {/* Profile button - same on mobile and desktop */}
+      {/* Profile button - direct navigation on mobile, menu on desktop */}
       <button
-        onClick={handleOpen}
+        onClick={handleProfileIconClick}
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         aria-expanded={isOpen}
-        aria-haspopup="true"
+        aria-haspopup={!isMobile}
       >
         <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
           <User className="w-4 h-4 text-primary" />
