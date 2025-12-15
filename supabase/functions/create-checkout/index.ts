@@ -44,7 +44,10 @@ serve(async (req) => {
       logStep("Found existing customer", { customerId });
     }
 
-    const origin = req.headers.get("origin") || "https://bqzickzpceriwcbbzntk.lovableproject.com";
+    // Extract project ID from SUPABASE_URL or use fallback
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const projectId = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1] || "cjpfnoatmfcrrpgdmdux";
+    const origin = req.headers.get("origin") || `https://${projectId}.lovableproject.com`;
     
     // Create subscription checkout session with 7-day trial
     // Price: $10/month USD (price_1SarxoHv8qNXfrXZv7VUgjJY)

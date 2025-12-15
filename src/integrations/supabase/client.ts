@@ -5,6 +5,29 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+// Validate environment variables
+if (!SUPABASE_URL) {
+  throw new Error(
+    'Missing VITE_SUPABASE_URL environment variable. ' +
+    'Please ensure your Supabase project URL is configured.'
+  );
+}
+
+if (!SUPABASE_PUBLISHABLE_KEY) {
+  throw new Error(
+    'Missing VITE_SUPABASE_PUBLISHABLE_KEY environment variable. ' +
+    'Please ensure your Supabase anon/public key is configured.'
+  );
+}
+
+// Validate URL format
+if (!SUPABASE_URL.startsWith('https://') || !SUPABASE_URL.includes('.supabase.co')) {
+  console.warn(
+    '⚠️  VITE_SUPABASE_URL does not appear to be a valid Supabase URL. ' +
+    'Expected format: https://<project-id>.supabase.co'
+  );
+}
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
@@ -13,5 +36,31 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-  }
+  },
+  db: {
+    schema: 'public',
+  },
+  global: {
+    headers: {
+      'x-client-info': 'conclusiv-web',
+    },
+  },
 });
+
+// Test connection on initialization (non-blocking)
+if (typeof window !== 'undefined') {
+  supabase
+    .from('profiles')
+    .select('id')
+    .limit(1)
+    .then(({ error }) => {
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 is "no rows returned" which is fine for a test query
+        console.error('⚠️  Supabase connection test failed:', error.message);
+        console.error('Please verify your VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY are correct.');
+      }
+    })
+    .catch((err) => {
+      console.error('⚠️  Failed to test Supabase connection:', err);
+    });
+}

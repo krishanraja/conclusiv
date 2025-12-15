@@ -47,7 +47,10 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    const origin = req.headers.get("origin") || "https://bqzickzpceriwcbbzntk.lovableproject.com";
+    // Extract project ID from SUPABASE_URL or use fallback
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const projectId = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1] || "cjpfnoatmfcrrpgdmdux";
+    const origin = req.headers.get("origin") || `https://${projectId}.lovableproject.com`;
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${origin}/`,

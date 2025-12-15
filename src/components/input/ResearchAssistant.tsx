@@ -353,7 +353,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
           
           if (user) {
             try {
-              await supabase.from("research_history").insert({
+              const { error } = await supabase.from("research_history").insert({
                 user_id: user.id,
                 query,
                 subject: companyName,
@@ -361,8 +361,12 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                 audience,
                 results: researchResults,
               });
+              
+              if (error) {
+                console.error("Failed to save research history:", error);
+              }
             } catch (err) {
-              console.error("Failed to save research history:", err);
+              console.error("Failed to save research history (exception):", err);
             }
           }
         }

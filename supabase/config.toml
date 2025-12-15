@@ -1,4 +1,4 @@
-project_id = "bqzickzpceriwcbbzntk"
+project_id = "cjpfnoatmfcrrpgdmdux"
 
 [functions.extract-themes]
 verify_jwt = false

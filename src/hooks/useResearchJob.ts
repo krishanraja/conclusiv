@@ -156,11 +156,18 @@ export function useResearchJob(options: UseResearchJobOptions = {}) {
   // Trigger the edge function to process the job
   const triggerJobProcessing = async (jobId: string) => {
     try {
-      await supabase.functions.invoke('guided-research', {
+      const { error } = await supabase.functions.invoke('guided-research', {
         body: { phase: 'process-job', jobId }
       });
+      
+      if (error) {
+        console.error('[useResearchJob] Trigger error:', error);
+        options.onError?.(error.message || 'Failed to trigger research job');
+        // Job will be picked up by retry logic or show as failed
+      }
     } catch (err) {
-      console.error('[useResearchJob] Trigger error:', err);
+      console.error('[useResearchJob] Trigger exception:', err);
+      options.onError?.(err instanceof Error ? err.message : 'Failed to trigger research job');
       // Job will be picked up by retry logic or show as failed
     }
   };
