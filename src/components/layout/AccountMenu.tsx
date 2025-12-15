@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, LogOut, CreditCard, Sparkles, Loader2, X, ChevronDown } from 'lucide-react';
+import { User, LogOut, CreditCard, Sparkles, Loader2, X, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -17,7 +17,6 @@ export const AccountMenu = () => {
   const haptics = useHaptics();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
 
   // Lock body scroll when menu is open on mobile
   useEffect(() => {
@@ -45,18 +44,23 @@ export const AccountMenu = () => {
 
   const handleOpen = () => {
     haptics.light();
-    setIsClosing(false);
     setIsOpen(true);
   };
 
   const handleClose = () => {
     haptics.selection();
-    setIsClosing(true);
-    // Wait for exit animation before fully closing
-    setTimeout(() => {
+    setIsOpen(false);
+  };
+
+  const handleProfileClick = () => {
+    haptics.light();
+    if (isMobile) {
       setIsOpen(false);
-      setIsClosing(false);
-    }, 200);
+      navigate('/profile');
+    } else {
+      setIsOpen(false);
+      navigate('/profile');
+    }
   };
 
   const handleSignOut = async () => {
@@ -132,8 +136,8 @@ export const AccountMenu = () => {
       </button>
 
       {/* Account Menu - renders via portal-like fixed positioning */}
-      <AnimatePresence mode="wait">
-        {isOpen && !isClosing && (
+      <AnimatePresence>
+        {isOpen && (
           <>
             {/* Backdrop - always rendered first */}
             <motion.div
@@ -217,6 +221,18 @@ export const AccountMenu = () => {
 
                 {/* Actions */}
                 <div className="px-4 pb-safe space-y-2">
+                  <motion.button
+                    onClick={handleProfileClick}
+                    className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl bg-muted/30 text-foreground font-medium text-base active:scale-[0.98] active:bg-muted/50 transition-all"
+                    variants={menuItemVariants}
+                    initial="hidden"
+                    animate="visible"
+                    custom={2}
+                  >
+                    <Settings className="w-5 h-5" />
+                    View Profile
+                  </motion.button>
+
                   {!isPro && (
                     <motion.button
                       onClick={handleUpgrade}
@@ -225,7 +241,7 @@ export const AccountMenu = () => {
                       variants={menuItemVariants}
                       initial="hidden"
                       animate="visible"
-                      custom={2}
+                      custom={3}
                     >
                       {isLoading ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -244,7 +260,7 @@ export const AccountMenu = () => {
                       variants={menuItemVariants}
                       initial="hidden"
                       animate="visible"
-                      custom={2}
+                      custom={3}
                     >
                       {isLoading ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -261,7 +277,7 @@ export const AccountMenu = () => {
                     variants={menuItemVariants}
                     initial="hidden"
                     animate="visible"
-                    custom={isPro ? 3 : 3}
+                    custom={isPro ? 4 : 4}
                   >
                     <LogOut className="w-5 h-5" />
                     Sign Out
@@ -305,6 +321,14 @@ export const AccountMenu = () => {
 
                 {/* Actions */}
                 <div className="p-2">
+                  <button
+                    onClick={handleProfileClick}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-left rounded-lg text-muted-foreground text-sm hover:text-foreground hover:bg-muted/50 transition-colors"
+                  >
+                    <Settings className="w-4 h-4" />
+                    View Profile
+                  </button>
+
                   {!isPro && (
                     <button
                       onClick={handleUpgrade}
