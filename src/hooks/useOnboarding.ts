@@ -29,25 +29,49 @@ export const useOnboarding = (): OnboardingState => {
     const checkOnboardingStatus = async () => {
       if (user) {
         // Check database for authenticated users
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('profiles')
           .select('onboarding_completed, onboarding_step')
           .eq('id', user.id)
           .single();
 
-        if (data) {
+        if (error && error.code === 'PGRST116') {
+          // Profile doesn't exist - create it as fallback
+          console.warn('Profile missing for user, creating fallback profile');
+          const { error: insertError } = await supabase.from('profiles').insert({
+            id: user.id,
+            email: user.email,
+            display_name: user.user_metadata?.display_name || user.email?.split('@')[0] || 'User',
+            onboarding_completed: false,
+            onboarding_step: 0,
+          });
+          
+          if (insertError) {
+            console.error('Failed to create fallback profile:', insertError);
+          }
+          
+          setIsFirstTime(true);
+          setCurrentStep(0);
+        } else if (data) {
           setIsFirstTime(!data.onboarding_completed);
           setCurrentStep(data.onboarding_step || 0);
         } else {
+          // Other error - default to first time
           setIsFirstTime(true);
+          setCurrentStep(0);
         }
       } else {
         // Check localStorage for anonymous users
         const stored = localStorage.getItem(ONBOARDING_STORAGE_KEY);
         if (stored) {
-          const parsed = JSON.parse(stored);
-          setIsFirstTime(!parsed.completed);
-          setCurrentStep(parsed.step || 0);
+          try {
+            const parsed = JSON.parse(stored);
+            setIsFirstTime(!parsed.completed);
+            setCurrentStep(parsed.step || 0);
+          } catch {
+            setIsFirstTime(true);
+            setCurrentStep(0);
+          }
         } else {
           setIsFirstTime(true);
         }
@@ -69,13 +93,24 @@ export const useOnboarding = (): OnboardingState => {
 
   const saveProgress = useCallback(async (step: number, completed: boolean) => {
     if (user) {
-      await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({
           onboarding_step: step,
           onboarding_completed: completed,
         })
         .eq('id', user.id);
+      
+      // If update failed (e.g., profile doesn't exist), try to create it
+      if (error && error.code === 'PGRST116') {
+        await supabase.from('profiles').insert({
+          id: user.id,
+          email: user.email,
+          display_name: user.user_metadata?.display_name || user.email?.split('@')[0] || 'User',
+          onboarding_step: step,
+          onboarding_completed: completed,
+        });
+      }
     } else {
       localStorage.setItem(
         ONBOARDING_STORAGE_KEY,

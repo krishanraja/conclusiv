@@ -1,4 +1,5 @@
-project_id = "cjpfnoatmfcrrpgdmdux"
+# project_id is now derived from SUPABASE_URL environment variable
+# Remove this line or set it to your project ID if needed for local development
 
 [functions.extract-themes]
 verify_jwt = false

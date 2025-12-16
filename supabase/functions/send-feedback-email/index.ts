@@ -55,8 +55,11 @@ const handler = async (req: Request): Promise<Response> => {
     const authHeader = req.headers.get('Authorization');
     if (authHeader?.startsWith('Bearer ')) {
       try {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabaseUrl = Deno.env.get("SUPABASE_URL");
+        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+        if (!supabaseUrl || !supabaseKey) {
+          throw new Error("Supabase environment variables not configured");
+        }
         const supabaseAuth = createClient(supabaseUrl, supabaseKey);
         const token = authHeader.replace('Bearer ', '');
         const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);

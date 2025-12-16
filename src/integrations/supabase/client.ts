@@ -20,12 +20,15 @@ if (!SUPABASE_PUBLISHABLE_KEY) {
   );
 }
 
-// Validate URL format
-if (!SUPABASE_URL.startsWith('https://') || !SUPABASE_URL.includes('.supabase.co')) {
-  console.warn(
-    '⚠️  VITE_SUPABASE_URL does not appear to be a valid Supabase URL. ' +
-    'Expected format: https://<project-id>.supabase.co'
-  );
+// Validate URL format - fail loudly in production
+const isValidSupabaseUrl = SUPABASE_URL.startsWith('https://') && SUPABASE_URL.includes('.supabase.co');
+if (!isValidSupabaseUrl) {
+  const errorMsg = `Invalid VITE_SUPABASE_URL format: ${SUPABASE_URL}. Expected format: https://<project-id>.supabase.co`;
+  if (import.meta.env.PROD) {
+    throw new Error(errorMsg);
+  } else {
+    console.error('⚠️  ' + errorMsg);
+  }
 }
 
 // Import the supabase client like this:
@@ -33,9 +36,10 @@ if (!SUPABASE_URL.startsWith('https://') || !SUPABASE_URL.includes('.supabase.co
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: typeof window !== 'undefined' ? localStorage : undefined,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
   },
   db: {
     schema: 'public',
@@ -46,21 +50,3 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     },
   },
 });
-
-// Test connection on initialization (non-blocking)
-if (typeof window !== 'undefined') {
-  supabase
-    .from('profiles')
-    .select('id')
-    .limit(1)
-    .then(({ error }) => {
-      if (error && error.code !== 'PGRST116') {
-        // PGRST116 is "no rows returned" which is fine for a test query
-        console.error('⚠️  Supabase connection test failed:', error.message);
-        console.error('Please verify your VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY are correct.');
-      }
-    })
-    .catch((err) => {
-      console.error('⚠️  Failed to test Supabase connection:', err);
-    });
-}

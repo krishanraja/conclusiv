@@ -20,12 +20,24 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
+    // Validate environment variables
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    
+    if (!supabaseUrl) {
+      throw new Error("SUPABASE_URL environment variable is not set");
+    }
+    if (!supabaseServiceKey) {
+      throw new Error("SUPABASE_SERVICE_ROLE_KEY environment variable is not set");
+    }
+    if (!stripeKey) {
+      throw new Error("STRIPE_SECRET_KEY is not set");
+    }
 
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      supabaseUrl,
+      supabaseServiceKey,
       { auth: { persistSession: false } }
     );
 
@@ -47,10 +59,25 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    // Extract project ID from SUPABASE_URL or use fallback
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const projectId = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1] || "cjpfnoatmfcrrpgdmdux";
-    const origin = req.headers.get("origin") || `https://${projectId}.lovableproject.com`;
+    // Get origin from request header or environment variable
+    // Fallback to extracting from SUPABASE_URL if needed (for development)
+    let origin = req.headers.get("origin");
+    if (!origin) {
+      // Try environment variable first
+      origin = Deno.env.get("APP_URL") || Deno.env.get("VERCEL_URL");
+      if (origin && !origin.startsWith("http")) {
+        origin = `https://${origin}`;
+      }
+      // Last resort: extract from SUPABASE_URL (development only)
+      if (!origin) {
+        const projectIdMatch = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/);
+        if (projectIdMatch && projectIdMatch[1]) {
+          origin = `https://${projectIdMatch[1]}.lovableproject.com`;
+        } else {
+          throw new Error("Could not determine app origin. Set APP_URL or VERCEL_URL environment variable, or include Origin header in request.");
+        }
+      }
+    }
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${origin}/`,

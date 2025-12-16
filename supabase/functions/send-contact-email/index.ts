@@ -81,8 +81,11 @@ const handler = async (req: Request): Promise<Response> => {
     const authHeader = req.headers.get('Authorization');
     if (authHeader?.startsWith('Bearer ')) {
       try {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabaseUrl = Deno.env.get("SUPABASE_URL");
+        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+        if (!supabaseUrl || !supabaseKey) {
+          throw new Error("Supabase environment variables not configured");
+        }
         const supabaseAuth = createClient(supabaseUrl, supabaseKey);
         const token = authHeader.replace('Bearer ', '');
         const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
@@ -139,26 +142,30 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Store inquiry in database
     console.log(`[send-contact-email][${requestId}] Attempting to store inquiry in database...`);
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
     let inquiryLogged = false;
-    const { error: dbError } = await supabase.from("contact_inquiries").insert({
-      name,
-      email,
-      subject,
-      message,
-      category: category || "general",
-      user_id: validatedUserId, // Use validated userId from JWT, not client input
-    });
+    if (supabaseUrl && supabaseKey) {
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      const { error: dbError } = await supabase.from("contact_inquiries").insert({
+        name,
+        email,
+        subject,
+        message,
+        category: category || "general",
+        user_id: validatedUserId, // Use validated userId from JWT, not client input
+      });
 
-    if (dbError) {
-      console.error(`[send-contact-email][${requestId}] Database error: ${JSON.stringify(dbError)}`);
-      // Continue to send emails even if DB fails
+      if (dbError) {
+        console.error(`[send-contact-email][${requestId}] Database error: ${JSON.stringify(dbError)}`);
+        // Continue to send emails even if DB fails
+      } else {
+        inquiryLogged = true;
+        console.log(`[send-contact-email][${requestId}] Inquiry stored in database successfully`);
+      }
     } else {
-      inquiryLogged = true;
-      console.log(`[send-contact-email][${requestId}] Inquiry stored in database successfully`);
+      console.warn(`[send-contact-email][${requestId}] Supabase environment variables not configured - skipping database logging`);
     }
 
     // Send notification email to admin
