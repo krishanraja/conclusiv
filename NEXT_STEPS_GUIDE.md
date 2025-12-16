@@ -98,29 +98,16 @@ Once your project is ready:
 
 8. **After adding both**, you should see them in the list
 
-## Step 6: Set Up Supabase Edge Function Secrets (10 minutes)
+## Step 6: Set Up Supabase Edge Function Secrets (5 minutes)
+
+**IMPORTANT**: Supabase automatically provides `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_ANON_KEY` to all edge functions. You **DO NOT** need to add these manually - they're already available!
 
 1. **Go back to Supabase dashboard**
 2. **Click "Edge Functions"** in the left sidebar
 3. **Click "Manage secrets"** button (or look for "Secrets" in the menu)
-4. **Add these secrets one by one** (click "Add secret" for each):
+4. **Skip the Supabase variables** - they're already there automatically!
 
-   **Secret 1:**
-   - **Name**: `SUPABASE_URL`
-   - **Value**: Your Project URL (same as Step 2a)
-   - Click **"Add"**
-
-   **Secret 2:**
-   - **Name**: `SUPABASE_SERVICE_ROLE_KEY`
-   - **Value**: Your service_role key from Step 2c
-   - Click **"Add"**
-
-   **Secret 3:**
-   - **Name**: `SUPABASE_ANON_KEY`
-   - **Value**: Your anon/public key (same as Step 2b)
-   - Click **"Add"**
-
-5. **Optional secrets** (only add if you use these features):
+5. **Add these optional secrets** (only if you use these features):
    - `STRIPE_SECRET_KEY` - if you use payments
    - `RESEND_API_KEY` - if you send emails
    - `LOVABLE_API_KEY` - if you use AI features
