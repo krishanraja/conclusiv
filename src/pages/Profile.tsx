@@ -69,7 +69,7 @@ export default function Profile() {
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        setNarratives(data || []);
+        setNarratives((data || []) as unknown as Narrative[]);
       } catch (err) {
         console.error('Error fetching narratives:', err);
         toast({

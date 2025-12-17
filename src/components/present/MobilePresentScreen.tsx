@@ -507,21 +507,15 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
                 </div>
                 
                 <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
-                  {currentSection.speakerNotes ? (
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {currentSection.speakerNotes}
+                  <div className="text-center py-4">
+                    <StickyNote className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground/70 italic">
+                      No notes for this section
                     </p>
-                  ) : (
-                    <div className="text-center py-4">
-                      <StickyNote className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground/70 italic">
-                        No notes for this section
-                      </p>
-                      <p className="text-xs text-muted-foreground/50 mt-1">
-                        Add notes in preview mode
-                      </p>
-                    </div>
-                  )}
+                    <p className="text-xs text-muted-foreground/50 mt-1">
+                      Add notes in preview mode
+                    </p>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -554,7 +548,7 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
                 </button>
               </div>
               <div className="text-sm text-muted-foreground italic">
-                {currentSection.speakerNotes || "No notes for this section. Tap to add notes in preview mode."}
+                No notes for this section. Add notes in preview mode.
               </div>
             </div>
           </motion.div>
