@@ -116,7 +116,7 @@ export const AccountMenu = () => {
     visible: (i: number) => ({
       opacity: 1,
       y: 0,
-      transition: { delay: 0.05 + i * 0.05, duration: 0.2, ease: "easeOut" }
+      transition: { delay: 0.05 + i * 0.05, duration: 0.2, ease: [0, 0, 0.2, 1] as const }
     })
   };
 

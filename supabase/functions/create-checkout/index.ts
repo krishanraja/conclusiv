@@ -61,10 +61,10 @@ serve(async (req) => {
 
     // Get origin from request header or environment variable
     // Fallback to extracting from SUPABASE_URL if needed (for development)
-    let origin = req.headers.get("origin");
+    let origin: string | null = req.headers.get("origin");
     if (!origin) {
       // Try environment variable first
-      origin = Deno.env.get("APP_URL") || Deno.env.get("VERCEL_URL");
+      origin = Deno.env.get("APP_URL") || Deno.env.get("VERCEL_URL") || null;
       if (origin && !origin.startsWith("http")) {
         origin = `https://${origin}`;
       }
