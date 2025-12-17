@@ -40,10 +40,10 @@ serve(async (req) => {
       );
     }
 
-    // Use Lovable AI to normalize verbose content
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      console.error('[normalize-claim] LOVABLE_API_KEY not configured');
+    // Use Google AI to normalize verbose content
+    const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+    if (!GOOGLE_AI_API_KEY) {
+      console.error('[normalize-claim] GOOGLE_AI_API_KEY not configured');
       // Fallback to truncation
       return new Response(
         JSON.stringify({
@@ -55,36 +55,32 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are a concise editor. Clean up claims to be scannable and clear.
+    const prompt = `You are a concise editor. Clean up claims to be scannable and clear.
 Rules:
 - Title: 5-8 words max, action-oriented headline
 - Text: Max 200 characters, one clear statement
 - Preserve the core meaning
 - Remove filler words and redundancy
-- Use active voice`;
+- Use active voice
 
-    const userPrompt = `Clean up this claim:
+Clean up this claim:
 
 Title: ${title}
 Text: ${text}
 
 Return JSON only: {"title": "...", "text": "..."}`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.3,
-      }),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.3 },
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -101,7 +97,7 @@ Return JSON only: {"title": "...", "text": "..."}`;
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '';
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     
     // Parse JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);

@@ -23,12 +23,12 @@ serve(async (req) => {
 
     console.log("[extract-claims] Processing text of length:", text.length);
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) {
+      throw new Error("GOOGLE_AI_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are an expert analyst who extracts key claims and facts from research documents.
+    const prompt = `You are an expert analyst who extracts key claims and facts from research documents.
 
 Your task is to identify 8-10 of the most important claims, facts, or assertions from the provided text.
 
@@ -55,27 +55,27 @@ Example output:
     { "id": "claim_1", "title": "15% Annual Market Growth Through 2028", "text": "Market growth is projected at 15% annually through 2028, driven by increased adoption in emerging markets.", "source": "Market analysis section" },
     { "id": "claim_2", "title": "Customer Acquisition Costs Down 30%", "text": "Customer acquisition costs have decreased 30% year-over-year due to improved targeting and organic growth." }
   ]
-}`;
+}
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Extract key claims from this research:\n\n${text.slice(0, 30000)}` }
-        ],
-        temperature: 0.3,
-      }),
-    });
+Extract key claims from this research:
+
+${text.slice(0, 30000)}`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.3 },
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[extract-claims] AI gateway error:", response.status, errorText);
+      console.error("[extract-claims] Google AI error:", response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
@@ -83,18 +83,12 @@ Example output:
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Usage limit reached. Please add credits." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
       
-      throw new Error(`AI gateway error: ${response.status}`);
+      throw new Error(`Google AI error: ${response.status}`);
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!content) {
       throw new Error("No content in AI response");

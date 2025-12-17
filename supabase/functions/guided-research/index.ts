@@ -184,7 +184,7 @@ serve(async (req) => {
     
     console.log('[guided-research] Request:', { phase, depth, jobId });
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
     const PERPLEXITY_API_KEY = Deno.env.get('PERPLEXITY_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -281,9 +281,9 @@ serve(async (req) => {
 
     // Phase: Structure Voice Input
     if (phase === 'structure-voice') {
-      if (!LOVABLE_API_KEY) {
+      if (!GOOGLE_AI_API_KEY) {
         return new Response(
-          JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }),
+          JSON.stringify({ error: 'GOOGLE_AI_API_KEY not configured' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -295,7 +295,7 @@ serve(async (req) => {
         );
       }
 
-      const systemPrompt = `You are an assistant that extracts structured research information from a user's stream-of-consciousness voice input.
+      const prompt = `You are an assistant that extracts structured research information from a user's stream-of-consciousness voice input.
 Given a transcript, extract and return a JSON object with the following fields (only include fields that are clearly mentioned):
 - companyName: The company or subject being researched
 - websiteUrl: Any website or URL mentioned
@@ -305,29 +305,26 @@ Given a transcript, extract and return a JSON object with the following fields (
 - successCriteria: What would make them say yes
 - redFlags: What would make them say no
 
-Return ONLY valid JSON, no other text.`;
+Return ONLY valid JSON, no other text.
 
-      const userPrompt = `Decision type context: ${decisionType}
+Decision type context: ${decisionType}
 
 Voice transcript:
 "${transcript}"
 
 Extract structured fields:`;
 
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-        }),
-      });
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.3 },
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -339,7 +336,7 @@ Extract structured fields:`;
       }
 
       const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || '';
+      const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       
       // Parse JSON from response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -361,11 +358,11 @@ Extract structured fields:`;
       );
     }
 
-    // Phase 1: Query Formulation (uses Lovable AI with structured input)
+    // Phase 1: Query Formulation (uses Google AI with structured input)
     if (phase === 'formulate') {
-      if (!LOVABLE_API_KEY) {
+      if (!GOOGLE_AI_API_KEY) {
         return new Response(
-          JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }),
+          JSON.stringify({ error: 'GOOGLE_AI_API_KEY not configured' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -376,25 +373,24 @@ Extract structured fields:`;
       console.log('[guided-research] Built query from structured input:', researchQuery.slice(0, 200));
 
       // Use AI to refine and polish the query
-      const systemPrompt = `You are a research strategist. Given a structured research request, refine it into a clear, comprehensive query optimized for deep web research.
+      const prompt = `You are a research strategist. Given a structured research request, refine it into a clear, comprehensive query optimized for deep web research.
 Keep the specificity - company names, URLs, industries, and specific questions should remain.
 Make it search-engine friendly while maintaining the business context.
-Return only the refined query, no JSON or other formatting.`;
+Return only the refined query, no JSON or other formatting.
 
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: researchQuery }
-          ],
-        }),
-      });
+${researchQuery}`;
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.3 },
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -407,7 +403,7 @@ Return only the refined query, no JSON or other formatting.`;
       }
 
       const data = await response.json();
-      const refinedQuery = data.choices?.[0]?.message?.content?.trim() || researchQuery;
+      const refinedQuery = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || researchQuery;
 
       return new Response(
         JSON.stringify({ suggestedQuery: refinedQuery }),

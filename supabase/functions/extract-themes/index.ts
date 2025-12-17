@@ -20,14 +20,14 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+    if (!GOOGLE_AI_API_KEY) {
+      throw new Error('GOOGLE_AI_API_KEY is not configured');
     }
 
     console.log('Extracting themes from text of length:', text.length);
 
-    const systemPrompt = `You are an expert research analyst. Your task is to analyze research text and extract structured themes.
+    const prompt = `You are an expert research analyst. Your task is to analyze research text and extract structured themes.
 
 Analyze the provided text and extract 3-7 key themes. For each theme, identify specific items (insights, risks, metrics, trends, opportunities, problems, or drivers).
 
@@ -62,27 +62,27 @@ Guidelines:
   - "problem": Issues or challenges identified
   - "driver": Factors causing change or impact
 
-Detect common structures like SWOT analysis, competitive analysis, or problem-solution frameworks.`;
+Detect common structures like SWOT analysis, competitive analysis, or problem-solution frameworks.
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Analyze the following research text and extract themes:\n\n${text}` }
-        ],
-        temperature: 0.3,
-      }),
-    });
+Analyze the following research text and extract themes:
+
+${text}`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.3 },
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AI gateway error:', response.status, errorText);
+      console.error('Google AI error:', response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
@@ -90,18 +90,12 @@ Detect common structures like SWOT analysis, competitive analysis, or problem-so
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'Usage limit reached. Please add credits to continue.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
       
-      throw new Error(`AI gateway error: ${response.status}`);
+      throw new Error(`Google AI error: ${response.status}`);
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!content) {
       throw new Error('No content in AI response');

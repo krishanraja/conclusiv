@@ -310,10 +310,10 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      log.error(requestId, 'LOVABLE_API_KEY not configured');
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+    if (!GOOGLE_AI_API_KEY) {
+      log.error(requestId, 'GOOGLE_AI_API_KEY not configured');
+      throw new Error('GOOGLE_AI_API_KEY is not configured');
     }
 
     // Build context-aware system prompt
@@ -611,23 +611,20 @@ Guidelines:
         });
         
         const summaryResponse = await retryWithBackoff(async () => {
-          return fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'google/gemini-2.5-flash',
-              messages: [
-                { 
-                  role: 'system', 
-                  content: 'Summarize the key themes, insights, and data from this text. Keep it concise but preserve all important information. Focus on actionable insights.' 
-                },
-                { role: 'user', content: chunks[i] }
-              ],
-            }),
-          });
+          return fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{
+                  role: 'user',
+                  parts: [{ text: 'Summarize the key themes, insights, and data from this text. Keep it concise but preserve all important information. Focus on actionable insights.\n\n' + chunks[i] }]
+                }],
+                generationConfig: { temperature: 0.3 },
+              }),
+            }
+          );
         });
 
         log.timing(requestId, `Chunk ${i + 1} API call`, chunkStart);
@@ -642,7 +639,7 @@ Guidelines:
         }
 
         const summaryData = await summaryResponse.json();
-        const summary = summaryData.choices?.[0]?.message?.content;
+        const summary = summaryData.candidates?.[0]?.content?.parts?.[0]?.text;
         if (summary) {
           summaries.push(`=== Section ${i + 1} ===\n${summary}`);
           log.info(requestId, `Chunk ${i + 1} summarized`, { summaryLength: summary.length });
@@ -658,27 +655,27 @@ Guidelines:
     log.info(requestId, 'Starting main narrative generation');
 
     const response = await retryWithBackoff(async () => {
-      return fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Create a compelling narrative from this research:\n\n${combinedText}` }
-          ],
-        }),
-      });
+      return fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              role: 'user',
+              parts: [{ text: systemPrompt + '\n\nCreate a compelling narrative from this research:\n\n' + combinedText }]
+            }],
+            generationConfig: { temperature: 0.5 },
+          }),
+        }
+      );
     });
 
     log.timing(requestId, 'Main narrative API call', mainStart);
 
     if (!response.ok) {
       const errorText = await response.text();
-      log.error(requestId, 'AI gateway error', { status: response.status, error: errorText });
+      log.error(requestId, 'Google AI error', { status: response.status, error: errorText });
       
       if (response.status === 429) {
         return new Response(
@@ -686,18 +683,12 @@ Guidelines:
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'Usage limit reached. Please add credits to continue.', code: 'PAYMENT_REQUIRED' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
       
-      throw new Error(`AI gateway error: ${response.status}`);
+      throw new Error(`Google AI error: ${response.status}`);
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!content) {
       log.error(requestId, 'No content in AI response');

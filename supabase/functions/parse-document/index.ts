@@ -159,11 +159,11 @@ serve(async (req) => {
       console.info('[parse-document] Sending PDF to AI for extraction...');
       
       const binaryData = Uint8Array.from(atob(fileData), c => c.charCodeAt(0));
-      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+      const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
       
-      if (!LOVABLE_API_KEY) {
-        console.error('[parse-document] LOVABLE_API_KEY not configured');
-        throw new Error('LOVABLE_API_KEY is not configured');
+      if (!GOOGLE_AI_API_KEY) {
+        console.error('[parse-document] GOOGLE_AI_API_KEY not configured');
+        throw new Error('GOOGLE_AI_API_KEY is not configured');
       }
 
       // Use chunked base64 conversion to avoid stack overflow on large files
@@ -174,36 +174,28 @@ serve(async (req) => {
         base64ForAPI += String.fromCharCode.apply(null, Array.from(chunk));
       }
       base64ForAPI = btoa(base64ForAPI);
-      const dataUri = `data:application/pdf;base64,${base64ForAPI}`;
 
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a document text extractor. Extract ALL the text content from the provided PDF document. Return ONLY the extracted text. Preserve paragraph breaks. Do not add commentary.'
-            },
-            {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
               role: 'user',
-              content: [
-                { type: 'text', text: 'Extract all text from this PDF document. Return only the raw text content.' },
-                { type: 'file', file: { filename: fileName, file_data: dataUri } }
+              parts: [
+                { text: 'You are a document text extractor. Extract ALL the text content from this PDF document. Return ONLY the extracted text. Preserve paragraph breaks. Do not add commentary.' },
+                { inlineData: { mimeType: 'application/pdf', data: base64ForAPI } }
               ]
-            }
-          ],
-          max_tokens: 100000,
-        }),
-      });
+            }],
+            generationConfig: { maxOutputTokens: 100000 },
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[parse-document] AI API error:', response.status, errorText);
+        console.error('[parse-document] Google AI error:', response.status, errorText);
         
         if (response.status === 429) {
           return new Response(
@@ -215,22 +207,12 @@ serve(async (req) => {
             { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        if (response.status === 402) {
-          return new Response(
-            JSON.stringify({ 
-              error: 'PDF processing limit reached.',
-              suggestion: 'Upload as Word document (.docx) or PowerPoint (.pptx) instead - these are processed locally with no limits.',
-              code: 'CREDITS_EXHAUSTED'
-            }),
-            { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
         
-        throw new Error(`AI API error: ${response.status}`);
+        throw new Error(`Google AI error: ${response.status}`);
       }
 
       const data = await response.json();
-      extractedText = data.choices?.[0]?.message?.content || '';
+      extractedText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       console.info(`[parse-document] Successfully extracted ${extractedText.length} characters from PDF`);
     }
     // Unsupported file type
