@@ -91,14 +91,26 @@ export default function Profile() {
   };
 
   const handleDelete = async (narrativeId: string) => {
+    // Defense in depth: verify user is authenticated before delete
+    if (!user) {
+      toast({
+        title: 'Not authenticated',
+        description: 'Please sign in to delete demos',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     if (!confirm('Are you sure you want to delete this demo?')) return;
 
     setIsDeleting(narrativeId);
     try {
+      // Explicit user_id check in addition to RLS for defense in depth
       const { error } = await supabase
         .from('narratives')
         .delete()
-        .eq('id', narrativeId);
+        .eq('id', narrativeId)
+        .eq('user_id', user.id); // Ensure we only delete our own narratives
 
       if (error) throw error;
 

@@ -36,10 +36,15 @@ if (!isValidSupabaseUrl) {
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: typeof window !== 'undefined' ? localStorage : undefined,
+    // Use Supabase's default storage (localStorage in browser)
+    // Note: For enhanced security in production, consider:
+    // 1. Strict Content-Security-Policy headers
+    // 2. HttpOnly cookie auth via Supabase Auth Helpers (requires SSR)
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    // Prevent auth state from being stored in URL (security)
+    flowType: 'pkce',
   },
   db: {
     schema: 'public',

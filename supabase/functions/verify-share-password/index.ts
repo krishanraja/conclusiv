@@ -6,6 +6,56 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+/**
+ * Hash a password with SHA-256 and a salt (same as client-side implementation)
+ */
+async function hashPassword(password: string, salt: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(salt + password);
+  
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  return hashHex;
+}
+
+/**
+ * Verify a password against a stored hash (constant-time comparison)
+ */
+async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  // Check if it's the new hashed format (salt:hash)
+  const parts = storedHash.split(':');
+  
+  if (parts.length === 2 && parts[0].length === 32 && parts[1].length === 64) {
+    // New hashed format
+    const [salt, expectedHash] = parts;
+    const computedHash = await hashPassword(password, salt);
+    
+    // Constant-time comparison
+    if (computedHash.length !== expectedHash.length) {
+      return false;
+    }
+    
+    let result = 0;
+    for (let i = 0; i < computedHash.length; i++) {
+      result |= computedHash.charCodeAt(i) ^ expectedHash.charCodeAt(i);
+    }
+    
+    return result === 0;
+  } else {
+    // Legacy plaintext format - do constant-time comparison
+    // This handles passwords set before hashing was implemented
+    let isValid = password.length === storedHash.length;
+    for (let i = 0; i < Math.max(password.length, storedHash.length); i++) {
+      if (password[i] !== storedHash[i]) {
+        isValid = false;
+      }
+    }
+    return isValid;
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -59,16 +109,11 @@ serve(async (req) => {
       );
     }
 
-    // Server-side password comparison (constant-time to prevent timing attacks)
+    // Server-side password verification (supports both hashed and legacy plaintext)
     const storedPassword = data.share_password || '';
     
-    // Simple constant-time comparison for passwords
-    let isValid = password.length === storedPassword.length;
-    for (let i = 0; i < Math.max(password.length, storedPassword.length); i++) {
-      if (password[i] !== storedPassword[i]) {
-        isValid = false;
-      }
-    }
+    // Verify using our secure comparison function
+    const isValid = await verifyPassword(password, storedPassword);
 
     if (!isValid) {
       console.log('[verify-share-password] Invalid password attempt for share:', shareId);

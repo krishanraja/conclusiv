@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { exportToPDF } from "@/lib/exports/pdfExport";
 import { exportToPPTX } from "@/lib/exports/pptxExport";
 import { exportBrandedPDF, exportBrandedPPTX } from "@/lib/exports/brandedExport";
+import { hashPassword } from "@/lib/crypto";
 import { ViewMode } from "@/lib/types";
 import {
   DropdownMenu,
@@ -138,16 +139,19 @@ export const PreviewScreen = () => {
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [lastShareId, setLastShareId] = useState<string | null>(null);
   
-  // Update password in database when it changes
+  // Update password in database when it changes (hashed for security)
   const handlePasswordSet = async (password: string | null) => {
     setSharePassword(password);
     
     // Save to database if we have a share ID
     if (lastShareId && user) {
       try {
+        // Hash the password before storing (null if removing)
+        const hashedPassword = password ? await hashPassword(password) : null;
+        
         const { error } = await supabase
           .from("narratives")
-          .update({ share_password: password })
+          .update({ share_password: hashedPassword })
           .eq("share_id", lastShareId)
           .eq("user_id", user.id);
         

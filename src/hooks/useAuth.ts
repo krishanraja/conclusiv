@@ -109,26 +109,9 @@ export const useAuth = () => {
       },
     });
     
-    // If signup successful but profile might not exist yet, ensure it gets created
-    if (data.user && !error) {
-      // Give the trigger a moment, then verify profile exists
-      setTimeout(async () => {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', data.user.id)
-          .single();
-        
-        if (!profile) {
-          // Fallback: create profile if trigger failed
-          await supabase.from('profiles').insert({
-            id: data.user.id,
-            email: data.user.email,
-            display_name: displayName || email.split('@')[0],
-          });
-        }
-      }, 500);
-    }
+    // Profile creation is handled by the database trigger (handle_new_user)
+    // which runs on auth.users INSERT. No client-side fallback needed.
+    // See: supabase/migrations/consolidated_schema.sql
     
     return { data, error };
   };

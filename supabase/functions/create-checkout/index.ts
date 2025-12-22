@@ -52,11 +52,38 @@ serve(async (req) => {
     });
 
     // Check if a Stripe customer record exists for this user
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    let customerId;
-    if (customers.data.length > 0) {
-      customerId = customers.data[0].id;
-      logStep("Found existing customer", { customerId });
+    // First, try to find by user_id in metadata (preferred, stable lookup)
+    let customerId: string | undefined;
+    
+    try {
+      const customersByUserId = await stripe.customers.search({
+        query: `metadata['user_id']:'${user.id}'`,
+        limit: 1,
+      });
+      if (customersByUserId.data.length > 0) {
+        customerId = customersByUserId.data[0].id;
+        logStep("Found customer by user_id", { customerId });
+      }
+    } catch (searchError) {
+      logStep("Customer search by user_id failed, falling back to email", { error: String(searchError) });
+    }
+    
+    // Fall back to email lookup for legacy customers
+    if (!customerId) {
+      const customersByEmail = await stripe.customers.list({ email: user.email, limit: 1 });
+      if (customersByEmail.data.length > 0) {
+        const existingCustomer = customersByEmail.data[0];
+        customerId = existingCustomer.id;
+        logStep("Found existing customer by email", { customerId });
+        
+        // Upgrade legacy customer with user_id metadata for future lookups
+        if (!existingCustomer.metadata?.user_id) {
+          await stripe.customers.update(customerId, {
+            metadata: { user_id: user.id },
+          });
+          logStep("Updated legacy customer with user_id metadata", { customerId });
+        }
+      }
     }
 
     // Get origin from request header or environment variable
@@ -82,7 +109,7 @@ serve(async (req) => {
     // Create subscription checkout session with 7-day trial
     // Price: $10/month USD (price_1SarxoHv8qNXfrXZv7VUgjJY)
     // allow_promotion_codes lets users enter EARLYADOPTER or 3MONTHS at checkout
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       line_items: [
@@ -99,7 +126,18 @@ serve(async (req) => {
       },
       success_url: `${origin}/?checkout=success`,
       cancel_url: `${origin}/?checkout=cancelled`,
-    });
+    };
+    
+    // If creating a new customer, include user_id in metadata for stable lookups
+    if (!customerId) {
+      sessionParams.customer_creation = 'always';
+      // Stripe Checkout doesn't support direct metadata on customer creation,
+      // so we'll update the customer after the session is created via webhook
+      // For now, include in client_reference_id for tracking
+      sessionParams.client_reference_id = user.id;
+    }
+    
+    const session = await stripe.checkout.sessions.create(sessionParams);
     
     logStep("Checkout session created", { sessionId: session.id, url: session.url });
 

@@ -52,9 +52,41 @@ serve(async (req) => {
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2024-11-20.acacia" });
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
-    if (customers.data.length === 0) {
+    // Look up customer by user_id metadata first (stable), then fall back to email (legacy)
+    let customer: Stripe.Customer | undefined;
+    
+    try {
+      const customersByUserId = await stripe.customers.search({
+        query: `metadata['user_id']:'${user.id}'`,
+        limit: 1,
+      });
+      if (customersByUserId.data.length > 0) {
+        customer = customersByUserId.data[0] as Stripe.Customer;
+        logStep("Found customer by user_id", { customerId: customer.id });
+      }
+    } catch (searchError) {
+      logStep("Customer search by user_id failed, falling back to email", { error: String(searchError) });
+    }
+    
+    // Fall back to email lookup for legacy customers
+    if (!customer && user.email) {
+      const customersByEmail = await stripe.customers.list({ email: user.email, limit: 1 });
+      if (customersByEmail.data.length > 0) {
+        customer = customersByEmail.data[0];
+        logStep("Found customer by email", { customerId: customer.id });
+        
+        // Upgrade legacy customer with user_id metadata for future lookups
+        if (!customer.metadata?.user_id) {
+          await stripe.customers.update(customer.id, {
+            metadata: { user_id: user.id },
+          });
+          logStep("Updated legacy customer with user_id metadata", { customerId: customer.id });
+        }
+      }
+    }
+    
+    if (!customer) {
       logStep("No customer found, returning free tier");
       
       // Update subscriptions table
@@ -77,7 +109,7 @@ serve(async (req) => {
       });
     }
 
-    const customerId = customers.data[0].id;
+    const customerId = customer.id;
     logStep("Found Stripe customer", { customerId });
 
     // Check for active or trialing subscriptions
@@ -93,8 +125,8 @@ serve(async (req) => {
     
     let plan = 'free';
     let status = 'free';
-    let subscriptionEnd = null;
-    let trialEnd = null;
+    let subscriptionEnd: string | null = null;
+    let trialEnd: string | null = null;
 
     if (activeOrTrialing) {
       plan = 'pro';
