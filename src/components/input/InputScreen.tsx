@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, DragEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
-import { parseDocument } from "@/lib/api";
+import { parseDocument, parseGoogleDoc } from "@/lib/api";
 
 import { AmbientDemo } from "./AmbientDemo";
 import { ResearchAssistant } from "./ResearchAssistant";
@@ -12,7 +12,8 @@ import { MobileInputFlow } from "./MobileInputFlow";
 import { SetupSheet, useSetupSheet } from "./SetupSheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, AlertCircle, Crown, Check, Search, Settings2, Upload, FileText } from "lucide-react";
+import { Sparkles, AlertCircle, Crown, Check, Search, Settings2, Upload, FileText, Link, X, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useFeatureGate } from "@/components/subscription/FeatureGate";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -67,6 +68,9 @@ export const InputScreen = () => {
   const [showSuccessFlash, setShowSuccessFlash] = useState(false);
   const [showResearchAssistant, setShowResearchAssistant] = useState(false);
   const [showPostSetupGuidance, setShowPostSetupGuidance] = useState(false);
+  const [showGoogleDocInput, setShowGoogleDocInput] = useState(false);
+  const [googleDocUrl, setGoogleDocUrl] = useState("");
+  const [isParsingGoogleDoc, setIsParsingGoogleDoc] = useState(false);
 
   // Derived state - must be defined before hooks that reference them
   const charCount = rawText.length;
@@ -142,6 +146,39 @@ export const InputScreen = () => {
     // Success indicated by content appearing - no toast needed
   };
 
+  const handleGoogleDocSubmit = async () => {
+    if (!googleDocUrl.trim()) return;
+
+    setIsParsingGoogleDoc(true);
+    try {
+      const result = await parseGoogleDoc(googleDocUrl.trim());
+      
+      if (result.error) {
+        toast({
+          title: "Failed to load Google Doc",
+          description: result.suggestion || result.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (result.text) {
+        setRawText(result.text);
+        setUploadedFileName("Google Doc");
+        setShowGoogleDocInput(false);
+        setGoogleDocUrl("");
+      }
+    } catch (err) {
+      console.error("Failed to parse Google Doc:", err);
+      toast({
+        title: "Failed to load Google Doc",
+        description: err instanceof Error ? err.message : "Please check the URL and try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsParsingGoogleDoc(false);
+    }
+  };
 
   const handleFileSelect = async (file: File) => {
     if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
@@ -391,18 +428,18 @@ export const InputScreen = () => {
           )}
         </AnimatePresence>
 
-        {/* Primary Action Cards - Upload & Generate */}
+        {/* Primary Action Cards - Upload, Google Doc & Generate */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="grid grid-cols-2 gap-3"
+          className="grid grid-cols-3 gap-3"
         >
           {/* Upload Document Card */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isParsingDocument}
+            disabled={isParsingDocument || isParsingGoogleDoc}
             className="flex items-center gap-3 px-4 py-4 rounded-xl border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group bg-card/50 backdrop-blur-sm text-left disabled:opacity-50"
             data-onboarding="document-upload"
           >
@@ -410,8 +447,28 @@ export const InputScreen = () => {
               <Upload className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <span className="text-sm font-medium text-foreground block">Upload Document</span>
-              <p className="text-xs text-muted-foreground truncate">PDF, Word, or PowerPoint</p>
+              <span className="text-sm font-medium text-foreground block">Upload</span>
+              <p className="text-xs text-muted-foreground truncate">PDF, Word, PPTX</p>
+            </div>
+          </button>
+
+          {/* Google Doc Card */}
+          <button
+            type="button"
+            onClick={() => setShowGoogleDocInput(!showGoogleDocInput)}
+            disabled={isParsingDocument || isParsingGoogleDoc}
+            className={`flex items-center gap-3 px-4 py-4 rounded-xl border transition-all group bg-card/50 backdrop-blur-sm text-left disabled:opacity-50 ${
+              showGoogleDocInput 
+                ? 'border-primary/50 bg-primary/5' 
+                : 'border-border/50 hover:border-primary/30 hover:bg-primary/5'
+            }`}
+          >
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              <Link className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-medium text-foreground block">Google Doc</span>
+              <p className="text-xs text-muted-foreground truncate">Public link</p>
             </div>
           </button>
 
@@ -419,7 +476,8 @@ export const InputScreen = () => {
           <button
             type="button"
             onClick={() => setShowResearchAssistant(true)}
-            className="flex items-center gap-3 px-4 py-4 rounded-xl border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group bg-card/50 backdrop-blur-sm text-left"
+            disabled={isParsingDocument || isParsingGoogleDoc}
+            className="flex items-center gap-3 px-4 py-4 rounded-xl border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group bg-card/50 backdrop-blur-sm text-left disabled:opacity-50"
             data-onboarding="research-assistant"
           >
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors relative">
@@ -427,11 +485,68 @@ export const InputScreen = () => {
               <Sparkles className="w-3 h-3 text-shimmer-start absolute -top-1 -right-1" />
             </div>
             <div className="flex-1 min-w-0">
-              <span className="text-sm font-medium text-foreground block">Generate with AI</span>
-              <p className="text-xs text-muted-foreground truncate">Research & writing assistant</p>
+              <span className="text-sm font-medium text-foreground block">Generate</span>
+              <p className="text-xs text-muted-foreground truncate">AI assistant</p>
             </div>
           </button>
         </motion.div>
+
+        {/* Google Doc URL Input */}
+        <AnimatePresence>
+          {showGoogleDocInput && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="glass-strong rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-foreground">Enter Google Docs URL</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowGoogleDocInput(false);
+                      setGoogleDocUrl("");
+                    }}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={googleDocUrl}
+                    onChange={(e) => setGoogleDocUrl(e.target.value)}
+                    placeholder="https://docs.google.com/document/d/..."
+                    className="flex-1 bg-background/50"
+                    disabled={isParsingGoogleDoc}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && googleDocUrl.trim()) {
+                        handleGoogleDocSubmit();
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={handleGoogleDocSubmit}
+                    disabled={!googleDocUrl.trim() || isParsingGoogleDoc}
+                    size="default"
+                  >
+                    {isParsingGoogleDoc ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      "Load"
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Make sure the document is set to "Anyone with the link can view"
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Secondary: Text Area (Output/Paste) */}
         <motion.div
@@ -484,7 +599,7 @@ export const InputScreen = () => {
               className={`bg-background/30 border-0 resize-none text-sm rounded-lg focus:ring-primary/50 transition-all ${
                 hasContent ? 'min-h-[100px]' : 'min-h-[80px]'
               }`}
-              disabled={isParsingDocument}
+              disabled={isParsingDocument || isParsingGoogleDoc}
             />
             {isDraggingOnTextarea && (
               <div className="absolute inset-0 flex items-center justify-center bg-shimmer-start/10 rounded-lg pointer-events-none">

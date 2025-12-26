@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface UseWhisperRecorderOptions {
@@ -31,6 +31,15 @@ export const useWhisperRecorder = ({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const durationRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
+  const isMountedRef = useRef(true);
+
+  // Track mounted state to prevent state updates after unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const isSupported = typeof navigator !== 'undefined' && 
     navigator.mediaDevices && 
@@ -48,11 +57,14 @@ export const useWhisperRecorder = ({
   }, []);
 
   const transcribeAudio = useCallback(async (audioBlob: Blob) => {
+    if (!isMountedRef.current) return;
     setIsTranscribing(true);
     
     try {
       // Convert blob to base64
       const arrayBuffer = await audioBlob.arrayBuffer();
+      if (!isMountedRef.current) return;
+      
       const uint8Array = new Uint8Array(arrayBuffer);
       let binary = '';
       const chunkSize = 8192;
@@ -68,6 +80,8 @@ export const useWhisperRecorder = ({
         body: { audio: base64Audio }
       });
 
+      if (!isMountedRef.current) return;
+
       if (error) {
         throw new Error(error.message || 'Transcription failed');
       }
@@ -79,9 +93,13 @@ export const useWhisperRecorder = ({
       }
     } catch (err) {
       console.error('Transcription error:', err);
-      onError?.(err instanceof Error ? err.message : 'Failed to transcribe audio');
+      if (isMountedRef.current) {
+        onError?.(err instanceof Error ? err.message : 'Failed to transcribe audio');
+      }
     } finally {
-      setIsTranscribing(false);
+      if (isMountedRef.current) {
+        setIsTranscribing(false);
+      }
     }
   }, [onTranscript, onError]);
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,6 +23,15 @@ export const useOnboarding = (): OnboardingState => {
   const [isActive, setIsActive] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
+  
+  // Track mounted state to prevent state updates after unmount
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Check onboarding status on mount
   useEffect(() => {
@@ -34,6 +43,8 @@ export const useOnboarding = (): OnboardingState => {
           .select('onboarding_completed, onboarding_step')
           .eq('id', user.id)
           .single();
+
+        if (!isMountedRef.current) return;
 
         if (error && error.code === 'PGRST116') {
           // Profile doesn't exist - create it as fallback
@@ -50,6 +61,7 @@ export const useOnboarding = (): OnboardingState => {
             console.error('Failed to create fallback profile:', insertError);
           }
           
+          if (!isMountedRef.current) return;
           setIsFirstTime(true);
           setCurrentStep(0);
         } else if (data) {
@@ -66,17 +78,22 @@ export const useOnboarding = (): OnboardingState => {
         if (stored) {
           try {
             const parsed = JSON.parse(stored);
+            if (!isMountedRef.current) return;
             setIsFirstTime(!parsed.completed);
             setCurrentStep(parsed.step || 0);
           } catch {
+            if (!isMountedRef.current) return;
             setIsFirstTime(true);
             setCurrentStep(0);
           }
         } else {
+          if (!isMountedRef.current) return;
           setIsFirstTime(true);
         }
       }
-      setIsLoaded(true);
+      if (isMountedRef.current) {
+        setIsLoaded(true);
+      }
     };
 
     checkOnboardingStatus();

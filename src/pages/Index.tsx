@@ -73,7 +73,7 @@ const Index = () => {
       searchParams.delete('checkout');
       setSearchParams(searchParams, { replace: true });
     }
-  }, [searchParams, trackSubscriptionAction]);
+  }, [searchParams, trackSubscriptionAction, toast, checkSubscription, setSearchParams]);
 
   // Present mode is fullscreen, no header
   if (currentStep === "present") {

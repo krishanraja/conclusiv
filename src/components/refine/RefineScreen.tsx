@@ -27,6 +27,7 @@ export const RefineScreen = () => {
     approveClaim,
     rejectClaim,
     updateClaim,
+    swapClaimAlternative,
     voiceFeedback,
     setVoiceFeedback,
   } = useNarrativeStore();
@@ -317,6 +318,7 @@ export const RefineScreen = () => {
                       onApprove={() => approveClaim(claim.id)}
                       onReject={() => rejectClaim(claim.id)}
                       onUpdate={(updates) => updateClaim(claim.id, updates)}
+                      onSwapAlternative={(altIndex) => swapClaimAlternative(claim.id, altIndex)}
                     />
                   ))}
                 </div>

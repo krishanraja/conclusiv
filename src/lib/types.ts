@@ -143,6 +143,11 @@ export interface RefinementHighlight {
   text: string;
 }
 
+export interface ClaimAlternative {
+  title: string;
+  text: string;
+}
+
 export interface KeyClaim {
   id: string;
   title: string;
@@ -152,6 +157,7 @@ export interface KeyClaim {
   edited?: boolean;
   originalTitle?: string;
   originalText?: string;
+  alternatives?: ClaimAlternative[];
 }
 
 export interface RefinementState {

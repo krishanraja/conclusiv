@@ -276,6 +276,29 @@ export const parseDocument = async (file: File): Promise<ParseDocumentResponse> 
   }
 };
 
+export interface ParseGoogleDocResponse {
+  text?: string;
+  error?: string;
+  suggestion?: string;
+}
+
+export const parseGoogleDoc = async (url: string): Promise<ParseGoogleDocResponse> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('parse-google-doc', {
+      body: { url }
+    });
+
+    if (error) throw new Error(error.message);
+    if (data.error) {
+      return { error: data.error, suggestion: data.suggestion };
+    }
+
+    return { text: data.text };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to parse Google Doc' };
+  }
+};
+
 export const extractKeyClaims = async (text: string): Promise<ExtractClaimsResponse> => {
   try {
     const { data, error } = await supabase.functions.invoke('extract-claims', {

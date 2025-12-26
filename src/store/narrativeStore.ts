@@ -70,6 +70,7 @@ interface NarrativeState {
   approveClaim: (claimId: string) => void;
   rejectClaim: (claimId: string) => void;
   updateClaim: (claimId: string, updates: { title?: string; text?: string }) => void;
+  swapClaimAlternative: (claimId: string, alternativeIndex: number) => void;
   voiceFeedback: string;
   setVoiceFeedback: (feedback: string) => void;
   
@@ -280,6 +281,32 @@ export const useNarrativeStore = create<NarrativeState>((set, get) => ({
         originalText: c.originalText ?? c.text,
       } : c
     ),
+  })),
+  
+  swapClaimAlternative: (claimId, alternativeIndex) => set((state) => ({
+    keyClaims: state.keyClaims.map((c) => {
+      if (c.id !== claimId || !c.alternatives || !c.alternatives[alternativeIndex]) {
+        return c;
+      }
+      
+      const selectedAlt = c.alternatives[alternativeIndex];
+      
+      // Build new alternatives array: current claim becomes an alternative, selected is removed
+      const newAlternatives = [
+        { title: c.title, text: c.text },
+        ...c.alternatives.filter((_, i) => i !== alternativeIndex),
+      ];
+      
+      return {
+        ...c,
+        title: selectedAlt.title,
+        text: selectedAlt.text,
+        alternatives: newAlternatives,
+        edited: true,
+        originalTitle: c.originalTitle ?? c.title,
+        originalText: c.originalText ?? c.text,
+      };
+    }),
   })),
   
   setVoiceFeedback: (voiceFeedback) => set({ voiceFeedback }),

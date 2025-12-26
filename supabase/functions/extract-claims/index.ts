@@ -37,6 +37,7 @@ For each claim:
 2. Extract the core assertion as a clear, concise statement
 3. If possible, identify what part of the text it came from (optional source field)
 4. Focus on claims that are substantive and would impact business decisions
+5. IMPORTANT: If the document explicitly mentions alternative options, competing choices, or different possibilities for this claim (e.g., multiple ICP targets, different market segments, alternative strategies), include them in the "alternatives" array
 
 The title should be:
 - Action-oriented or insight-focused
@@ -48,12 +49,16 @@ Return a JSON object with a "claims" array containing objects with:
 - title: short scannable headline (5-8 words max)
 - text: the full claim as a clear statement (max 200 chars)
 - source: optional brief reference to where in the text this came from
+- alternatives: optional array of alternative options ONLY if the document explicitly mentions other valid choices. Each alternative has { title, text }. Do NOT fabricate alternatives - only include them when the source document explicitly presents multiple options.
 
 Example output:
 {
   "claims": [
     { "id": "claim_1", "title": "15% Annual Market Growth Through 2028", "text": "Market growth is projected at 15% annually through 2028, driven by increased adoption in emerging markets.", "source": "Market analysis section" },
-    { "id": "claim_2", "title": "Customer Acquisition Costs Down 30%", "text": "Customer acquisition costs have decreased 30% year-over-year due to improved targeting and organic growth." }
+    { "id": "claim_2", "title": "Prioritize Music Educators as ICP", "text": "Music educators (choir/band directors) are the priority ICP due to high pain and a budget.", "source": "ICP Selection & Prioritization", "alternatives": [
+      { "title": "Prioritize Dance Studios as ICP", "text": "Dance studios represent a strong alternative ICP with recurring revenue needs and scheduling pain points." },
+      { "title": "Prioritize Private Music Teachers as ICP", "text": "Private music instructors have high volume and clear billing challenges, making them a viable primary target." }
+    ] }
   ]
 }
 
@@ -117,6 +122,12 @@ ${text.slice(0, 30000)}`;
       source: claim.source || undefined,
       approved: null,
       flaggedMisleading: false,
+      alternatives: Array.isArray(claim.alternatives) && claim.alternatives.length > 0
+        ? claim.alternatives.map((alt: any) => ({
+            title: alt.title || "",
+            text: alt.text || "",
+          }))
+        : undefined,
     }));
 
     console.log("[extract-claims] Extracted", normalizedClaims.length, "claims");

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -48,6 +48,15 @@ export default function Profile() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isUpgrading, setIsUpgrading] = useState(false);
+  
+  // Track mounted state to prevent state updates after unmount
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -68,17 +77,23 @@ export default function Profile() {
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
+        if (!isMountedRef.current) return;
+        
         if (error) throw error;
         setNarratives((data || []) as unknown as Narrative[]);
       } catch (err) {
         console.error('Error fetching narratives:', err);
-        toast({
-          title: 'Error',
-          description: 'Failed to load your saved demos',
-          variant: 'destructive',
-        });
+        if (isMountedRef.current) {
+          toast({
+            title: 'Error',
+            description: 'Failed to load your saved demos',
+            variant: 'destructive',
+          });
+        }
       } finally {
-        setIsLoading(false);
+        if (isMountedRef.current) {
+          setIsLoading(false);
+        }
       }
     };
 

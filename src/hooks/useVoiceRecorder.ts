@@ -23,6 +23,12 @@ export const useVoiceRecorder = ({
   const [isSupported, setIsSupported] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isRecordingRef = useRef(false);
+
+  // Keep ref in sync with state to avoid stale closures in setTimeout
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+  }, [isRecording]);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -39,11 +45,12 @@ export const useVoiceRecorder = ({
   const resetSilenceTimer = useCallback(() => {
     clearSilenceTimer();
     silenceTimerRef.current = setTimeout(() => {
-      if (recognitionRef.current && isRecording) {
+      // Use ref to get current recording state, avoiding stale closure
+      if (recognitionRef.current && isRecordingRef.current) {
         recognitionRef.current.stop();
       }
     }, silenceTimeout);
-  }, [clearSilenceTimer, silenceTimeout, isRecording]);
+  }, [clearSilenceTimer, silenceTimeout]);
 
   const startRecording = useCallback(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;

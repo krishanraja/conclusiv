@@ -1,9 +1,15 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, X, Pencil, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Check, X, Pencil, ChevronDown, ChevronUp, Loader2, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { normalizeClaim } from "@/lib/api";
 import type { KeyClaim } from "@/lib/types";
@@ -15,6 +21,7 @@ interface ClaimCardProps {
   onApprove: () => void;
   onReject: () => void;
   onUpdate: (updates: { title?: string; text?: string }) => void;
+  onSwapAlternative?: (alternativeIndex: number) => void;
 }
 
 const TITLE_MAX = 60;
@@ -27,6 +34,7 @@ export const ClaimCard = ({
   onApprove,
   onReject,
   onUpdate,
+  onSwapAlternative,
 }: ClaimCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -247,6 +255,37 @@ export const ClaimCard = ({
           >
             <Pencil className="w-3.5 h-3.5" />
           </Button>
+          
+          {/* Swap alternatives dropdown */}
+          {claim.alternatives && claim.alternatives.length > 0 && onSwapAlternative && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 border-primary/30 text-primary hover:bg-primary/10"
+                  title={`${claim.alternatives.length} alternative${claim.alternatives.length > 1 ? 's' : ''} available`}
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <div className="px-2 py-1.5 text-xs text-muted-foreground border-b border-border/50 mb-1">
+                  Swap to alternative
+                </div>
+                {claim.alternatives.map((alt, altIndex) => (
+                  <DropdownMenuItem
+                    key={altIndex}
+                    onClick={() => onSwapAlternative(altIndex)}
+                    className="flex flex-col items-start gap-0.5 py-2 cursor-pointer"
+                  >
+                    <span className="text-sm font-medium text-foreground">{alt.title}</span>
+                    <span className="text-xs text-muted-foreground line-clamp-2">{alt.text}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 

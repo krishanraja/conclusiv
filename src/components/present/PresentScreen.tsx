@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState, useMemo } from "react";
+import { useEffect, useCallback, useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { X, ChevronLeft, ChevronRight, Map, Sun, Moon, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -234,6 +234,9 @@ export const PresentScreen = () => {
   });
   const showWatermark = limits.hasWatermark;
   
+  // Track transition timeouts for cleanup
+  const transitionTimeoutRefs = useRef<NodeJS.Timeout[]>([]);
+  
   // Load brand fonts dynamically
   useEffect(() => {
     const loadFont = (fontFamily: string | undefined) => {
@@ -353,6 +356,10 @@ export const PresentScreen = () => {
     const targetPos = nodePositions[currentSectionIndex];
     if (!targetPos) return;
 
+    // Clear any pending transition timeouts
+    transitionTimeoutRefs.current.forEach(clearTimeout);
+    transitionTimeoutRefs.current = [];
+
     const currentTransition = narrative.transitions[currentSectionIndex];
     const config = getTransitionConfig(
       currentTransition?.type || "fade",
@@ -385,16 +392,23 @@ export const PresentScreen = () => {
     cameraX.set(targetPos.x);
     cameraY.set(targetPos.y);
     
-    setTimeout(() => {
+    const t1 = setTimeout(() => {
       cameraZoom.set(1);
       blurAmount.set(0);
     }, midpointDelay * 1000);
 
-    setTimeout(() => {
+    const t2 = setTimeout(() => {
       setIsTransitioning(false);
       setPrevIndex(currentSectionIndex);
     }, config.duration * 1000);
 
+    transitionTimeoutRefs.current.push(t1, t2);
+
+    // Cleanup timeouts on unmount or section change
+    return () => {
+      transitionTimeoutRefs.current.forEach(clearTimeout);
+      transitionTimeoutRefs.current = [];
+    };
   }, [currentSectionIndex, narrative, nodePositions, isMobile, reducedMotion]);
 
   // Initialize camera position

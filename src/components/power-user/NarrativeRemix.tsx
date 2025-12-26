@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Wand2, Minimize2, Maximize2, ShieldAlert, RotateCcw, Loader2 } from "lucide-react";
+import { Wand2, Minimize2, Maximize2, ShieldAlert, RotateCcw, Loader2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-type RemixOption = "shorter" | "bolder" | "safer" | "flip";
+type RemixOption = "shorter" | "bolder" | "safer" | "flip" | "plain-english";
 
 interface RemixConfig {
   id: RemixOption;
@@ -44,6 +44,13 @@ const remixOptions: RemixConfig[] = [
     description: "Opposite perspective",
     icon: <RotateCcw className="w-4 h-4" />,
     prompt: "Rewrite this narrative from the opposite perspective. If it was optimistic, make it cautionary. If it highlighted opportunities, highlight risks. Maintain factual accuracy but shift the framing entirely.",
+  },
+  {
+    id: "plain-english",
+    label: "Plain English",
+    description: "Simplify jargon for any reader",
+    icon: <BookOpen className="w-4 h-4" />,
+    prompt: "Rewrite this narrative in plain English. Replace technical jargon, acronyms, and industry-specific terms with simple, everyday language that anyone can understand. Spell out abbreviations on first use. Keep the core insights and message intact but make them accessible to readers without domain expertise. Avoid corporate buzzwords and complex terminology.",
   },
 ];
 

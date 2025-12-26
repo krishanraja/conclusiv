@@ -28,7 +28,7 @@ interface UseResearchJobOptions {
   onError?: (error: string) => void;
 }
 
-export function useResearchJob(options: UseResearchJobOptions = {}) {
+export function useResearchJob({ onComplete, onError }: UseResearchJobOptions = {}) {
   const { user } = useAuth();
   const [currentJob, setCurrentJob] = useState<ResearchJob | null>(null);
   const [isPolling, setIsPolling] = useState(false);
@@ -71,15 +71,15 @@ export function useResearchJob(options: UseResearchJobOptions = {}) {
 
       if (job.status === 'completed') {
         cleanup();
-        options.onComplete?.(job);
+        onComplete?.(job);
       } else if (job.status === 'failed') {
         cleanup();
-        options.onError?.(job.error || 'Research failed');
+        onError?.(job.error || 'Research failed');
       }
     } catch (err) {
       console.error('[useResearchJob] Poll error:', err);
     }
-  }, [user, cleanup, options]);
+  }, [user, cleanup, onComplete, onError]);
 
   // Start polling for a job
   const startPolling = useCallback((jobId: string) => {
@@ -110,7 +110,7 @@ export function useResearchJob(options: UseResearchJobOptions = {}) {
     audience?: string;
   }): Promise<ResearchJob | null> => {
     if (!user) {
-      options.onError?.('You must be logged in to start research');
+      onError?.('You must be logged in to start research');
       return null;
     }
 
@@ -132,7 +132,7 @@ export function useResearchJob(options: UseResearchJobOptions = {}) {
 
       if (error) {
         console.error('[useResearchJob] Create error:', error);
-        options.onError?.(error.message);
+        onError?.(error.message);
         return null;
       }
 
@@ -148,10 +148,10 @@ export function useResearchJob(options: UseResearchJobOptions = {}) {
       return job;
     } catch (err) {
       console.error('[useResearchJob] Create error:', err);
-      options.onError?.(err instanceof Error ? err.message : 'Failed to create job');
+      onError?.(err instanceof Error ? err.message : 'Failed to create job');
       return null;
     }
-  }, [user, options, startPolling]);
+  }, [user, onError, startPolling]);
 
   // Trigger the edge function to process the job
   const triggerJobProcessing = async (jobId: string) => {
@@ -162,12 +162,12 @@ export function useResearchJob(options: UseResearchJobOptions = {}) {
       
       if (error) {
         console.error('[useResearchJob] Trigger error:', error);
-        options.onError?.(error.message || 'Failed to trigger research job');
+        onError?.(error.message || 'Failed to trigger research job');
         // Job will be picked up by retry logic or show as failed
       }
     } catch (err) {
       console.error('[useResearchJob] Trigger exception:', err);
-      options.onError?.(err instanceof Error ? err.message : 'Failed to trigger research job');
+      onError?.(err instanceof Error ? err.message : 'Failed to trigger research job');
       // Job will be picked up by retry logic or show as failed
     }
   };
