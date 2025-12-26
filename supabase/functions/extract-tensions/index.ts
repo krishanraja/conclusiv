@@ -23,7 +23,8 @@ serve(async (req) => {
     if (!GOOGLE_AI_API_KEY) throw new Error('GOOGLE_AI_API_KEY not configured');
 
     const systemPrompt = `Analyze the text for tensions, contradictions, blind spots, and hidden risks.
-Return JSON: { "tensions": [{ "type": "contradiction"|"blind_spot"|"hidden_risk"|"strategic_option", "severity": "low"|"medium"|"high", "title": "short title", "description": "explanation", "sourceA": "quote or null", "sourceB": "quote or null", "recommendation": "what to do" }] }
+Return JSON: { "tensions": [{ "type": "contradiction"|"blind_spot"|"hidden_risk"|"strategic_option", "severity": "low"|"medium"|"high", "title": "short title", "description": "explanation", "sourceA": "quote" or omit if no source, "sourceB": "quote" or omit if no source, "recommendation": "what to do" }] }
+IMPORTANT: For sourceA and sourceB, either provide an actual quote from the text, or omit the field entirely. Do NOT use the string "null" - use JSON null or omit the field.
 Find 2-5 meaningful tensions. Be specific and actionable.`;
 
     const response = await fetch(
@@ -56,10 +57,23 @@ Find 2-5 meaningful tensions. Be specific and actionable.`;
       result = { tensions: [] };
     }
 
-    const tensionsWithIds = (result.tensions || []).map((t: Record<string, unknown>) => ({
-      id: crypto.randomUUID(),
-      ...t
-    }));
+    const tensionsWithIds = (result.tensions || []).map((t: Record<string, unknown>) => {
+      // Clean up "null" strings - convert to actual null or remove the field
+      const cleaned: Record<string, unknown> = {
+        id: crypto.randomUUID(),
+        ...t
+      };
+      
+      // Convert string "null" to actual null or remove field
+      if (cleaned.sourceA === "null" || cleaned.sourceA === null) {
+        delete cleaned.sourceA;
+      }
+      if (cleaned.sourceB === "null" || cleaned.sourceB === null) {
+        delete cleaned.sourceB;
+      }
+      
+      return cleaned;
+    });
 
     return new Response(JSON.stringify({ tensions: tensionsWithIds }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

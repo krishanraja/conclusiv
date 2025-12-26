@@ -33,6 +33,52 @@ const colorRoles: { role: ColorRole; label: string; description: string }[] = [
   { role: 'highlight', label: 'Highlight', description: 'Call-out areas' },
 ];
 
+// Map CSS variables to readable font names
+const CSS_VAR_FONT_MAP: Record<string, string> = {
+  '--font-sans': 'Plus Jakarta Sans',
+  '--font-serif': 'serif',
+  '--font-mono': 'monospace',
+  '--brand-heading-font': 'Plus Jakarta Sans',
+  '--brand-body-font': 'Plus Jakarta Sans',
+};
+
+// Extract readable font name from value (handles CSS variables)
+const getReadableFontName = (value?: string | null): string => {
+  if (!value) return '';
+  
+  // If it's a CSS variable, try to extract the font name
+  if (value.startsWith('var(--')) {
+    const varMatch = value.match(/var\(--([^)]+)\)/);
+    if (varMatch) {
+      const varName = varMatch[1];
+      // Check our map first
+      if (CSS_VAR_FONT_MAP[`--${varName}`]) {
+        return CSS_VAR_FONT_MAP[`--${varName}`];
+      }
+      // Try to get computed value from DOM
+      try {
+        const testEl = document.createElement('div');
+        testEl.style.fontFamily = value;
+        document.body.appendChild(testEl);
+        const computed = window.getComputedStyle(testEl).fontFamily;
+        document.body.removeChild(testEl);
+        // Extract font family name (remove quotes if present)
+        const fontName = computed.split(',')[0].trim().replace(/^["']|["']$/g, '');
+        if (fontName && fontName !== 'serif' && fontName !== 'sans-serif' && fontName !== 'monospace') {
+          return fontName;
+        }
+      } catch (e) {
+        // Fall through to default
+      }
+      // Default fallback for common variables
+      return 'System Font';
+    }
+  }
+  
+  // Return the value as-is if it's already a font name
+  return value;
+};
+
 export const BrandStyleEditor = () => {
   const [expandedPanel, setExpandedPanel] = useState<string | null>(null);
   const [showSaved, setShowSaved] = useState(false);
@@ -240,7 +286,7 @@ export const BrandStyleEditor = () => {
             <span>Brand Fonts</span>
             {(presentationStyle?.primaryFont || hasBrandFonts) && (
               <span className="text-xs text-muted-foreground ml-1 truncate max-w-[100px]">
-                {presentationStyle?.primaryFont || businessContext?.brandFonts?.primary}
+                {getReadableFontName(presentationStyle?.primaryFont || businessContext?.brandFonts?.primary)}
               </span>
             )}
           </div>

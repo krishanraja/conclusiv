@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 import { Search, Check, Loader2, ChevronDown, Type } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { GoogleFont } from "@/lib/types";
@@ -10,6 +11,52 @@ interface GoogleFontPickerProps {
   label?: string;
   placeholder?: string;
 }
+
+// Map CSS variables to readable font names
+const CSS_VAR_FONT_MAP: Record<string, string> = {
+  '--font-sans': 'Plus Jakarta Sans',
+  '--font-serif': 'serif',
+  '--font-mono': 'monospace',
+  '--brand-heading-font': 'Plus Jakarta Sans',
+  '--brand-body-font': 'Plus Jakarta Sans',
+};
+
+// Extract readable font name from value (handles CSS variables)
+const getReadableFontName = (value?: string): string => {
+  if (!value) return '';
+  
+  // If it's a CSS variable, try to extract the font name
+  if (value.startsWith('var(--')) {
+    const varMatch = value.match(/var\(--([^)]+)\)/);
+    if (varMatch) {
+      const varName = varMatch[1];
+      // Check our map first
+      if (CSS_VAR_FONT_MAP[`--${varName}`]) {
+        return CSS_VAR_FONT_MAP[`--${varName}`];
+      }
+      // Try to get computed value from DOM
+      try {
+        const testEl = document.createElement('div');
+        testEl.style.fontFamily = value;
+        document.body.appendChild(testEl);
+        const computed = window.getComputedStyle(testEl).fontFamily;
+        document.body.removeChild(testEl);
+        // Extract font family name (remove quotes if present)
+        const fontName = computed.split(',')[0].trim().replace(/^["']|["']$/g, '');
+        if (fontName && fontName !== 'serif' && fontName !== 'sans-serif' && fontName !== 'monospace') {
+          return fontName;
+        }
+      } catch (e) {
+        // Fall through to default
+      }
+      // Default fallback for common variables
+      return 'System Font';
+    }
+  }
+  
+  // Return the value as-is if it's already a font name
+  return value;
+};
 
 // Popular fonts to show by default (curated list)
 const POPULAR_FONTS: GoogleFont[] = [
@@ -68,6 +115,8 @@ export const GoogleFontPicker = ({
   const [fonts, setFonts] = useState<GoogleFont[]>(POPULAR_FONTS);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
 
   // Fetch fonts from Google Fonts API
   const fetchFonts = useCallback(async () => {
@@ -124,10 +173,44 @@ export const GoogleFontPicker = ({
 
   // Preload currently selected font
   useEffect(() => {
-    if (value) {
-      loadFont(value);
+    const fontName = getReadableFontName(value);
+    if (fontName && !fontName.startsWith('var(')) {
+      loadFont(fontName);
     }
   }, [value]);
+
+  // Calculate dropdown position when opening
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 8,
+        left: rect.left,
+        width: rect.width,
+      });
+    } else {
+      setDropdownPosition(null);
+    }
+  }, [isOpen]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (buttonRef.current && !buttonRef.current.contains(target)) {
+        // Check if click is outside the dropdown (which is portaled to body)
+        const dropdown = document.querySelector('[data-font-picker-dropdown]');
+        if (dropdown && !dropdown.contains(target)) {
+          setIsOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
 
   // Filter fonts based on search
   const filteredFonts = useMemo(() => {
@@ -156,49 +239,37 @@ export const GoogleFontPicker = ({
     setSearchQuery("");
   };
 
-  return (
-    <div className="relative">
-      {label && (
-        <label className="text-xs text-muted-foreground mb-1.5 block">
-          {label}
-        </label>
-      )}
-      
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "w-full flex items-center justify-between gap-2 p-2.5 rounded-md transition-colors",
-          "border border-border/50 hover:border-primary/50 text-left",
-          isOpen && "border-primary bg-primary/5"
-        )}
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          <Type className="w-4 h-4 text-muted-foreground shrink-0" />
-          <span
-            className="text-sm truncate"
-            style={value ? { fontFamily: `"${value}", sans-serif` } : undefined}
-          >
-            {value || placeholder}
-          </span>
-        </div>
-        <ChevronDown
-          className={cn(
-            "w-4 h-4 text-muted-foreground shrink-0 transition-transform",
-            isOpen && "rotate-180"
-          )}
-        />
-      </button>
+  // Get display value (readable font name)
+  const displayValue = useMemo(() => {
+    const readableName = getReadableFontName(value);
+    return readableName || placeholder;
+  }, [value, placeholder]);
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="absolute z-50 top-full left-0 mt-2 bg-card border border-border rounded-lg shadow-xl w-full max-h-[300px] overflow-hidden"
-          >
+  // Get actual font value for styling (use original value if it's a font name, otherwise use readable name)
+  const fontValueForStyle = useMemo(() => {
+    if (!value) return undefined;
+    // If it's already a font name (not a CSS var), use it directly
+    if (!value.startsWith('var(')) {
+      return value;
+    }
+    // Otherwise use the readable name
+    return getReadableFontName(value);
+  }, [value]);
+
+  const dropdownContent = isOpen && dropdownPosition ? (
+    <motion.div
+      data-font-picker-dropdown
+      initial={{ opacity: 0, y: -8, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.95 }}
+      transition={{ duration: 0.15 }}
+      className="fixed z-[100] bg-card border border-border rounded-lg shadow-xl max-h-[300px] overflow-hidden"
+      style={{
+        top: `${dropdownPosition.top}px`,
+        left: `${dropdownPosition.left}px`,
+        width: `${dropdownPosition.width}px`,
+      }}
+    >
             {/* Search input */}
             <div className="p-2 border-b border-border/50">
               <div className="relative">
@@ -214,49 +285,90 @@ export const GoogleFontPicker = ({
               </div>
             </div>
 
-            {/* Font list */}
-            <div className="overflow-y-auto max-h-[240px] p-1">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : filteredFonts.length === 0 ? (
-                <div className="text-center py-8 text-sm text-muted-foreground">
-                  No fonts found
-                </div>
-              ) : (
-                filteredFonts.map((font) => (
-                  <button
-                    key={font.family}
-                    type="button"
-                    onClick={() => handleSelect(font)}
-                    onMouseEnter={() => loadFont(font.family)}
-                    className={cn(
-                      "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md transition-colors text-left",
-                      "hover:bg-primary/5",
-                      value === font.family && "bg-primary/10"
-                    )}
+      {/* Font list */}
+      <div className="overflow-y-auto max-h-[240px] p-1">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : filteredFonts.length === 0 ? (
+          <div className="text-center py-8 text-sm text-muted-foreground">
+            No fonts found
+          </div>
+        ) : (
+          filteredFonts.map((font) => {
+            const isSelected = getReadableFontName(value) === font.family || value === font.family;
+            return (
+              <button
+                key={font.family}
+                type="button"
+                onClick={() => handleSelect(font)}
+                onMouseEnter={() => loadFont(font.family)}
+                className={cn(
+                  "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md transition-colors text-left",
+                  "hover:bg-primary/5",
+                  isSelected && "bg-primary/10"
+                )}
+              >
+                <div className="min-w-0">
+                  <p
+                    className="text-sm truncate"
+                    style={{ fontFamily: `"${font.family}", ${font.category}` }}
                   >
-                    <div className="min-w-0">
-                      <p
-                        className="text-sm truncate"
-                        style={{ fontFamily: `"${font.family}", ${font.category}` }}
-                      >
-                        {font.family}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground capitalize">
-                        {font.category}
-                      </p>
-                    </div>
-                    {value === font.family && (
-                      <Check className="w-4 h-4 text-primary shrink-0" />
-                    )}
-                  </button>
-                ))
-              )}
-            </div>
-          </motion.div>
+                    {font.family}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground capitalize">
+                    {font.category}
+                  </p>
+                </div>
+                {isSelected && (
+                  <Check className="w-4 h-4 text-primary shrink-0" />
+                )}
+              </button>
+            );
+          })
         )}
+      </div>
+    </motion.div>
+  ) : null;
+
+  return (
+    <div className="relative">
+      {label && (
+        <label className="text-xs text-muted-foreground mb-1.5 block">
+          {label}
+        </label>
+      )}
+      
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "w-full flex items-center justify-between gap-2 p-2.5 rounded-md transition-colors",
+          "border border-border/50 hover:border-primary/50 text-left",
+          isOpen && "border-primary bg-primary/5"
+        )}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <Type className="w-4 h-4 text-muted-foreground shrink-0" />
+          <span
+            className="text-sm truncate"
+            style={fontValueForStyle ? { fontFamily: `"${fontValueForStyle}", sans-serif` } : undefined}
+          >
+            {displayValue}
+          </span>
+        </div>
+        <ChevronDown
+          className={cn(
+            "w-4 h-4 text-muted-foreground shrink-0 transition-transform",
+            isOpen && "rotate-180"
+          )}
+        />
+      </button>
+
+      <AnimatePresence>
+        {dropdownContent && createPortal(dropdownContent, document.body)}
       </AnimatePresence>
     </div>
   );

@@ -78,16 +78,18 @@ export const TensionCard = ({ tension, onAddToNarrative }: TensionCardProps) => 
               {tension.description}
             </p>
 
-            {(tension.sourceA || tension.sourceB) && (
+            {((tension.sourceA && tension.sourceA !== "null") || (tension.sourceB && tension.sourceB !== "null")) && (
               <div className="flex gap-2 text-[10px]">
-                {tension.sourceA && (
+                {tension.sourceA && tension.sourceA !== "null" && (
                   <span className="px-2 py-1 rounded bg-background text-muted-foreground">
                     "{tension.sourceA}"
                   </span>
                 )}
-                {tension.sourceB && (
+                {tension.sourceB && tension.sourceB !== "null" && (
                   <>
-                    <span className="text-muted-foreground">vs</span>
+                    {tension.sourceA && tension.sourceA !== "null" && (
+                      <span className="text-muted-foreground">vs</span>
+                    )}
                     <span className="px-2 py-1 rounded bg-background text-muted-foreground">
                       "{tension.sourceB}"
                     </span>

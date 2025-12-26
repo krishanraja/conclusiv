@@ -390,7 +390,7 @@ export const QuickAdjustments = () => {
             >
               <Button
                 onClick={() => setSaveDialogOpen(true)}
-                className="w-full gap-2 bg-shimmer-start hover:bg-shimmer-start/90"
+                className="w-full gap-2 bg-shimmer-start hover:bg-shimmer-start/90 text-background"
               >
                 <Save className="w-4 h-4" />
                 Save Changes
