@@ -259,15 +259,27 @@ export const alternativeGoalDescriptions: Record<AlternativeGoal, { label: strin
 export type LogoPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'none';
 export type LogoSize = 'sm' | 'md' | 'lg';
 
+export type ColorRole = 'primary' | 'secondary' | 'accent' | 'background' | 'text' | 'highlight';
+
 export interface PresentationStyle {
   primaryColor?: string;
   secondaryColor?: string;
   accentColor?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  highlightColor?: string;
   primaryFont?: string;
   secondaryFont?: string;
   logoPosition: LogoPosition;
   logoSize: LogoSize;
   showLogo: boolean;
+}
+
+// Google Font type for font picker
+export interface GoogleFont {
+  family: string;
+  variants: string[];
+  category: string;
 }
 
 // ===== Pexels Image =====

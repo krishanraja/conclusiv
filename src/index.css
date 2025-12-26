@@ -50,6 +50,16 @@
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 0 0% 12%;
     --sidebar-ring: 78 100% 83%;
+
+    /* Brand customization fallbacks */
+    --brand-primary: hsl(var(--primary));
+    --brand-secondary: hsl(var(--secondary));
+    --brand-accent: hsl(var(--accent));
+    --brand-background: hsl(var(--background));
+    --brand-text: hsl(var(--foreground));
+    --brand-highlight: hsl(var(--shimmer-start));
+    --brand-heading-font: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --brand-body-font: 'Plus Jakarta Sans', system-ui, sans-serif;
   }
 }
 

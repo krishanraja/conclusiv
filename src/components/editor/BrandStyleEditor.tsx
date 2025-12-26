@@ -1,11 +1,14 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Palette, Type, ImageIcon, Check } from "lucide-react";
+import { ChevronRight, Palette, Type, ImageIcon, Check, Plus } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import type { LogoPosition, LogoSize, PresentationStyle } from "@/lib/types";
+import { ColorPickerInput } from "./ColorPickerInput";
+import { GoogleFontPicker } from "./GoogleFontPicker";
+import { CompanyLogoUpload } from "@/components/input/CompanyLogoUpload";
+import type { LogoPosition, LogoSize, PresentationStyle, ColorRole } from "@/lib/types";
 
 const logoPositions: { value: LogoPosition; label: string }[] = [
   { value: 'top-left', label: 'Top Left' },
@@ -20,14 +23,26 @@ const logoSizes: { value: LogoSize; label: string }[] = [
   { value: 'lg', label: 'L' },
 ];
 
+// All available color roles with their display info
+const colorRoles: { role: ColorRole; label: string; description: string }[] = [
+  { role: 'primary', label: 'Primary', description: 'Main brand color' },
+  { role: 'secondary', label: 'Secondary', description: 'Supporting color' },
+  { role: 'accent', label: 'Accent', description: 'Highlight elements' },
+  { role: 'background', label: 'Background', description: 'Slide backgrounds' },
+  { role: 'text', label: 'Text', description: 'Main text color' },
+  { role: 'highlight', label: 'Highlight', description: 'Call-out areas' },
+];
+
 export const BrandStyleEditor = () => {
   const [expandedPanel, setExpandedPanel] = useState<string | null>(null);
   const [showSaved, setShowSaved] = useState(false);
+  const [showAllColors, setShowAllColors] = useState(false);
   const { 
     businessContext, 
     presentationStyle, 
     setPresentationStyle,
     userUploadedLogoUrl,
+    setUserUploadedLogoUrl,
   } = useNarrativeStore();
 
   const hasLogo = !!(businessContext?.logoUrl || userUploadedLogoUrl);
@@ -52,6 +67,23 @@ export const BrandStyleEditor = () => {
   const applyBrandFont = (fontType: 'primary' | 'secondary', font: string) => {
     updateStyle({ [`${fontType}Font`]: font });
   };
+
+  // Get color value for a role (from presentation style or brand colors)
+  const getColorValue = (role: ColorRole): string => {
+    const styleKey = `${role}Color` as keyof PresentationStyle;
+    const styleValue = presentationStyle?.[styleKey];
+    if (styleValue && typeof styleValue === 'string') return styleValue;
+    
+    // Fall back to brand colors for primary/secondary/accent
+    if (role === 'primary' || role === 'secondary' || role === 'accent') {
+      return businessContext?.brandColors?.[role] || '';
+    }
+    
+    return '';
+  };
+
+  // Get active colors count for preview
+  const activeColors = colorRoles.filter(({ role }) => getColorValue(role)).slice(0, 6);
 
   return (
     <div className="space-y-1">
@@ -79,15 +111,18 @@ export const BrandStyleEditor = () => {
           <div className="flex items-center gap-2 text-sm">
             <Palette className="w-4 h-4 text-muted-foreground" />
             <span>Brand Colors</span>
-            {hasBrandColors && (
+            {activeColors.length > 0 && (
               <div className="flex gap-1 ml-1">
-                {Object.values(businessContext?.brandColors || {}).slice(0, 3).map((color, i) => (
-                  <div
-                    key={i}
-                    className="w-3 h-3 rounded-full border border-border/50"
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
+                {activeColors.map(({ role }) => {
+                  const color = getColorValue(role);
+                  return color ? (
+                    <div
+                      key={role}
+                      className="w-3 h-3 rounded-full border border-border/50"
+                      style={{ backgroundColor: color }}
+                    />
+                  ) : null;
+                })}
               </div>
             )}
           </div>
@@ -109,10 +144,11 @@ export const BrandStyleEditor = () => {
               className="overflow-hidden"
             >
               <div className="p-3 pt-0 space-y-3">
-                {hasBrandColors ? (
+                {/* Brand Colors from Brandfetch */}
+                {hasBrandColors && (
                   <>
                     <p className="text-xs text-muted-foreground">
-                      Click a color to apply it to your presentation
+                      Quick apply from your brand
                     </p>
                     <div className="grid grid-cols-3 gap-2">
                       {(['primary', 'secondary', 'accent'] as const).map((colorType) => {
@@ -145,12 +181,48 @@ export const BrandStyleEditor = () => {
                         );
                       })}
                     </div>
+                    <div className="border-t border-border/30 my-2" />
                   </>
-                ) : (
-                  <p className="text-xs text-muted-foreground py-2">
-                    Add a business website to fetch brand colors automatically
-                  </p>
                 )}
+
+                {/* Custom Color Pickers */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      Customize colors
+                    </p>
+                    {!showAllColors && (
+                      <button
+                        onClick={() => setShowAllColors(true)}
+                        className="text-xs text-primary hover:underline flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" />
+                        More colors
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Primary colors always shown */}
+                  <div className="space-y-2">
+                    {colorRoles.slice(0, showAllColors ? 6 : 3).map(({ role, label }) => (
+                      <ColorPickerInput
+                        key={role}
+                        label={label}
+                        value={getColorValue(role)}
+                        onChange={(color) => updateStyle({ [`${role}Color`]: color })}
+                      />
+                    ))}
+                  </div>
+
+                  {showAllColors && (
+                    <button
+                      onClick={() => setShowAllColors(false)}
+                      className="text-xs text-muted-foreground hover:text-foreground w-full text-center py-1"
+                    >
+                      Show less
+                    </button>
+                  )}
+                </div>
               </div>
             </motion.div>
           )}
@@ -166,9 +238,9 @@ export const BrandStyleEditor = () => {
           <div className="flex items-center gap-2 text-sm">
             <Type className="w-4 h-4 text-muted-foreground" />
             <span>Brand Fonts</span>
-            {hasBrandFonts && (
-              <span className="text-xs text-muted-foreground ml-1">
-                {businessContext?.brandFonts?.primary}
+            {(presentationStyle?.primaryFont || hasBrandFonts) && (
+              <span className="text-xs text-muted-foreground ml-1 truncate max-w-[100px]">
+                {presentationStyle?.primaryFont || businessContext?.brandFonts?.primary}
               </span>
             )}
           </div>
@@ -190,10 +262,11 @@ export const BrandStyleEditor = () => {
               className="overflow-hidden"
             >
               <div className="p-3 pt-0 space-y-3">
-                {hasBrandFonts ? (
+                {/* Brand fonts from Brandfetch */}
+                {hasBrandFonts && (
                   <>
                     <p className="text-xs text-muted-foreground">
-                      Click to apply your brand fonts
+                      Quick apply from your brand
                     </p>
                     <div className="space-y-2">
                       {(['primary', 'secondary'] as const).map((fontType) => {
@@ -219,19 +292,35 @@ export const BrandStyleEditor = () => {
                         );
                       })}
                     </div>
+                    <div className="border-t border-border/30 my-2" />
                   </>
-                ) : (
-                  <p className="text-xs text-muted-foreground py-2">
-                    Add a business website to fetch brand fonts automatically
-                  </p>
                 )}
+
+                {/* Google Fonts Picker */}
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Choose from Google Fonts
+                  </p>
+                  <GoogleFontPicker
+                    label="Heading Font"
+                    value={presentationStyle?.primaryFont}
+                    onChange={(font) => updateStyle({ primaryFont: font })}
+                    placeholder="Select heading font..."
+                  />
+                  <GoogleFontPicker
+                    label="Body Font"
+                    value={presentationStyle?.secondaryFont}
+                    onChange={(font) => updateStyle({ secondaryFont: font })}
+                    placeholder="Select body font..."
+                  />
+                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Logo Placement Panel */}
+      {/* Logo Panel */}
       <div className="rounded-lg border border-border/50 overflow-hidden">
         <button
           onClick={() => togglePanel("logo")}
@@ -239,7 +328,7 @@ export const BrandStyleEditor = () => {
         >
           <div className="flex items-center gap-2 text-sm">
             <ImageIcon className="w-4 h-4 text-muted-foreground" />
-            <span>Logo Placement</span>
+            <span>Logo</span>
             {hasLogo && presentationStyle?.showLogo && (
               <span className="text-xs text-shimmer-start">
                 {presentationStyle?.logoPosition?.replace('-', ' ')}
@@ -264,16 +353,26 @@ export const BrandStyleEditor = () => {
               className="overflow-hidden"
             >
               <div className="p-3 pt-0 space-y-4">
-                {hasLogo ? (
+                {/* Logo Upload */}
+                <CompanyLogoUpload
+                  currentLogoUrl={userUploadedLogoUrl || undefined}
+                  brandfetchLogoUrl={businessContext?.logoUrl}
+                  onUpload={(url) => setUserUploadedLogoUrl(url)}
+                  onRemove={() => setUserUploadedLogoUrl(null)}
+                />
+
+                {hasLogo && (
                   <>
+                    <div className="border-t border-border/30" />
+                    
                     {/* Show/Hide toggle */}
                     <div className="flex items-center justify-between">
                       <Label htmlFor="show-logo" className="text-sm">Show logo on slides</Label>
-                        <Switch
-                          id="show-logo"
-                          checked={presentationStyle?.showLogo ?? true}
-                          onCheckedChange={(checked) => updateStyle({ showLogo: checked })}
-                        />
+                      <Switch
+                        id="show-logo"
+                        checked={presentationStyle?.showLogo ?? true}
+                        onCheckedChange={(checked) => updateStyle({ showLogo: checked })}
+                      />
                     </div>
 
                     {presentationStyle?.showLogo && (
@@ -322,10 +421,6 @@ export const BrandStyleEditor = () => {
                       </>
                     )}
                   </>
-                ) : (
-                  <p className="text-xs text-muted-foreground py-2">
-                    Add a business website or upload a logo to enable logo placement
-                  </p>
                 )}
               </div>
             </motion.div>

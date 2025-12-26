@@ -234,10 +234,12 @@ export const PresentScreen = () => {
   });
   const showWatermark = limits.hasWatermark;
   
-  // Load brand font dynamically
+  // Load brand fonts dynamically
   useEffect(() => {
-    if (presentationStyle?.primaryFont) {
-      const fontName = presentationStyle.primaryFont.replace(/ /g, '+');
+    const loadFont = (fontFamily: string | undefined) => {
+      if (!fontFamily) return;
+      
+      const fontName = fontFamily.replace(/ /g, '+');
       const linkId = `brand-font-${fontName}`;
       
       // Check if already loaded
@@ -248,8 +250,11 @@ export const PresentScreen = () => {
       link.href = `https://fonts.googleapis.com/css2?family=${fontName}:wght@400;500;600;700&display=swap`;
       link.rel = 'stylesheet';
       document.head.appendChild(link);
-    }
-  }, [presentationStyle?.primaryFont]);
+    };
+    
+    loadFont(presentationStyle?.primaryFont);
+    loadFont(presentationStyle?.secondaryFont);
+  }, [presentationStyle?.primaryFont, presentationStyle?.secondaryFont]);
   
   // Logo positioning classes - adjusted to avoid header overlap
   const logoPositionClasses: Record<string, string> = {
@@ -275,7 +280,7 @@ export const PresentScreen = () => {
   // Get theme icon based on current state
   const ThemeIcon = presentationTheme === 'light' ? Sun : presentationTheme === 'dark' ? Moon : Monitor;
   
-  // Brand color styling
+  // Brand color and font styling
   const brandColorStyles = useMemo(() => {
     const styles: React.CSSProperties & Record<string, string> = {};
     if (presentationStyle?.primaryColor) {
@@ -286,6 +291,21 @@ export const PresentScreen = () => {
     }
     if (presentationStyle?.accentColor) {
       styles['--brand-accent'] = presentationStyle.accentColor;
+    }
+    if (presentationStyle?.backgroundColor) {
+      styles['--brand-background'] = presentationStyle.backgroundColor;
+    }
+    if (presentationStyle?.textColor) {
+      styles['--brand-text'] = presentationStyle.textColor;
+    }
+    if (presentationStyle?.highlightColor) {
+      styles['--brand-highlight'] = presentationStyle.highlightColor;
+    }
+    if (presentationStyle?.primaryFont) {
+      styles['--brand-heading-font'] = `"${presentationStyle.primaryFont}", sans-serif`;
+    }
+    if (presentationStyle?.secondaryFont) {
+      styles['--brand-body-font'] = `"${presentationStyle.secondaryFont}", sans-serif`;
     }
     return styles;
   }, [presentationStyle]);
