@@ -30,7 +30,7 @@ serve(async (req) => {
 
     const prompt = `You are an expert analyst who extracts key claims and facts from research documents.
 
-Your task is to identify 8-10 of the most important claims, facts, or assertions from the provided text.
+Your task is to identify the most important claims, facts, or assertions from the provided text. Extract as many claims as are genuinely significant - this could be 5 for a short document or 15+ for a comprehensive one. Focus on quality over hitting a specific number.
 
 For each claim:
 1. Create a SHORT, scannable title (5-8 words max) that captures the insight
