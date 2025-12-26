@@ -229,6 +229,9 @@ importers:
       '@rollup/rollup-win32-arm64-msvc':
         specifier: ^4.54.0
         version: 4.54.0
+      '@rollup/rollup-win32-x64-msvc':
+        specifier: ^4.54.0
+        version: 4.54.0
 
 packages:
 
