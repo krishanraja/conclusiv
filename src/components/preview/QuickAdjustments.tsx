@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Layers, Layout, List, Lock, Users, AlertTriangle, Clock, Paintbrush } from "lucide-react";
+import { ChevronRight, Layers, Layout, List, Lock, Users, AlertTriangle, Clock, Paintbrush, Save } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { TemplateName } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,8 @@ import { AudienceSelector } from "./AudienceSelector";
 import { TensionCard } from "./TensionCard";
 import { DurationSelector } from "./DurationSelector";
 import { BrandStyleEditor } from "@/components/editor/BrandStyleEditor";
+import { SaveNarrativeDialog } from "./SaveNarrativeDialog";
+import { Button } from "@/components/ui/button";
 
 
 const templates: { name: TemplateName; label: string; proOnly: boolean }[] = [
@@ -21,7 +23,7 @@ const templates: { name: TemplateName; label: string; proOnly: boolean }[] = [
 
 export const QuickAdjustments = () => {
   const [expandedPanel, setExpandedPanel] = useState<string | null>(null);
-  const [settingsChanged, setSettingsChanged] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const { 
     themes, 
     toggleThemeKeep, 
@@ -32,9 +34,13 @@ export const QuickAdjustments = () => {
     tensions,
     setIncludeTensionSlide,
     businessContext,
-    presentationStyle,
+    hasUnsavedChanges,
+    originalSettings,
   } = useNarrativeStore();
   const { requireFeature, UpgradePromptComponent, isPro } = useFeatureGate();
+  
+  // Check if there are unsaved changes (only if we have original settings to compare against)
+  const showSaveButton = originalSettings && hasUnsavedChanges();
 
   const hasLogo = !!(businessContext?.logoUrl || businessContext?.userUploadedLogoUrl);
   const hasBrandData = !!(businessContext?.brandColors || businessContext?.brandFonts || hasLogo);
@@ -43,18 +49,12 @@ export const QuickAdjustments = () => {
     setExpandedPanel(expandedPanel === panel ? null : panel);
   };
 
-  const handleSettingChange = (_setting: string) => {
-    setSettingsChanged(true);
-    // Visual feedback via settingsChanged state - no toast needed
-  };
-
   const handleTemplateSelect = (template: TemplateName, proOnly: boolean) => {
     if (proOnly && !isPro) {
       requireFeature('template');
       return;
     }
     setSelectedTemplate(template);
-    handleSettingChange("Template");
   };
 
   const keptThemesCount = themes.filter((t) => t.keep).length;
@@ -96,7 +96,7 @@ export const QuickAdjustments = () => {
                 className="overflow-hidden"
               >
               <div className="p-3 pt-0">
-                  <AudienceSelector onSelect={() => handleSettingChange("Audience")} />
+                  <AudienceSelector />
                 </div>
               </motion.div>
             )}
@@ -131,7 +131,7 @@ export const QuickAdjustments = () => {
                 className="overflow-hidden"
               >
                 <div className="p-3 pt-0">
-                  <DurationSelector onSelect={() => handleSettingChange("Duration")} />
+                  <DurationSelector />
                 </div>
               </motion.div>
             )}
@@ -184,19 +184,19 @@ export const QuickAdjustments = () => {
           </div>
         )}
 
-        {/* Themes Panel */}
+        {/* Story Pillars Panel */}
         <div className="rounded-lg border border-border/50 overflow-hidden">
           <button
-            onClick={() => togglePanel("themes")}
+            onClick={() => togglePanel("storyPillars")}
             className="w-full flex items-center justify-between p-3 hover:bg-card/50 transition-colors"
           >
             <div className="flex items-center gap-2 text-sm">
               <Layers className="w-4 h-4 text-muted-foreground" />
-              <span>Themes</span>
+              <span>Story Pillars</span>
               <span className="text-xs text-muted-foreground">({keptThemesCount} selected)</span>
             </div>
             <motion.div
-              animate={{ rotate: expandedPanel === "themes" ? 90 : 0 }}
+              animate={{ rotate: expandedPanel === "storyPillars" ? 90 : 0 }}
               transition={{ duration: 0.2 }}
             >
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
@@ -204,7 +204,7 @@ export const QuickAdjustments = () => {
           </button>
 
           <AnimatePresence>
-            {expandedPanel === "themes" && (
+            {expandedPanel === "storyPillars" && (
               <motion.div
                 initial={{ height: 0 }}
                 animate={{ height: "auto" }}
@@ -377,7 +377,37 @@ export const QuickAdjustments = () => {
             )}
           </AnimatePresence>
         </div>
+
+        {/* Save Button - appears when changes are detected */}
+        <AnimatePresence>
+          {showSaveButton && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="pt-3"
+            >
+              <Button
+                onClick={() => setSaveDialogOpen(true)}
+                className="w-full gap-2 bg-shimmer-start hover:bg-shimmer-start/90"
+              >
+                <Save className="w-4 h-4" />
+                Save Changes
+              </Button>
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                Changes detected. Save to regenerate your narrative.
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+
+      {/* Save Dialog */}
+      <SaveNarrativeDialog 
+        open={saveDialogOpen} 
+        onOpenChange={setSaveDialogOpen} 
+      />
     </>
   );
 };

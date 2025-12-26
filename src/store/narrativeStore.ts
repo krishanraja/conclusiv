@@ -17,6 +17,15 @@ import type {
   PresentationStyle,
 } from "@/lib/types";
 
+// Settings snapshot for change detection
+export interface QuickAdjustmentSettings {
+  audienceMode: AudienceMode | null;
+  duration: NarrativeDuration;
+  includeTensionSlide: boolean;
+  selectedTemplate: TemplateName | null;
+  keptThemeIds: string[]; // IDs of themes with keep=true
+}
+
 interface NarrativeState {
   // Input
   rawText: string;
@@ -124,6 +133,15 @@ interface NarrativeState {
   // ===== Section Images =====
   updateSectionImage: (sectionId: string, imageUrl: string | undefined) => void;
   
+  // ===== Change Tracking for Quick Adjustments =====
+  originalSettings: QuickAdjustmentSettings | null;
+  currentNarrativeId: string | null;
+  setCurrentNarrativeId: (id: string | null) => void;
+  snapshotSettings: () => void;
+  hasUnsavedChanges: () => boolean;
+  getChangedSettings: () => Partial<QuickAdjustmentSettings>;
+  getCurrentSettings: () => QuickAdjustmentSettings;
+  
   // Reset
   reset: () => void;
 }
@@ -167,6 +185,9 @@ const initialState = {
     logoSize: 'md',
     showLogo: true,
   } as PresentationStyle,
+  // Change tracking
+  originalSettings: null as QuickAdjustmentSettings | null,
+  currentNarrativeId: null as string | null,
 };
 
 export const useNarrativeStore = create<NarrativeState>((set, get) => ({
@@ -345,6 +366,89 @@ export const useNarrativeStore = create<NarrativeState>((set, get) => ({
         }
       : null,
   })),
+  
+  // Change tracking for Quick Adjustments
+  setCurrentNarrativeId: (id) => set({ currentNarrativeId: id }),
+  
+  getCurrentSettings: () => {
+    const state = get();
+    return {
+      audienceMode: state.audienceMode,
+      duration: state.duration,
+      includeTensionSlide: state.includeTensionSlide,
+      selectedTemplate: state.selectedTemplate,
+      keptThemeIds: state.themes.filter(t => t.keep).map(t => t.id),
+    };
+  },
+  
+  snapshotSettings: () => {
+    const currentSettings = get().getCurrentSettings();
+    set({ originalSettings: currentSettings });
+  },
+  
+  hasUnsavedChanges: () => {
+    const state = get();
+    const original = state.originalSettings;
+    if (!original) return false;
+    
+    const current = state.getCurrentSettings();
+    
+    // Compare each setting
+    if (current.audienceMode !== original.audienceMode) return true;
+    if (current.duration !== original.duration) return true;
+    if (current.includeTensionSlide !== original.includeTensionSlide) return true;
+    if (current.selectedTemplate !== original.selectedTemplate) return true;
+    
+    // Compare kept theme IDs
+    const currentKept = new Set(current.keptThemeIds);
+    const originalKept = new Set(original.keptThemeIds);
+    if (currentKept.size !== originalKept.size) return true;
+    for (const id of currentKept) {
+      if (!originalKept.has(id)) return true;
+    }
+    
+    return false;
+  },
+  
+  getChangedSettings: () => {
+    const state = get();
+    const original = state.originalSettings;
+    const current = state.getCurrentSettings();
+    const changes: Partial<QuickAdjustmentSettings> = {};
+    
+    if (!original) return current;
+    
+    if (current.audienceMode !== original.audienceMode) {
+      changes.audienceMode = current.audienceMode;
+    }
+    if (current.duration !== original.duration) {
+      changes.duration = current.duration;
+    }
+    if (current.includeTensionSlide !== original.includeTensionSlide) {
+      changes.includeTensionSlide = current.includeTensionSlide;
+    }
+    if (current.selectedTemplate !== original.selectedTemplate) {
+      changes.selectedTemplate = current.selectedTemplate;
+    }
+    
+    // Check kept themes
+    const currentKept = new Set(current.keptThemeIds);
+    const originalKept = new Set(original.keptThemeIds);
+    let themesChanged = currentKept.size !== originalKept.size;
+    if (!themesChanged) {
+      for (const id of currentKept) {
+        if (!originalKept.has(id)) {
+          themesChanged = true;
+          break;
+        }
+      }
+    }
+    if (themesChanged) {
+      changes.keptThemeIds = current.keptThemeIds;
+    }
+    
+    return changes;
+  },
   
   reset: () => set(initialState),
 }));

@@ -278,7 +278,8 @@ serve(async (req) => {
       archetype, 
       duration = 'full',
       includeTensionSlide = false,
-      companyBrain
+      companyBrain,
+      storyPillars
     } = await req.json();
     
     log.info(requestId, 'Request parsed', { 
@@ -289,7 +290,8 @@ serve(async (req) => {
       archetype,
       duration,
       includeTensionSlide,
-      hasCompanyBrain: !!companyBrain
+      hasCompanyBrain: !!companyBrain,
+      storyPillarsCount: storyPillars?.length || 0
     });
 
     // Input validation
@@ -375,6 +377,15 @@ Tailor the narrative to align with their positioning and speak to their audience
     if (includeTensionSlide) {
       log.info(requestId, 'Including tension slide instruction');
       contextPrefix += `SPECIAL INSTRUCTION: Include a "Tension" or "Blind Spot" section that surfaces contradictions, hidden risks, or strategic tensions in the content. This should feel like a consultant's secret weapon - surfacing what others might miss.
+
+`;
+    }
+
+    // Story Pillars - focus the narrative on selected themes
+    if (storyPillars && Array.isArray(storyPillars) && storyPillars.length > 0) {
+      log.info(requestId, 'Applying story pillars focus', { pillars: storyPillars });
+      contextPrefix += `STORY PILLARS FOCUS: The narrative MUST prominently feature and build around these key themes/pillars: ${storyPillars.join(', ')}.
+Each pillar should have dedicated coverage in the narrative structure. Ensure these themes are woven throughout the content and given appropriate emphasis.
 
 `;
     }

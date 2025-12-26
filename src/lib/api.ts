@@ -42,6 +42,7 @@ export interface BuildNarrativeOptions {
   archetype?: NarrativeArchetype | null;
   duration?: NarrativeDuration;
   includeTensionSlide?: boolean;
+  storyPillars?: string[]; // Names of selected story pillars to focus on
 }
 
 // Logo variant from Brandfetch
@@ -152,6 +153,7 @@ export const buildNarrative = async (
         archetype: options?.archetype || undefined,
         duration: options?.duration || 'full',
         includeTensionSlide: options?.includeTensionSlide || false,
+        storyPillars: options?.storyPillars || undefined,
       }
     });
 

@@ -120,6 +120,8 @@ export const PreviewScreen = () => {
     alternatives,
     isGeneratingAlternatives,
     setIsGeneratingAlternatives,
+    // Change tracking
+    snapshotSettings,
   } = useNarrativeStore();
 
   const { requireFeature, UpgradePromptComponent, isPro, limits } = useFeatureGate();
@@ -246,6 +248,9 @@ export const PreviewScreen = () => {
           });
         }
         setNarrative(result.narrative);
+        
+        // Snapshot current settings for change detection
+        snapshotSettings();
         
         // Trigger celebration on successful build
         celebration.triggerConfetti();
