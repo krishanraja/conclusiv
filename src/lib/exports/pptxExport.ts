@@ -1,11 +1,15 @@
 import PptxGenJS from 'pptxgenjs';
 import type { NarrativeSchema, BusinessContext } from '@/lib/types';
+import { criticalImages } from '@/lib/imagePreloader';
+import { CONCLUSIV_COLORS, rgbToHex } from './colorUtils';
+import { getPptxFont, getPptxFontSize, CONCLUSIV_FONT } from './fontLoader';
+import { getPptxLogoPosition, getPptxLogoSize } from './layoutUtils';
 
-export const exportToPPTX = (
+export const exportToPPTX = async (
   narrative: NarrativeSchema,
   businessContext: BusinessContext | null,
   title?: string
-): void => {
+): Promise<void> => {
   const pptx = new PptxGenJS();
   
   const docTitle = title || businessContext?.companyName || 'Narrative';
@@ -13,26 +17,48 @@ export const exportToPPTX = (
   pptx.author = 'Conclusiv';
   pptx.subject = 'Narrative Presentation';
 
-  // Define colors based on narrative color theme
+  // Use Conclusiv brand colors
+  const conclusivPrimaryHex = rgbToHex(CONCLUSIV_COLORS.primary).replace('#', '');
+  const conclusivSecondaryHex = rgbToHex(CONCLUSIV_COLORS.secondary).replace('#', '');
+  
+  // Define colors based on narrative color theme with Conclusiv accents
   const colors = {
-    darkCinematic: { bg: '0D0D0D', text: 'FFFFFF', accent: '8B5CF6' },
-    cleanWhite: { bg: 'FFFFFF', text: '1A1A1A', accent: '3B82F6' },
-    warmNeutral: { bg: 'F5F5F4', text: '292524', accent: 'D97706' },
-    deepOcean: { bg: '0F172A', text: 'F1F5F9', accent: '06B6D4' },
+    darkCinematic: { bg: '0D0D0D', text: 'FFFFFF', accent: conclusivPrimaryHex },
+    cleanWhite: { bg: 'FAFAFC', text: '1A1A1A', accent: conclusivPrimaryHex },
+    warmNeutral: { bg: 'F5F5F4', text: '292524', accent: conclusivPrimaryHex },
+    deepOcean: { bg: '0F172A', text: 'F1F5F9', accent: conclusivPrimaryHex },
   };
 
   const theme = colors[narrative.colorTheme] || colors.darkCinematic;
 
-  // Title slide
+  // Title slide with Conclusiv branding
   const titleSlide = pptx.addSlide();
   titleSlide.background = { color: theme.bg };
   
+  // Add Conclusiv logo
+  try {
+    const logoPos = getPptxLogoPosition('top-right');
+    const logoSize = getPptxLogoSize('md');
+    titleSlide.addImage({
+      path: criticalImages.conclusivLogo,
+      x: logoPos.x,
+      y: logoPos.y,
+      w: logoSize.w,
+      h: logoSize.h,
+      sizing: { type: 'contain', w: logoSize.w, h: logoSize.h },
+    });
+  } catch (err) {
+    console.warn('Failed to add Conclusiv logo to title slide:', err);
+  }
+  
+  // Title with Conclusiv styling
   titleSlide.addText(docTitle, {
     x: 0.5,
     y: 2,
     w: '90%',
     h: 1.5,
-    fontSize: 44,
+    fontSize: getPptxFontSize('title'),
+    fontFace: getPptxFont(CONCLUSIV_FONT),
     bold: true,
     color: theme.text,
     align: 'center',
@@ -44,7 +70,8 @@ export const exportToPPTX = (
       y: 3.5,
       w: '90%',
       h: 0.5,
-      fontSize: 18,
+      fontSize: getPptxFontSize('subheading'),
+      fontFace: getPptxFont(CONCLUSIV_FONT),
       color: theme.accent,
       align: 'center',
     });
@@ -54,7 +81,8 @@ export const exportToPPTX = (
       y: 4.2,
       w: '90%',
       h: 0.5,
-      fontSize: 14,
+      fontSize: getPptxFontSize('body'),
+      fontFace: getPptxFont(CONCLUSIV_FONT),
       color: theme.text,
       align: 'center',
       italic: true,
@@ -66,23 +94,52 @@ export const exportToPPTX = (
     const slide = pptx.addSlide();
     slide.background = { color: theme.bg };
 
-    // Section number
-    slide.addText(`${index + 1}`, {
-      x: 0.5,
+    // Add Conclusiv logo to each slide
+    try {
+      const logoPos = getPptxLogoPosition('top-right');
+      const logoSize = getPptxLogoSize('sm');
+      slide.addImage({
+        path: criticalImages.conclusivLogo,
+        x: logoPos.x,
+        y: logoPos.y,
+        w: logoSize.w,
+        h: logoSize.h,
+        sizing: { type: 'contain', w: logoSize.w, h: logoSize.h },
+      });
+    } catch (err) {
+      // Ignore logo errors
+    }
+
+    // Branded section number badge
+    slide.addShape('rect', {
+      x: 0.3,
       y: 0.3,
-      w: 0.5,
-      h: 0.5,
-      fontSize: 12,
-      color: theme.accent,
+      w: 0.6,
+      h: 0.6,
+      fill: { color: theme.accent },
+      line: { color: theme.accent, width: 0 },
+    });
+    slide.addText(`${index + 1}`, {
+      x: 0.3,
+      y: 0.3,
+      w: 0.6,
+      h: 0.6,
+      fontSize: getPptxFontSize('body'),
+      fontFace: getPptxFont(CONCLUSIV_FONT),
+      bold: true,
+      color: theme.bg === '0D0D0D' ? 'FFFFFF' : 'FFFFFF',
+      align: 'center',
+      valign: 'middle',
     });
 
     // Section title
     slide.addText(section.title, {
-      x: 0.5,
+      x: 1,
       y: 0.8,
-      w: '90%',
+      w: '85%',
       h: 1,
-      fontSize: 32,
+      fontSize: getPptxFontSize('heading'),
+      fontFace: getPptxFont(CONCLUSIV_FONT),
       bold: true,
       color: theme.text,
     });
@@ -94,17 +151,23 @@ export const exportToPPTX = (
         y: 2,
         w: '90%',
         h: 2,
-        fontSize: 18,
+        fontSize: getPptxFontSize('subheading'),
+        fontFace: getPptxFont(CONCLUSIV_FONT),
         color: theme.text,
         valign: 'top',
       });
     }
 
-    // Section items as bullet points
+    // Section items as branded bullet points
     if (section.items && section.items.length > 0) {
       const bulletText = section.items.map((item) => ({
         text: item,
-        options: { bullet: { code: '2022' }, fontSize: 14, color: theme.text },
+        options: { 
+          bullet: { type: 'number' as const, color: theme.accent },
+          fontSize: getPptxFontSize('body'),
+          fontFace: getPptxFont(CONCLUSIV_FONT),
+          color: theme.text,
+        },
       }));
 
       slide.addText(bulletText, {
@@ -117,16 +180,32 @@ export const exportToPPTX = (
     }
   });
 
-  // Thank you slide
+  // Thank you slide with Conclusiv branding
   const endSlide = pptx.addSlide();
   endSlide.background = { color: theme.bg };
   
+  // Add Conclusiv logo
+  try {
+    const logoSize = getPptxLogoSize('lg');
+    endSlide.addImage({
+      path: criticalImages.conclusivLogo,
+      x: 4,
+      y: 1.5,
+      w: logoSize.w,
+      h: logoSize.h,
+      sizing: { type: 'contain', w: logoSize.w, h: logoSize.h },
+    });
+  } catch (err) {
+    // Ignore
+  }
+  
   endSlide.addText('Thank You', {
     x: 0.5,
-    y: 2.5,
+    y: 3,
     w: '90%',
     h: 1,
-    fontSize: 44,
+    fontSize: getPptxFontSize('title'),
+    fontFace: getPptxFont(CONCLUSIV_FONT),
     bold: true,
     color: theme.text,
     align: 'center',
@@ -134,10 +213,11 @@ export const exportToPPTX = (
 
   endSlide.addText('Generated by Conclusiv', {
     x: 0.5,
-    y: 4,
+    y: 4.2,
     w: '90%',
     h: 0.5,
-    fontSize: 12,
+    fontSize: getPptxFontSize('caption'),
+    fontFace: getPptxFont(CONCLUSIV_FONT),
     color: theme.accent,
     align: 'center',
   });

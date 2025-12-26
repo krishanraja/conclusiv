@@ -122,6 +122,8 @@ export const PreviewScreen = () => {
     setIsGeneratingAlternatives,
     // Change tracking
     snapshotSettings,
+    // Presentation styling
+    presentationStyle,
   } = useNarrativeStore();
 
   const { requireFeature, UpgradePromptComponent, isPro, limits } = useFeatureGate();
@@ -329,6 +331,7 @@ export const PreviewScreen = () => {
         logoUrl: businessContext?.logoUrl || businessContext?.userUploadedLogoUrl,
         brandColors: businessContext?.brandColors,
         brandFonts: businessContext?.brandFonts,
+        presentationStyle: presentationStyle,
       };
       
       // Use branded exports when brand context is available and user is Pro
@@ -338,14 +341,14 @@ export const PreviewScreen = () => {
         if (useBranded) {
           await exportBrandedPDF(narrative, businessContext, title, exportOptions);
         } else {
-          exportToPDF(narrative, businessContext, title, { watermark: !isPro });
+          await exportToPDF(narrative, businessContext, title, { watermark: !isPro });
         }
         // Download initiated by browser - no toast needed
       } else {
         if (useBranded) {
           await exportBrandedPPTX(narrative, businessContext, title, exportOptions);
         } else {
-          exportToPPTX(narrative, businessContext, title);
+          await exportToPPTX(narrative, businessContext, title);
         }
         // Download initiated by browser - no toast needed
       }
