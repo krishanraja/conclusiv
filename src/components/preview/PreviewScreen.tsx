@@ -254,7 +254,6 @@ export const PreviewScreen = () => {
         
         // Trigger celebration on successful build
         celebration.triggerConfetti();
-        celebration.triggerAchievement("Narrative created!", "star");
       }
 
       // Extract tensions in parallel (non-blocking)
@@ -567,9 +566,9 @@ export const PreviewScreen = () => {
         )}
       </AnimatePresence>
 
-      <div className="min-h-[calc(100dvh-4rem)] flex flex-col pb-20 md:pb-0">
+      <div className="h-[calc(100vh-4rem)] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border/50">
+        <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-border/50">
           <button
             onClick={handleBack}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -639,7 +638,7 @@ export const PreviewScreen = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex">
+        <div className="flex-1 flex overflow-hidden">
           {/* Left Panel - Narrative Score (collapsible) */}
           <AnimatePresence mode="wait">
             {leftPanelOpen ? (
@@ -648,9 +647,9 @@ export const PreviewScreen = () => {
                 animate={{ width: 280, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="border-r border-border/50 hidden lg:flex flex-col overflow-hidden"
+                className="flex-shrink-0 border-r border-border/50 hidden lg:flex flex-col overflow-hidden"
               >
-                <div className="p-4 overflow-y-auto flex-1">
+                <div className="p-4 overflow-y-auto flex-1 min-h-0">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                       <BarChart3 className="w-3.5 h-3.5" />
@@ -701,7 +700,7 @@ export const PreviewScreen = () => {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="hidden lg:flex flex-col items-center py-4 px-2 border-r border-border/50"
+                className="flex-shrink-0 hidden lg:flex flex-col items-center py-4 px-2 border-r border-border/50"
               >
                 <button
                   onClick={() => setLeftPanelOpen(true)}
@@ -723,9 +722,9 @@ export const PreviewScreen = () => {
           </AnimatePresence>
 
           {/* Preview Area */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col overflow-hidden min-w-0">
             {/* Mode Toggle */}
-            <div className="flex justify-center py-4">
+            <div className="flex-shrink-0 flex justify-center py-4">
               <div className="flex items-center gap-1 p-1 rounded-lg bg-card border border-border/50">
                 <button
                   onClick={() => setViewMode("present")}
@@ -767,7 +766,7 @@ export const PreviewScreen = () => {
             </div>
 
             {/* Preview Window - Logo rendered outside overflow-hidden to prevent clipping */}
-            <div className="flex-1 mx-4 mb-4 relative min-h-[50vh] lg:min-h-0">
+            <div className="flex-1 mx-4 mb-4 relative min-w-0">
               {/* Brand Logo Overlay - positioned outside the clipped container */}
               <BrandLogoOverlay />
               
@@ -794,7 +793,7 @@ export const PreviewScreen = () => {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="w-72 border-l border-border/50 p-4 hidden lg:block overflow-y-auto max-h-[calc(100vh-10rem)]"
+            className="flex-shrink-0 w-72 border-l border-border/50 p-4 hidden lg:block overflow-y-auto"
           >
             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">
               Quick Adjustments
@@ -804,7 +803,7 @@ export const PreviewScreen = () => {
         </div>
 
         {/* Footer CTA */}
-        <div className="flex justify-center p-4 border-t border-border/50">
+        <div className="flex-shrink-0 flex justify-center p-4 border-t border-border/50">
           <Button variant="shimmer" size="lg" onClick={handlePresent} disabled={!narrative}>
             <Play className="w-4 h-4 mr-2" />
             Present
