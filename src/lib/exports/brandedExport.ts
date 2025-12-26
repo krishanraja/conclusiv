@@ -3,7 +3,7 @@ import PptxGenJS from 'pptxgenjs';
 import type { NarrativeSchema, BusinessContext, PresentationStyle } from '@/lib/types';
 import { toRgb, toHex, toHexNoHash, getBackgroundColor, getTextColor, type RGB } from './colorUtils';
 import { getPdfFont, getPptxFont, getFontSize, getPptxFontSize, getBrandFonts, CONCLUSIV_FONT } from './fontLoader';
-import { addPdfHeader, addPdfFooter, addPdfWatermark, addPdfSectionDivider, addPdfBullet } from './layoutUtils';
+import { addPdfHeader, addPdfFooter, addPdfWatermark, addPdfSectionDivider, addPdfBullet, getPptxLogoPosition, getPptxLogoSize } from './layoutUtils';
 
 interface BrandedExportOptions {
   watermark?: boolean;
@@ -123,48 +123,52 @@ export const exportBrandedPDF = async (
   const textColor = getTextColor(bgColor);
   doc.setTextColor(textColor.r, textColor.g, textColor.b);
 
-  // Sections
-  narrative.sections.forEach((section, index) => {
+  // Sections - use for...of to allow await
+  for (const [index, section] of narrative.sections.entries()) {
     if (yPosition > 250) {
       doc.addPage();
       // Add background and logo to new page
       doc.setFillColor(bgColor.r, bgColor.g, bgColor.b);
       doc.rect(0, 0, pageWidth, pageHeight, 'F');
       
-      // Re-add logo if enabled
+      // Re-add logo if enabled - await loading
       if (options.logoUrl && options.presentationStyle?.showLogo) {
         try {
           const img = new Image();
           img.crossOrigin = 'Anonymous';
-          img.onload = () => {
-            const logoSize = options.presentationStyle?.logoSize || 'md';
-            const logoHeight = logoSize === 'lg' ? 18 : logoSize === 'sm' ? 12 : 15;
-            const logoWidth = (img.width / img.height) * logoHeight;
-            let logoX = margin;
-            let logoY = margin / 2;
-            
-            switch (options.presentationStyle?.logoPosition) {
-              case 'top-right':
-                logoX = pageWidth - margin - logoWidth;
-                break;
-              case 'bottom-left':
-                logoY = pageHeight - margin - logoHeight;
-                break;
-              case 'bottom-right':
-                logoX = pageWidth - margin - logoWidth;
-                logoY = pageHeight - margin - logoHeight;
-                break;
-            }
-            
-            try {
-              doc.addImage(img, 'PNG', logoX, logoY, logoWidth, logoHeight);
-            } catch (err) {
-              // Ignore
-            }
-          };
-          img.src = options.logoUrl;
+          await new Promise<void>((resolve) => {
+            img.onload = () => {
+              const logoSize = options.presentationStyle?.logoSize || 'md';
+              const logoHeight = logoSize === 'lg' ? 18 : logoSize === 'sm' ? 12 : 15;
+              const logoWidth = (img.width / img.height) * logoHeight;
+              let logoX = margin;
+              let logoY = margin / 2;
+              
+              switch (options.presentationStyle?.logoPosition) {
+                case 'top-right':
+                  logoX = pageWidth - margin - logoWidth;
+                  break;
+                case 'bottom-left':
+                  logoY = pageHeight - margin - logoHeight;
+                  break;
+                case 'bottom-right':
+                  logoX = pageWidth - margin - logoWidth;
+                  logoY = pageHeight - margin - logoHeight;
+                  break;
+              }
+              
+              try {
+                doc.addImage(img, 'PNG', logoX, logoY, logoWidth, logoHeight);
+              } catch (err) {
+                console.warn('Failed to add logo to PDF page:', err);
+              }
+              resolve();
+            };
+            img.onerror = () => resolve(); // Continue even if logo fails
+            img.src = options.logoUrl;
+          });
         } catch (err) {
-          // Ignore
+          console.warn('Logo loading failed:', err);
         }
       }
       yPosition = margin + 5;
@@ -199,11 +203,52 @@ export const exportBrandedPDF = async (
       doc.setFontSize(getFontSize('body'));
       doc.setFont(secondaryFont, 'normal');
       doc.setTextColor(textColor.r * 0.8, textColor.g * 0.8, textColor.b * 0.8);
-      section.items.forEach((item) => {
+      for (const item of section.items) {
         if (yPosition > 270) {
           doc.addPage();
           doc.setFillColor(bgColor.r, bgColor.g, bgColor.b);
           doc.rect(0, 0, pageWidth, pageHeight, 'F');
+          
+          // Re-add logo if enabled - await loading
+          if (options.logoUrl && options.presentationStyle?.showLogo) {
+            try {
+              const img = new Image();
+              img.crossOrigin = 'Anonymous';
+              await new Promise<void>((resolve) => {
+                img.onload = () => {
+                  const logoSize = options.presentationStyle?.logoSize || 'md';
+                  const logoHeight = logoSize === 'lg' ? 18 : logoSize === 'sm' ? 12 : 15;
+                  const logoWidth = (img.width / img.height) * logoHeight;
+                  let logoX = margin;
+                  let logoY = margin / 2;
+                  
+                  switch (options.presentationStyle?.logoPosition) {
+                    case 'top-right':
+                      logoX = pageWidth - margin - logoWidth;
+                      break;
+                    case 'bottom-left':
+                      logoY = pageHeight - margin - logoHeight;
+                      break;
+                    case 'bottom-right':
+                      logoX = pageWidth - margin - logoWidth;
+                      logoY = pageHeight - margin - logoHeight;
+                      break;
+                  }
+                  
+                  try {
+                    doc.addImage(img, 'PNG', logoX, logoY, logoWidth, logoHeight);
+                  } catch (err) {
+                    // Ignore
+                  }
+                  resolve();
+                };
+                img.onerror = () => resolve();
+                img.src = options.logoUrl;
+              });
+            } catch (err) {
+              // Ignore
+            }
+          }
           yPosition = margin + 5;
         }
         // Branded bullet with accent color
@@ -211,11 +256,11 @@ export const exportBrandedPDF = async (
         const bulletLines = doc.splitTextToSize(item, contentWidth - 10);
         doc.text(bulletLines, margin + 8, yPosition);
         yPosition += bulletLines.length * 5 + 4;
-      });
+      }
     }
 
     yPosition += 12;
-  });
+  }
 
   // Footer on all pages
   const pageCount = doc.getNumberOfPages();
@@ -288,34 +333,40 @@ export const exportBrandedPPTX = async (
   // Title slide with gradient background and logo
   const titleSlide = pptx.addSlide();
   
-  // Add gradient background using brand colors
-  try {
-    titleSlide.background = {
-      path: 'https://via.placeholder.com/1920x1080.png',
-      transparency: 100,
-    } as any;
-    // Use gradient effect with brand colors
-    titleSlide.background = { 
-      color: colors.bg,
-      // Add subtle gradient effect using shapes
-    } as any;
-  } catch (err) {
-    titleSlide.background = { color: colors.bg };
-  }
+  // Set background color
+  titleSlide.background = { color: colors.bg };
 
   if (options.logoUrl && options.presentationStyle?.showLogo) {
-    const logoPos = getPptxLogoPosition(
-      options.presentationStyle.logoPosition || 'top-right'
-    );
-    const logoSize = getPptxLogoSize(options.presentationStyle.logoSize || 'md');
-    
-    titleSlide.addImage({
-      path: options.logoUrl,
-      x: logoPos.x,
-      y: logoPos.y,
-      w: logoSize.w,
-      h: logoSize.h,
-      sizing: { type: 'contain', w: logoSize.w, h: logoSize.h },
+    // Preload logo before adding to slide
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'Anonymous';
+    await new Promise<void>((resolve) => {
+      logoImg.onload = () => {
+        try {
+          const logoPosition = (options.presentationStyle?.logoPosition === 'none' || !options.presentationStyle?.logoPosition)
+            ? 'top-right'
+            : options.presentationStyle.logoPosition;
+          const logoPos = getPptxLogoPosition(logoPosition as 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right');
+          const logoSize = getPptxLogoSize(options.presentationStyle?.logoSize || 'md');
+          
+          titleSlide.addImage({
+            path: options.logoUrl!,
+            x: logoPos.x,
+            y: logoPos.y,
+            w: logoSize.w,
+            h: logoSize.h,
+            sizing: { type: 'contain', w: logoSize.w, h: logoSize.h },
+          });
+        } catch (err) {
+          console.warn('Failed to add logo to title slide:', err);
+        }
+        resolve();
+      };
+      logoImg.onerror = () => {
+        console.warn('Failed to load logo for title slide');
+        resolve(); // Continue even if logo fails
+      };
+      logoImg.src = options.logoUrl;
     });
   }
 
@@ -359,24 +410,38 @@ export const exportBrandedPPTX = async (
     });
   }
 
-  // Content slides
-  narrative.sections.forEach((section, index) => {
+  // Content slides - use for...of to allow await
+  for (const [index, section] of narrative.sections.entries()) {
     const slide = pptx.addSlide();
     slide.background = { color: colors.bg };
 
-    // Add logo to each slide if enabled
+    // Preload and add logo to each slide if enabled
     if (options.logoUrl && options.presentationStyle?.showLogo) {
-      const logoPos = getPptxLogoPosition(
-        options.presentationStyle.logoPosition || 'top-right'
-      );
-      const logoSize = getPptxLogoSize('sm');
-      slide.addImage({
-        path: options.logoUrl,
-        x: logoPos.x,
-        y: logoPos.y,
-        w: logoSize.w,
-        h: logoSize.h,
-        sizing: { type: 'contain', w: logoSize.w, h: logoSize.h },
+      const logoImg = new Image();
+      logoImg.crossOrigin = 'Anonymous';
+      await new Promise<void>((resolve) => {
+        logoImg.onload = () => {
+          try {
+            const logoPosition = (options.presentationStyle?.logoPosition === 'none' || !options.presentationStyle?.logoPosition)
+              ? 'top-right'
+              : options.presentationStyle.logoPosition;
+            const logoPos = getPptxLogoPosition(logoPosition as 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right');
+            const logoSize = getPptxLogoSize('sm');
+            slide.addImage({
+              path: options.logoUrl!,
+              x: logoPos.x,
+              y: logoPos.y,
+              w: logoSize.w,
+              h: logoSize.h,
+              sizing: { type: 'contain', w: logoSize.w, h: logoSize.h },
+            });
+          } catch (err) {
+            // Ignore logo errors
+          }
+          resolve();
+        };
+        logoImg.onerror = () => resolve(); // Continue even if logo fails
+        logoImg.src = options.logoUrl;
       });
     }
 
@@ -448,21 +513,35 @@ export const exportBrandedPPTX = async (
         valign: 'top',
       });
     }
-  });
+  }
 
   // Thank you slide with brand styling
   const endSlide = pptx.addSlide();
   endSlide.background = { color: colors.bg };
 
   if (options.logoUrl && options.presentationStyle?.showLogo) {
-    const logoSize = getPptxLogoSize('lg');
-    endSlide.addImage({
-      path: options.logoUrl,
-      x: 4,
-      y: 1.5,
-      w: logoSize.w,
-      h: logoSize.h,
-      sizing: { type: 'contain', w: logoSize.w, h: logoSize.h },
+    // Preload logo before adding to slide
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'Anonymous';
+    await new Promise<void>((resolve) => {
+      logoImg.onload = () => {
+        try {
+          const logoSize = getPptxLogoSize('lg');
+          endSlide.addImage({
+            path: options.logoUrl!,
+            x: 4,
+            y: 1.5,
+            w: logoSize.w,
+            h: logoSize.h,
+            sizing: { type: 'contain', w: logoSize.w, h: logoSize.h },
+          });
+        } catch (err) {
+          // Ignore
+        }
+        resolve();
+      };
+      logoImg.onerror = () => resolve(); // Continue even if logo fails
+      logoImg.src = options.logoUrl;
     });
   }
 

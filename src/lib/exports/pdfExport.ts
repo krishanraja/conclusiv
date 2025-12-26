@@ -76,29 +76,35 @@ export const exportToPDF = async (
   // Reset text color
   doc.setTextColor(30, 30, 30);
 
-  // Sections
-  narrative.sections.forEach((section, index) => {
+  // Sections - use for...of to allow await
+  for (const [index, section] of narrative.sections.entries()) {
     // Check if we need a new page
     if (yPosition > 250) {
       doc.addPage();
       // Add background and logo to new page
       doc.setFillColor(250, 250, 252);
       doc.rect(0, 0, pageWidth, pageHeight, 'F');
+      
+      // Await logo loading before proceeding
       try {
         const logoImg = new Image();
         logoImg.crossOrigin = 'Anonymous';
-        logoImg.onload = () => {
-          const logoHeight = 12;
-          const logoWidth = (logoImg.width / logoImg.height) * logoHeight;
-          try {
-            doc.addImage(logoImg, 'PNG', pageWidth - margin - logoWidth, margin / 2, logoWidth, logoHeight);
-          } catch (err) {
-            // Ignore
-          }
-        };
-        logoImg.src = criticalImages.conclusivLogo;
+        await new Promise<void>((resolve) => {
+          logoImg.onload = () => {
+            const logoHeight = 12;
+            const logoWidth = (logoImg.width / logoImg.height) * logoHeight;
+            try {
+              doc.addImage(logoImg, 'PNG', pageWidth - margin - logoWidth, margin / 2, logoWidth, logoHeight);
+            } catch (err) {
+              console.warn('Failed to add logo to PDF page:', err);
+            }
+            resolve();
+          };
+          logoImg.onerror = () => resolve(); // Continue even if logo fails
+          logoImg.src = criticalImages.conclusivLogo;
+        });
       } catch (err) {
-        // Ignore
+        console.warn('Logo loading failed:', err);
       }
       yPosition = margin + 5;
     }
@@ -132,11 +138,33 @@ export const exportToPDF = async (
       doc.setFontSize(getFontSize('body'));
       doc.setFont(getPdfFont(CONCLUSIV_FONT), 'normal');
       doc.setTextColor(60, 60, 60);
-      section.items.forEach((item) => {
+      for (const item of section.items) {
         if (yPosition > 270) {
           doc.addPage();
           doc.setFillColor(250, 250, 252);
           doc.rect(0, 0, pageWidth, pageHeight, 'F');
+          
+          // Await logo loading for new page
+          try {
+            const logoImg = new Image();
+            logoImg.crossOrigin = 'Anonymous';
+            await new Promise<void>((resolve) => {
+              logoImg.onload = () => {
+                const logoHeight = 12;
+                const logoWidth = (logoImg.width / logoImg.height) * logoHeight;
+                try {
+                  doc.addImage(logoImg, 'PNG', pageWidth - margin - logoWidth, margin / 2, logoWidth, logoHeight);
+                } catch (err) {
+                  // Ignore
+                }
+                resolve();
+              };
+              logoImg.onerror = () => resolve();
+              logoImg.src = criticalImages.conclusivLogo;
+            });
+          } catch (err) {
+            // Ignore
+          }
           yPosition = margin + 5;
         }
         // Branded bullet with Conclusiv color
@@ -144,11 +172,11 @@ export const exportToPDF = async (
         const bulletLines = doc.splitTextToSize(item, contentWidth - 10);
         doc.text(bulletLines, margin + 8, yPosition);
         yPosition += bulletLines.length * 5 + 4;
-      });
+      }
     }
 
     yPosition += 12;
-  });
+  }
 
   // Footer on all pages
   const pageCount = doc.getNumberOfPages();

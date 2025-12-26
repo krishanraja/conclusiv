@@ -35,20 +35,36 @@ export const exportToPPTX = async (
   const titleSlide = pptx.addSlide();
   titleSlide.background = { color: theme.bg };
   
-  // Add Conclusiv logo
+  // Preload and add Conclusiv logo
   try {
-    const logoPos = getPptxLogoPosition('top-right');
-    const logoSize = getPptxLogoSize('md');
-    titleSlide.addImage({
-      path: criticalImages.conclusivLogo,
-      x: logoPos.x,
-      y: logoPos.y,
-      w: logoSize.w,
-      h: logoSize.h,
-      sizing: { type: 'contain', w: logoSize.w, h: logoSize.h },
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'Anonymous';
+    await new Promise<void>((resolve, reject) => {
+      logoImg.onload = () => {
+        try {
+          const logoPos = getPptxLogoPosition('top-right');
+          const logoSize = getPptxLogoSize('md');
+          titleSlide.addImage({
+            path: criticalImages.conclusivLogo,
+            x: logoPos.x,
+            y: logoPos.y,
+            w: logoSize.w,
+            h: logoSize.h,
+            sizing: { type: 'contain', w: logoSize.w, h: logoSize.h },
+          });
+        } catch (err) {
+          console.warn('Failed to add Conclusiv logo to title slide:', err);
+        }
+        resolve();
+      };
+      logoImg.onerror = () => {
+        console.warn('Failed to load Conclusiv logo for title slide');
+        resolve(); // Continue even if logo fails
+      };
+      logoImg.src = criticalImages.conclusivLogo;
     });
   } catch (err) {
-    console.warn('Failed to add Conclusiv logo to title slide:', err);
+    console.warn('Logo loading failed:', err);
   }
   
   // Title with Conclusiv styling
@@ -90,21 +106,34 @@ export const exportToPPTX = async (
   }
 
   // Content slides for each section
-  narrative.sections.forEach((section, index) => {
+  for (const [index, section] of narrative.sections.entries()) {
     const slide = pptx.addSlide();
     slide.background = { color: theme.bg };
 
-    // Add Conclusiv logo to each slide
+    // Preload and add Conclusiv logo to each slide
     try {
-      const logoPos = getPptxLogoPosition('top-right');
-      const logoSize = getPptxLogoSize('sm');
-      slide.addImage({
-        path: criticalImages.conclusivLogo,
-        x: logoPos.x,
-        y: logoPos.y,
-        w: logoSize.w,
-        h: logoSize.h,
-        sizing: { type: 'contain', w: logoSize.w, h: logoSize.h },
+      const logoImg = new Image();
+      logoImg.crossOrigin = 'Anonymous';
+      await new Promise<void>((resolve) => {
+        logoImg.onload = () => {
+          try {
+            const logoPos = getPptxLogoPosition('top-right');
+            const logoSize = getPptxLogoSize('sm');
+            slide.addImage({
+              path: criticalImages.conclusivLogo,
+              x: logoPos.x,
+              y: logoPos.y,
+              w: logoSize.w,
+              h: logoSize.h,
+              sizing: { type: 'contain', w: logoSize.w, h: logoSize.h },
+            });
+          } catch (err) {
+            // Ignore logo errors
+          }
+          resolve();
+        };
+        logoImg.onerror = () => resolve(); // Continue even if logo fails
+        logoImg.src = criticalImages.conclusivLogo;
       });
     } catch (err) {
       // Ignore logo errors
@@ -178,22 +207,35 @@ export const exportToPPTX = async (
         valign: 'top',
       });
     }
-  });
+  }
 
   // Thank you slide with Conclusiv branding
   const endSlide = pptx.addSlide();
   endSlide.background = { color: theme.bg };
   
-  // Add Conclusiv logo
+  // Preload and add Conclusiv logo
   try {
-    const logoSize = getPptxLogoSize('lg');
-    endSlide.addImage({
-      path: criticalImages.conclusivLogo,
-      x: 4,
-      y: 1.5,
-      w: logoSize.w,
-      h: logoSize.h,
-      sizing: { type: 'contain', w: logoSize.w, h: logoSize.h },
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'Anonymous';
+    await new Promise<void>((resolve) => {
+      logoImg.onload = () => {
+        try {
+          const logoSize = getPptxLogoSize('lg');
+          endSlide.addImage({
+            path: criticalImages.conclusivLogo,
+            x: 4,
+            y: 1.5,
+            w: logoSize.w,
+            h: logoSize.h,
+            sizing: { type: 'contain', w: logoSize.w, h: logoSize.h },
+          });
+        } catch (err) {
+          // Ignore
+        }
+        resolve();
+      };
+      logoImg.onerror = () => resolve(); // Continue even if logo fails
+      logoImg.src = criticalImages.conclusivLogo;
     });
   } catch (err) {
     // Ignore
