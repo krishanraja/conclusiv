@@ -220,7 +220,7 @@ export const SaveNarrativeDialog = ({ open, onOpenChange }: SaveNarrativeDialogP
             
             <Button
               onClick={() => handleRebuild(true)}
-              className="w-full sm:w-auto gap-2 bg-shimmer-start hover:bg-shimmer-start/90"
+              className="w-full sm:w-auto gap-2 bg-shimmer-start hover:bg-shimmer-start/90 text-background"
             >
               <FilePlus className="w-4 h-4" />
               Save as New
