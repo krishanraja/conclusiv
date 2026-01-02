@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Layers, Layout, List, Lock, Users, AlertTriangle, Clock, Paintbrush, Save } from "lucide-react";
+import { ChevronRight, Layers, Layout, List, Lock, Users, AlertTriangle, Clock, Paintbrush, Save, Wand2, Minimize2, Maximize2, ShieldAlert, RotateCcw, BookOpen, Loader2 } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { TemplateName } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,43 @@ import { DurationSelector } from "./DurationSelector";
 import { BrandStyleEditor } from "@/components/editor/BrandStyleEditor";
 import { SaveNarrativeDialog } from "./SaveNarrativeDialog";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+type RemixOption = "shorter" | "bolder" | "safer" | "flip" | "plain-english";
+
+const remixOptions: { id: RemixOption; label: string; icon: React.ReactNode; prompt: string }[] = [
+  {
+    id: "shorter",
+    label: "Shorter",
+    icon: <Minimize2 className="w-4 h-4" />,
+    prompt: "Compress this narrative to only the most essential 3-4 points. Be extremely concise but keep the core message and call to action intact.",
+  },
+  {
+    id: "bolder",
+    label: "Bolder",
+    icon: <Maximize2 className="w-4 h-4" />,
+    prompt: "Rewrite this narrative with more confident, assertive language. Remove hedging words, make claims stronger, and add more conviction to the recommendations.",
+  },
+  {
+    id: "safer",
+    label: "Safer",
+    icon: <ShieldAlert className="w-4 h-4" />,
+    prompt: "Rewrite this narrative with more balanced language. Add appropriate caveats, acknowledge uncertainties, and present a more measured view while keeping the core insights.",
+  },
+  {
+    id: "flip",
+    label: "Flip",
+    icon: <RotateCcw className="w-4 h-4" />,
+    prompt: "Rewrite this narrative from the opposite perspective. If it was optimistic, make it cautionary. If it highlighted opportunities, highlight risks. Maintain factual accuracy but shift the framing entirely.",
+  },
+  {
+    id: "plain-english",
+    label: "Simple",
+    icon: <BookOpen className="w-4 h-4" />,
+    prompt: "Rewrite this narrative in plain English. Replace technical jargon, acronyms, and industry-specific terms with simple, everyday language that anyone can understand.",
+  },
+];
 
 
 const templates: { name: TemplateName; label: string; proOnly: boolean }[] = [
@@ -24,12 +61,16 @@ const templates: { name: TemplateName; label: string; proOnly: boolean }[] = [
 export const QuickAdjustments = () => {
   const [expandedPanel, setExpandedPanel] = useState<string | null>(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [isRemixing, setIsRemixing] = useState<RemixOption | null>(null);
+  const { toast } = useToast();
   const { 
     themes, 
     toggleThemeKeep, 
     selectedTemplate, 
     setSelectedTemplate, 
     narrative,
+    setNarrative,
+    rawText,
     audienceMode,
     tensions,
     setIncludeTensionSlide,
@@ -38,6 +79,39 @@ export const QuickAdjustments = () => {
     originalSettings,
   } = useNarrativeStore();
   const { requireFeature, UpgradePromptComponent, isPro } = useFeatureGate();
+
+  const handleRemix = async (option: typeof remixOptions[0]) => {
+    if (!narrative) return;
+
+    setIsRemixing(option.id);
+
+    try {
+      const response = await supabase.functions.invoke("build-narrative", {
+        body: {
+          text: rawText,
+          businessContext,
+          remixPrompt: option.prompt,
+          currentNarrative: narrative,
+        },
+      });
+
+      if (response.error) throw response.error;
+
+      const result = response.data;
+      if (result.narrative) {
+        setNarrative(result.narrative);
+      }
+    } catch (error) {
+      console.error("Remix failed:", error);
+      toast({
+        title: "Remix failed",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRemixing(null);
+    }
+  };
   
   // Check if there are unsaved changes (only if we have original settings to compare against)
   const showSaveButton = originalSettings && hasUnsavedChanges();
@@ -372,6 +446,72 @@ export const QuickAdjustments = () => {
                       <span className="truncate">{section.title}</span>
                     </div>
                   ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Remix Panel - Mobile-friendly quick transforms */}
+        <div className="rounded-lg border border-border/50 overflow-hidden">
+          <button
+            onClick={() => togglePanel("remix")}
+            className="w-full flex items-center justify-between p-3 hover:bg-card/50 transition-colors"
+          >
+            <div className="flex items-center gap-2 text-sm">
+              <Wand2 className="w-4 h-4 text-primary" />
+              <span>Remix</span>
+              {isRemixing && (
+                <Loader2 className="w-3 h-3 animate-spin text-primary" />
+              )}
+            </div>
+            <motion.div
+              animate={{ rotate: expandedPanel === "remix" ? 90 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </motion.div>
+          </button>
+
+          <AnimatePresence>
+            {expandedPanel === "remix" && (
+              <motion.div
+                initial={{ height: 0 }}
+                animate={{ height: "auto" }}
+                exit={{ height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="p-3 pt-0">
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Transform your narrative style
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {remixOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => handleRemix(option)}
+                        disabled={isRemixing !== null || !narrative}
+                        className={cn(
+                          "flex flex-col items-center gap-1.5 p-2.5 rounded-lg border transition-all",
+                          "hover:bg-primary/5 hover:border-primary/30",
+                          isRemixing === option.id 
+                            ? "bg-primary/10 border-primary/40" 
+                            : "border-border/50 bg-card/30",
+                          (isRemixing !== null && isRemixing !== option.id) && "opacity-50"
+                        )}
+                      >
+                        {isRemixing === option.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                        ) : (
+                          <span className="text-muted-foreground">{option.icon}</span>
+                        )}
+                        <span className="text-[10px] font-medium text-foreground">
+                          {option.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             )}

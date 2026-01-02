@@ -52,6 +52,25 @@ export const RefineScreen = () => {
     }
   }, []);
 
+  // Client-side filter for low-value claims (safety net)
+  const filterLowValueClaims = (claims: typeof keyClaims) => {
+    const lowValuePatterns = [
+      /no\s+(direct\s+)?match(es)?\s+found/i,
+      /no\s+results/i,
+      /not\s+found/i,
+      /unable\s+to\s+find/i,
+      /could\s+not\s+(find|locate)/i,
+      /no\s+specific/i,
+      /no\s+evidence/i,
+      /none\s+identified/i,
+    ];
+    
+    return claims.filter(claim => {
+      const combined = `${claim.title} ${claim.text}`.toLowerCase();
+      return !lowValuePatterns.some(pattern => pattern.test(combined));
+    });
+  };
+
   // Extract claims when switching to claims tab
   const handleTabChange = async (value: string) => {
     haptics.selection();
@@ -69,7 +88,9 @@ export const RefineScreen = () => {
       try {
         const result = await extractKeyClaims(rawText);
         if (result.claims) {
-          setKeyClaims(result.claims);
+          // Filter out any low-value claims that slipped through
+          const filteredClaims = filterLowValueClaims(result.claims);
+          setKeyClaims(filteredClaims);
           setClaimsLoaded(true);
         } else if (result.error) {
           toast({
@@ -319,6 +340,7 @@ export const RefineScreen = () => {
                       onReject={() => rejectClaim(claim.id)}
                       onUpdate={(updates) => updateClaim(claim.id, updates)}
                       onSwapAlternative={(altIndex) => swapClaimAlternative(claim.id, altIndex)}
+                      autoVerify
                     />
                   ))}
                 </div>

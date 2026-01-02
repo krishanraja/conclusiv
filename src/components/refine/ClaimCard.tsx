@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, X, Pencil, ChevronDown, ChevronUp, Loader2, ArrowRightLeft } from "lucide-react";
+import { Check, X, Pencil, ChevronDown, ChevronUp, Loader2, ArrowRightLeft, ShieldCheck, ShieldAlert, ShieldQuestion, CircleDashed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,9 +10,81 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { normalizeClaim } from "@/lib/api";
-import type { KeyClaim } from "@/lib/types";
+import { normalizeClaim, verifyClaim } from "@/lib/api";
+import type { KeyClaim, ClaimVerification } from "@/lib/types";
+
+// Verification badge component
+const VerificationBadge = ({ verification, isLoading }: { verification?: ClaimVerification; isLoading?: boolean }) => {
+  if (isLoading) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted/50 text-muted-foreground">
+            <CircleDashed className="w-3 h-3 animate-spin" />
+            <span className="hidden sm:inline">Checking</span>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-[200px]">
+          <p>Verifying this claim...</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+  
+  if (!verification || verification.status === "pending") {
+    return null;
+  }
+
+  const config = {
+    verified: {
+      icon: ShieldCheck,
+      className: "bg-green-500/10 text-green-600",
+      label: "Verified",
+    },
+    unverified: {
+      icon: ShieldAlert,
+      className: "bg-amber-500/10 text-amber-600",
+      label: "Unverified",
+    },
+    uncertain: {
+      icon: ShieldQuestion,
+      className: "bg-muted/50 text-muted-foreground",
+      label: "Uncertain",
+    },
+    checking: {
+      icon: CircleDashed,
+      className: "bg-muted/50 text-muted-foreground",
+      label: "Checking",
+    },
+  };
+
+  const { icon: Icon, className, label } = config[verification.status];
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={cn("inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium", className)}>
+            <Icon className="w-3 h-3" />
+            <span className="hidden sm:inline">{label}</span>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-[250px]">
+          <p className="text-xs">
+            {verification.summary || `${label} (${verification.confidence}% confidence)`}
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
 
 interface ClaimCardProps {
   claim: KeyClaim;
@@ -20,8 +92,9 @@ interface ClaimCardProps {
   total: number;
   onApprove: () => void;
   onReject: () => void;
-  onUpdate: (updates: { title?: string; text?: string }) => void;
+  onUpdate: (updates: { title?: string; text?: string; verification?: ClaimVerification }) => void;
   onSwapAlternative?: (alternativeIndex: number) => void;
+  autoVerify?: boolean;
 }
 
 const TITLE_MAX = 60;
@@ -35,16 +108,49 @@ export const ClaimCard = ({
   onReject,
   onUpdate,
   onSwapAlternative,
+  autoVerify = false,
 }: ClaimCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(claim.title);
   const [editText, setEditText] = useState(claim.text);
   const [isNormalizing, setIsNormalizing] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   
   const isApproved = claim.approved === true;
   const isRejected = claim.approved === false;
   const isEdited = claim.edited;
+
+  // Auto-verify claim if enabled and not already verified
+  useEffect(() => {
+    if (autoVerify && !claim.verification && !isVerifying) {
+      const doVerify = async () => {
+        setIsVerifying(true);
+        try {
+          const result = await verifyClaim(claim.text, claim.title);
+          if (result.status) {
+            onUpdate({
+              verification: {
+                status: result.status,
+                confidence: result.confidence,
+                summary: result.summary,
+                checkedAt: Date.now(),
+              },
+            });
+          }
+        } catch (err) {
+          console.error('[ClaimCard] Verification failed:', err);
+        } finally {
+          setIsVerifying(false);
+        }
+      };
+      
+      // Stagger verification calls to avoid rate limiting
+      const delay = index * 500;
+      const timer = setTimeout(doVerify, delay);
+      return () => clearTimeout(timer);
+    }
+  }, [autoVerify, claim.verification, claim.text, claim.title, index, onUpdate, isVerifying]);
 
   // Show truncated text if longer than 120 chars and not expanded
   const shouldTruncate = claim.text.length > 120;
@@ -218,6 +324,7 @@ export const ClaimCard = ({
               Edited
             </span>
           )}
+          <VerificationBadge verification={claim.verification} isLoading={isVerifying} />
         </div>
         
         {/* Actions */}

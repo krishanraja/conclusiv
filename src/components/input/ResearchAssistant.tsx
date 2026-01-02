@@ -74,6 +74,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     businessWebsite, 
     selectedArchetype, 
     audienceMode,
+    setCurrentStep,
   } = useNarrativeStore();
 
   // Derive initial values from store
@@ -386,9 +387,20 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
         ? `\n\n---\nSources:\n${results.citations.map((c, i) => `[${i + 1}] ${c.title}: ${c.url}`).join('\n')}`
         : '';
       
+      // Check if user already has brand context and story type configured
+      const hasFullContext = businessContext?.companyName && selectedArchetype;
+      
       onComplete(results.rawContent + citationText);
       onClose();
       resetState();
+      
+      // If context is complete, auto-skip to refine step
+      if (hasFullContext) {
+        // Small delay to let state updates settle
+        setTimeout(() => {
+          setCurrentStep("refine");
+        }, 100);
+      }
     }
   };
 
@@ -731,15 +743,41 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="flex flex-col items-center justify-center py-12 space-y-6"
               >
-                <div className="relative">
-                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Sparkles className="w-8 h-8 text-primary animate-pulse" />
+                {/* Orbital Animation: C icon rotates around central Sparkles */}
+                <div className="relative w-24 h-24 flex items-center justify-center">
+                  {/* Central magic icon */}
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center z-10">
+                    <Sparkles className="w-7 h-7 text-primary animate-pulse" />
                   </div>
+                  
+                  {/* Pulsing ring */}
                   <motion.div
-                    className="absolute inset-0 rounded-full border-2 border-primary/30"
-                    animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
-                    transition={{ duration: 2, repeat: Infinity }}
+                    className="absolute inset-2 rounded-full border-2 border-primary/30"
+                    animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0, 0.4] }}
+                    transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                   />
+                  
+                  {/* Orbiting C icon container */}
+                  <motion.div
+                    className="absolute inset-0"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                  >
+                    {/* C icon positioned at top of orbit */}
+                    <div className="absolute -top-1 left-1/2 -translate-x-1/2">
+                      <motion.div
+                        className="relative"
+                        animate={{ rotate: -360 }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                      >
+                        <img 
+                          src={conclusivIcon} 
+                          alt="" 
+                          className="w-6 h-6 object-contain"
+                        />
+                      </motion.div>
+                    </div>
+                  </motion.div>
                 </div>
 
                 <div className="text-center space-y-2">

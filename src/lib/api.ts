@@ -336,6 +336,37 @@ export const normalizeClaim = async (title: string, text: string): Promise<Norma
   }
 };
 
+// Verify a claim using AI-powered fact checking
+export interface VerifyClaimResponse {
+  status: "verified" | "unverified" | "uncertain";
+  confidence: number;
+  summary?: string;
+  error?: string;
+}
+
+export const verifyClaim = async (claim: string, context?: string): Promise<VerifyClaimResponse> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('verify-claim', {
+      body: { claim, context }
+    });
+
+    if (error) throw new Error(error.message);
+    
+    return {
+      status: data.status || "uncertain",
+      confidence: data.confidence || 50,
+      summary: data.summary,
+    };
+  } catch (err) {
+    console.error('[verifyClaim] Error:', err);
+    return { 
+      status: "uncertain", 
+      confidence: 0,
+      error: err instanceof Error ? err.message : 'Failed to verify claim' 
+    };
+  }
+};
+
 // Fetch brand data from Brandfetch
 export const fetchBrandData = async (domain: string): Promise<FetchBrandDataResponse> => {
   try {

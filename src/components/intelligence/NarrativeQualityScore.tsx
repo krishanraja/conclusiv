@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
-import type { NarrativeSchema, Tension, BusinessContext } from "@/lib/types";
+import type { NarrativeSchema, Tension, BusinessContext, KeyClaim } from "@/lib/types";
 
 interface QualityMetric {
   name: string;
@@ -10,51 +10,110 @@ interface QualityMetric {
   weight: number;
 }
 
+// Generic title patterns that indicate low specificity
+const GENERIC_TITLE_PATTERNS = [
+  /^(the|a|an)\s/i,
+  /^(key|main|important)\s/i,
+  /overview$/i,
+  /summary$/i,
+  /conclusion$/i,
+  /introduction$/i,
+];
+
+// Check if a title is specific (contains numbers, proper nouns, or domain terms)
+const isSpecificTitle = (title: string): boolean => {
+  if (!title) return false;
+  const hasNumbers = /\d/.test(title);
+  const hasPercentage = /%/.test(title);
+  const isShort = title.split(' ').length <= 2;
+  const isGeneric = GENERIC_TITLE_PATTERNS.some(p => p.test(title));
+  return (hasNumbers || hasPercentage || !isGeneric) && !isShort;
+};
+
 export const calculateNarrativeQuality = (
   narrative: NarrativeSchema | null,
   rawText: string,
   tensions: Tension[],
-  businessContext: BusinessContext | null
+  businessContext: BusinessContext | null,
+  keyClaims?: KeyClaim[]
 ): { overall: number; metrics: QualityMetric[] } => {
   if (!narrative) return { overall: 0, metrics: [] };
 
   const metrics: QualityMetric[] = [];
 
-  // Structure coherence (sections have titles, content, logical flow)
-  const structureScore = Math.min(100, 
-    (narrative.sections.filter(s => s.title && s.content).length / narrative.sections.length) * 100 +
-    (narrative.sections.length >= 4 ? 20 : 0)
-  );
-  metrics.push({ name: "Structure", score: structureScore, weight: 0.25 });
+  // 1. Structure coherence (20%) - More granular scoring
+  const completeSections = narrative.sections.filter(s => s.title && s.content && s.content.length > 30);
+  const structureBase = (completeSections.length / narrative.sections.length) * 70;
+  const sectionCountBonus = narrative.sections.length >= 5 ? 15 : narrative.sections.length >= 3 ? 10 : 0;
+  const hasItemsBonus = narrative.sections.some(s => s.items && s.items.length > 0) ? 10 : 0;
+  const structureScore = Math.min(100, structureBase + sectionCountBonus + hasItemsBonus);
+  metrics.push({ name: "Structure", score: Math.round(structureScore), weight: 0.20 });
 
-  // Data density (how much of the input is utilized)
-  const avgContentLength = narrative.sections.reduce((acc, s) => acc + (s.content?.length || 0), 0) / narrative.sections.length;
-  const densityScore = Math.min(100, (avgContentLength / 150) * 100);
-  metrics.push({ name: "Data Density", score: densityScore, weight: 0.2 });
+  // 2. Content Efficiency (20%) - Input to output ratio
+  const totalOutputLength = narrative.sections.reduce((acc, s) => {
+    return acc + (s.title?.length || 0) + (s.content?.length || 0) + (s.items?.join('').length || 0);
+  }, 0);
+  const inputOutputRatio = rawText.length > 0 ? totalOutputLength / rawText.length : 0;
+  // Sweet spot is 0.3-0.6 ratio (summarization without losing too much)
+  let efficiencyScore: number;
+  if (inputOutputRatio < 0.1) efficiencyScore = 40; // Too much compression
+  else if (inputOutputRatio < 0.25) efficiencyScore = 60;
+  else if (inputOutputRatio < 0.5) efficiencyScore = 85;
+  else if (inputOutputRatio < 0.8) efficiencyScore = 75;
+  else efficiencyScore = 55; // Not enough summarization
+  metrics.push({ name: "Efficiency", score: efficiencyScore, weight: 0.20 });
 
-  // Call to action clarity (last section typically has CTA)
-  const lastSection = narrative.sections[narrative.sections.length - 1];
-  const ctaScore = lastSection?.items && lastSection.items.length > 0 ? 85 : 
-                   lastSection?.content?.length > 50 ? 70 : 50;
-  metrics.push({ name: "Call to Action", score: ctaScore, weight: 0.15 });
+  // 3. Specificity (15%) - Are titles/content specific or generic?
+  const specificTitles = narrative.sections.filter(s => isSpecificTitle(s.title || ''));
+  const specificityRatio = specificTitles.length / narrative.sections.length;
+  const specificityScore = Math.round(40 + specificityRatio * 60);
+  metrics.push({ name: "Specificity", score: specificityScore, weight: 0.15 });
 
-  // Tension balance (not too safe, not too risky)
-  const tensionScore = tensions.length === 0 ? 60 : 
-                       tensions.length <= 2 ? 80 :
-                       tensions.length <= 4 ? 95 : 85;
-  metrics.push({ name: "Tension Balance", score: tensionScore, weight: 0.2 });
+  // 4. Tension Balance (15%) - Wider variance
+  let tensionScore: number;
+  if (tensions.length === 0) tensionScore = 50; // No analysis = lower score
+  else if (tensions.length === 1) tensionScore = 65;
+  else if (tensions.length === 2) tensionScore = 80;
+  else if (tensions.length === 3) tensionScore = 90;
+  else if (tensions.length === 4) tensionScore = 85;
+  else tensionScore = 70; // Too many = analysis paralysis
+  metrics.push({ name: "Risk Analysis", score: tensionScore, weight: 0.15 });
 
-  // Personalization depth (if business context used)
-  const personalizationScore = businessContext ? 
-    (businessContext.companyName ? 30 : 0) +
-    (businessContext.industry ? 25 : 0) +
-    (businessContext.valuePropositions?.length > 0 ? 25 : 0) +
-    (businessContext.brandVoice ? 20 : 0) : 40;
-  metrics.push({ name: "Personalization", score: personalizationScore, weight: 0.2 });
+  // 5. Personalization (15%) - More granular
+  let personalizationScore = 30; // Base score
+  if (businessContext) {
+    if (businessContext.companyName) personalizationScore += 20;
+    if (businessContext.industry) personalizationScore += 15;
+    if (businessContext.valuePropositions && businessContext.valuePropositions.length > 0) personalizationScore += 20;
+    if (businessContext.brandVoice) personalizationScore += 10;
+    if (businessContext.logoUrl || businessContext.userUploadedLogoUrl) personalizationScore += 5;
+  }
+  metrics.push({ name: "Personalization", score: Math.min(100, personalizationScore), weight: 0.15 });
+
+  // 6. Claim Quality (15%) - If claims were reviewed
+  if (keyClaims && keyClaims.length > 0) {
+    const reviewedClaims = keyClaims.filter(c => c.approved !== null);
+    const approvedClaims = keyClaims.filter(c => c.approved === true);
+    const editedClaims = keyClaims.filter(c => c.edited);
+    
+    let claimScore = 50; // Base
+    if (reviewedClaims.length > 0) {
+      const reviewRatio = reviewedClaims.length / keyClaims.length;
+      const approvalRatio = approvedClaims.length / Math.max(1, reviewedClaims.length);
+      claimScore = Math.round(30 + reviewRatio * 30 + approvalRatio * 30 + (editedClaims.length > 0 ? 10 : 0));
+    }
+    metrics.push({ name: "Claim Review", score: claimScore, weight: 0.15 });
+    
+    // Rebalance weights when claim review is included
+    metrics.forEach(m => {
+      if (m.name !== "Claim Review") m.weight = m.weight * 0.85 / 0.85;
+    });
+  }
 
   // Calculate weighted overall
+  const totalWeight = metrics.reduce((acc, m) => acc + m.weight, 0);
   const overall = Math.round(
-    metrics.reduce((acc, m) => acc + m.score * m.weight, 0)
+    metrics.reduce((acc, m) => acc + m.score * m.weight, 0) / totalWeight
   );
 
   return { overall, metrics };
@@ -65,11 +124,14 @@ interface NarrativeQualityScoreProps {
 }
 
 export const NarrativeQualityScore = ({ compact = false }: NarrativeQualityScoreProps) => {
-  const { narrative, rawText, tensions, businessContext } = useNarrativeStore();
+  const { narrative, rawText, tensions, businessContext, keyClaims } = useNarrativeStore();
   const [displayScore, setDisplayScore] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
 
-  const { overall, metrics } = calculateNarrativeQuality(narrative, rawText, tensions, businessContext);
+  const { overall, metrics } = useMemo(
+    () => calculateNarrativeQuality(narrative, rawText, tensions, businessContext, keyClaims),
+    [narrative, rawText, tensions, businessContext, keyClaims]
+  );
 
   // Animate score counting up
   useEffect(() => {

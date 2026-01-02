@@ -37,7 +37,8 @@ export const ExecutiveSummary = () => {
     tensions, 
     businessContext,
     selectedArchetype,
-    duration 
+    duration,
+    keyClaims,
   } = useNarrativeStore();
 
   if (!narrative) return null;
@@ -46,7 +47,7 @@ export const ExecutiveSummary = () => {
   const wordCount = rawText.split(/\s+/).filter(Boolean).length;
   const sectionCount = narrative.sections.length;
   const tensionCount = tensions.length;
-  const { overall: qualityScore } = calculateNarrativeQuality(narrative, rawText, tensions, businessContext);
+  const { overall: qualityScore } = calculateNarrativeQuality(narrative, rawText, tensions, businessContext, keyClaims);
 
   // Calculate estimated read time (average 200 words per minute for presentation)
   const estimatedReadTime = Math.ceil(

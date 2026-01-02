@@ -15,6 +15,7 @@ import { LoadingOverlay } from "@/components/ui/loading";
 import { FeedbackWidget } from "@/components/feedback/FeedbackWidget";
 import { OnboardingManager } from "@/components/onboarding/OnboardingManager";
 import { SplashScreen } from "@/components/ui/SplashScreen";
+import { SectionErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { AnimatePresence, motion } from "framer-motion";
 
 const Index = () => {
@@ -77,7 +78,11 @@ const Index = () => {
 
   // Present mode is fullscreen, no header
   if (currentStep === "present") {
-    return <PresentScreen />;
+    return (
+      <SectionErrorBoundary name="PresentScreen">
+        <PresentScreen />
+      </SectionErrorBoundary>
+    );
   }
 
   return (
@@ -122,9 +127,21 @@ const Index = () => {
                 transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
                 className="flex-1 pt-16"
               >
-                {currentStep === "input" && <InputScreen />}
-                {currentStep === "refine" && <RefineScreen />}
-                {currentStep === "preview" && <PreviewScreen />}
+                {currentStep === "input" && (
+                  <SectionErrorBoundary name="InputScreen">
+                    <InputScreen />
+                  </SectionErrorBoundary>
+                )}
+                {currentStep === "refine" && (
+                  <SectionErrorBoundary name="RefineScreen">
+                    <RefineScreen />
+                  </SectionErrorBoundary>
+                )}
+                {currentStep === "preview" && (
+                  <SectionErrorBoundary name="PreviewScreen">
+                    <PreviewScreen />
+                  </SectionErrorBoundary>
+                )}
               </motion.main>
             </AnimatePresence>
             

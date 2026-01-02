@@ -148,6 +148,15 @@ export interface ClaimAlternative {
   text: string;
 }
 
+export type ClaimVerificationStatus = "pending" | "checking" | "verified" | "unverified" | "uncertain";
+
+export interface ClaimVerification {
+  status: ClaimVerificationStatus;
+  confidence: number; // 0-100
+  summary?: string;
+  checkedAt?: number; // timestamp
+}
+
 export interface KeyClaim {
   id: string;
   title: string;
@@ -158,6 +167,7 @@ export interface KeyClaim {
   originalTitle?: string;
   originalText?: string;
   alternatives?: ClaimAlternative[];
+  verification?: ClaimVerification;
 }
 
 export interface RefinementState {
