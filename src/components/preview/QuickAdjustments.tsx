@@ -453,7 +453,7 @@ export const QuickAdjustments = () => {
         </div>
 
         {/* Remix Panel - Mobile-friendly quick transforms */}
-        <div className="rounded-lg border border-border/50 overflow-hidden">
+        <div className="lg:hidden rounded-lg border border-border/50 overflow-hidden">
           <button
             onClick={() => togglePanel("remix")}
             className="w-full flex items-center justify-between p-3 hover:bg-card/50 transition-colors"
