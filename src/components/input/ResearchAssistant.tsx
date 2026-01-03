@@ -744,27 +744,27 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                 className="flex flex-col items-center justify-center py-12 space-y-6"
               >
                 {/* Orbital Animation: C icon rotates around central Sparkles */}
-                <div className="relative w-24 h-24 flex items-center justify-center">
-                  {/* Central magic icon */}
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center z-10">
-                    <Sparkles className="w-7 h-7 text-primary animate-pulse" />
+                <div className="relative w-32 h-32 flex items-center justify-center">
+                  {/* Central magic icon - fixed in place */}
+                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center z-10">
+                    <Sparkles className="w-6 h-6 text-primary animate-pulse" />
                   </div>
                   
-                  {/* Pulsing ring */}
+                  {/* Pulsing ring around sparkle */}
                   <motion.div
-                    className="absolute inset-2 rounded-full border-2 border-primary/30"
-                    animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0, 0.4] }}
+                    className="absolute w-16 h-16 rounded-full border-2 border-primary/30"
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0, 0.4] }}
                     transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                   />
                   
-                  {/* Orbiting C icon container */}
+                  {/* Orbiting C icon - rotates around the center */}
                   <motion.div
                     className="absolute inset-0"
                     animate={{ rotate: 360 }}
                     transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
                   >
-                    {/* C icon positioned at top of orbit */}
-                    <div className="absolute -top-1 left-1/2 -translate-x-1/2">
+                    {/* C icon positioned at outer edge of orbit */}
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                       <motion.div
                         className="relative"
                         animate={{ rotate: -360 }}
@@ -773,7 +773,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                         <img 
                           src={conclusivIcon} 
                           alt="" 
-                          className="w-6 h-6 object-contain"
+                          className="w-10 h-10 object-contain"
                         />
                       </motion.div>
                     </div>

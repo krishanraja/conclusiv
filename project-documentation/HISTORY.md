@@ -25,26 +25,87 @@ Changelog and version history for conclusiv.
 
 ---
 
+## [0.6.0] - 2025-01-03
+
+### Added
+- **Supabase Migration**: Complete migration to dedicated Supabase project with consolidated schema
+- **20 Edge Functions**: Expanded from 3 to 20 edge functions for comprehensive AI capabilities
+- **Claim Verification System**: AI-powered fact checking with confidence scores
+- **Guided Research**: Structured research flow with formulate → execute phases
+- **Brand Data Integration**: Brandfetch integration for logo and brand colors
+- **Voice Transcription**: Whisper-based audio transcription via `transcribe-audio` function
+- **Document Parsing**: Support for PDF, DOCX, and Google Docs via `parse-document` and `parse-google-doc`
+- **Image Search**: Pexels integration for section images via `search-images`
+- **Narrative Alternatives**: AI-generated alternative narratives with different goals
+- **Tension Detection**: Identify contradictions, blind spots, and hidden risks in content
+- **Blog System**: Blog with SEO support and blogData management
+- **Share Functionality**: Password-protected shareable narrative links
+- **Power User Features**: Advanced features for pro users
+- **Playwright E2E Testing**: End-to-end testing infrastructure
+
+### Changed
+- **Project Structure**: Reorganized components into feature-based folders
+- **Types System**: Expanded types to support audience modes, archetypes, durations, view modes
+- **State Management**: Enhanced Zustand store with 7 intelligence phases
+- **API Layer**: Comprehensive API module with 15+ typed response interfaces
+
+### Technical
+- Created consolidated_schema.sql with 15+ tables
+- Added comprehensive environment variable validation
+- Implemented structured logging across all edge functions
+- Added MIGRATION_SUMMARY.md and NEXT_STEPS_GUIDE.md for deployment
+- Full TypeScript coverage with strict types
+
+---
+
+## [0.5.0] - 2025-01-01
+
+### Added
+- **Intelligence Phases 1-7**: Complete narrative intelligence system
+  - Phase 1: Audience Mode (exec, product, investors, clients, ops, briefing)
+  - Phase 2: Tension Detector for contradictions and blind spots
+  - Phase 3: Narrative Archetypes (strategy_brief, exec_decision_memo, etc.)
+  - Phase 4: Adaptive Compression with duration controls
+  - Phase 5: View Modes (present, reader, external)
+  - Phase 6: Company Brain for historical context
+  - Phase 7: Alternative Narratives generation
+- **Presentation Styling**: Logo position, size, colors, fonts customization
+- **Key Claims System**: Extract, approve, reject, edit claims from content
+- **Claim Alternatives**: AI-generated alternative framings for claims
+- **Section Images**: Pexels image search per section
+- **Quick Adjustments Change Tracking**: Detect unsaved changes
+
+### Changed
+- **4-Step Flow**: Input → Refine → Preview → Present
+- **RefineScreen**: Three-tab design with Review, Highlight, Voice options
+- **Store Architecture**: Comprehensive state with 7 phase support
+
+### Technical
+- Added `QuickAdjustmentSettings` interface for change detection
+- Implemented `snapshotSettings()` and `hasUnsavedChanges()` methods
+- Extended `NarrativeSchema` with styling options
+
+---
+
 ## [0.4.2] - 2024-12-14
 
 ### Added
-- **Presentation Mode Edge Buttons**: Added always-visible edge buttons in MobilePresentScreen for accessing section navigation and speaker notes panels
-- **Narrative Section Panel**: Left slide-out panel in presentation mode showing all sections with visual indicators for current position
-- **Speaker Notes Panel**: Right slide-out panel in presentation mode for viewing speaker notes during presentation
-- **Refine Screen Onboarding Modal**: First-time user onboarding explaining the 3 refinement options (Review, Highlight, Voice) with clear descriptions
+- **Presentation Mode Edge Buttons**: Always-visible edge buttons for section navigation and speaker notes
+- **Narrative Section Panel**: Left slide-out panel showing all sections with current position
+- **Speaker Notes Panel**: Right slide-out panel for viewing notes during presentation
+- **Refine Screen Onboarding Modal**: First-time user onboarding for refinement options
 
 ### Changed
-- **Loading Screen Stability**: Fixed progress animation to only animate forward (never backwards) preventing visual glitches during loading
-- **Loading Screen Consistency**: Unified simple and staged loading to use identical visual style (same dimensions, animations, C logo treatment)
-- **AccountMenu z-index**: Fixed z-index issues to ensure proper layering (z-100 for backdrop, z-101 for menu) preventing sign-out appearing in wrong position
-- **AccountMenu Body Scroll Lock**: Added body scroll lock when mobile menu is open to prevent background scrolling
-- **RefineScreen Tab Design**: Enhanced tab buttons with circular icon containers and improved active state styling
+- **Loading Screen Stability**: Progress animation only moves forward (never backwards)
+- **Loading Screen Consistency**: Unified simple and staged loading with identical visual style
+- **AccountMenu z-index**: Fixed layering issues (z-100 backdrop, z-101 menu)
+- **AccountMenu Body Scroll Lock**: Prevents background scrolling when menu open
+- **RefineScreen Tab Design**: Circular icon containers with improved active state
 
 ### Technical
 - LoadingStages uses useRef to track progress and prevent backwards animation
 - LoadingOverlay matches LoadingStages dimensions (w-24 h-24 ring, w-10 h-10 logo)
-- AccountMenu uses AnimatePresence mode="wait" with key props for proper animation sequencing
-- MobilePresentScreen imports new icons (List, PanelLeftOpen, PanelRightOpen, Edit3)
+- AccountMenu uses AnimatePresence mode="wait" with key props
 - Added localStorage persistence for refine screen onboarding state
 
 ---
@@ -52,54 +113,50 @@ Changelog and version history for conclusiv.
 ## [0.4.1] - 2024-12-14
 
 ### Added
-- **Branded Loading Experience**: Unified loading screen with rotating C logo in center of progress ring, replacing two separate loading formats
-- **Mobile Sidebar Edge Buttons**: Always-visible arrow buttons on screen edges for quick access to analysis and adjustment panels
-- **Refine Screen Onboarding**: Contextual hint and dynamic descriptions for the 3 refinement options
+- **Branded Loading Experience**: Unified loading screen with rotating C logo
+- **Mobile Sidebar Edge Buttons**: Always-visible arrows for sidebar access
+- **Refine Screen Onboarding**: Contextual hints for refinement options
 
 ### Changed
-- **Loading Screen**: Single consistent branded experience - C logo rotates smoothly in center of progress ring throughout all loading states
-- **AccountMenu**: Complete UX overhaul on mobile - proper bottom sheet with drag handle, staggered animations, and refined visual hierarchy
-- **RefineScreen Tabs**: Redesigned from 4 icons to 3 (removed mapping tab), with vertical layout showing icon + label for better clarity
-- **MobilePreviewLayout**: Added edge arrow buttons (PanelLeftOpen, PanelRightOpen) for easy sidebar access
+- **Loading Screen**: Single branded experience with C logo in progress ring
+- **AccountMenu**: Complete UX overhaul on mobile with bottom sheet
+- **RefineScreen Tabs**: Redesigned from 4 icons to 3 with vertical layout
 
 ### Removed
-- **Mapping Tab**: Removed from RefineScreen as it was non-functional until narrative was built
+- **Mapping Tab**: Removed from RefineScreen (non-functional until narrative built)
 
 ### Technical
-- LoadingStages now uses `criticalImages.conclusivIcon` for branded loading
-- LoadingOverlay uses same branded spinner for simple loading states
-- AccountMenu uses separate render paths for mobile vs desktop with proper spring animations
-- RefineScreen uses AnimatePresence for smooth hint fade-out
+- LoadingStages uses `criticalImages.conclusivIcon` for branded loading
+- LoadingOverlay uses same branded spinner for simple loading
+- AccountMenu uses separate render paths for mobile vs desktop
 
 ---
 
 ## [0.4.0] - 2024-12-14
 
 ### Added
-- **Mobile UX Polish**: Comprehensive mobile-first experience improvements
-- **Haptic Feedback System**: New `useHaptics` hook providing tactile feedback on mobile interactions
-- **Mobile Animation Library**: Stunning, performant animations optimized for mobile (PulseRing, CardStackSwipe, ScrollRevealItem, MagneticButton, RadialProgress)
-- **Inline Notification System**: Professional notification system replacing toast popups
-- **Start Over Functionality**: Users can restart from presentation mode
-- **Exit Menu in Presentation**: Mobile users can choose to exit to preview or start fresh
+- **Mobile UX Polish**: Comprehensive mobile-first experience
+- **Haptic Feedback System**: `useHaptics` hook for tactile feedback
+- **Mobile Animation Library**: PulseRing, CardStackSwipe, ScrollRevealItem, MagneticButton, RadialProgress
+- **Inline Notification System**: Professional notifications replacing toasts
+- **Start Over Functionality**: Restart from presentation mode
+- **Exit Menu in Presentation**: Mobile exit options
 
 ### Changed
-- **UpgradePrompt**: Now displays as full-width bottom sheet on mobile with proper safe areas
-- **RefineScreen**: Removed awkward top gap above Continue button for cleaner mobile layout
-- **AccountMenu**: Solid background on mobile instead of translucent overlay
-- **MobilePresentScreen**: Icon and content no longer encroach on progress bar
-- **MobilePreviewLayout**: Enhanced sidebars with proper headers, close buttons, and haptic feedback
-- **Toast System**: Replaced ALL toast popups with professional inline notifications
+- **UpgradePrompt**: Full-width bottom sheet on mobile with safe areas
+- **RefineScreen**: Removed gap above Continue button
+- **AccountMenu**: Solid background on mobile
+- **MobilePresentScreen**: Fixed icon/content encroachment on progress bar
+- **Toast System**: Replaced with inline notifications
 
 ### Removed
-- **Toaster Components**: Removed radix-ui toast popup system in favor of inline notifications
+- **Toaster Components**: Removed radix-ui toast popup system
 
 ### Technical
-- Created `useHaptics` hook for cross-browser vibration API support
-- Created `MobileAnimations.tsx` with 5 reusable mobile animation components
-- Created `InlineNotification.tsx` with NotificationProvider and useNotification hook
-- Updated `use-toast.ts` to bridge legacy toast calls to new notification system
-- Added haptic feedback to navigation buttons, swipe gestures, and panel interactions
+- Created `useHaptics` hook for cross-browser vibration
+- Created `MobileAnimations.tsx` with 5 animation components
+- Created `InlineNotification.tsx` with NotificationProvider
+- Updated `use-toast.ts` to bridge to new notification system
 
 ---
 
@@ -107,16 +164,16 @@ Changelog and version history for conclusiv.
 
 ### Added
 - **Multi-stage loading UI**: Visual progress through build stages
-- **Error recovery component**: User-friendly error display with retry options
+- **Error recovery component**: User-friendly error display with retry
 - **Comprehensive logging system**: Structured logging in edge functions
-- **Project documentation**: Full documentation system (PURPOSE, ARCHITECTURE, FEATURES, etc.)
-- **Input validation**: Min/max length checks with helpful feedback
+- **Project documentation**: Full documentation system
+- **Input validation**: Min/max length checks with feedback
 - **Loading progress state**: Track build progress in store
 
 ### Changed
-- **Loading overlay**: Now shows stage-specific messages and progress
-- **Error handling**: Improved error categorization (rate limit, payment, timeout, parse)
-- **Edge functions**: Added extensive logging for debugging
+- **Loading overlay**: Stage-specific messages and progress
+- **Error handling**: Error categorization (rate limit, payment, timeout, parse)
+- **Edge functions**: Extensive logging for debugging
 
 ### Technical
 - Added `loadingStage` and `loadingProgress` to store
@@ -133,12 +190,12 @@ Changelog and version history for conclusiv.
 - **Business context scraping**: Auto-extract company info from URL
 - **Combined build flow**: Single AI call for themes + template + narrative
 - **3-step workflow**: Simplified from 5 steps to Input → Preview → Present
-- **Template recommendation**: AI selects best template for content
+- **Template recommendation**: AI selects best template
 - **Long document chunking**: Smart processing for 15k+ char inputs
 
 ### Changed
 - **Store structure**: Simplified state for 3-step flow
-- **Preview screen**: Combined review, template, and editor into unified view
+- **Preview screen**: Combined review, template, and editor
 - **Loading messages**: Context-aware messages based on input size
 
 ### Removed
@@ -177,6 +234,35 @@ Changelog and version history for conclusiv.
 
 ## Migration Notes
 
+### 0.4.x → 0.5.x
+
+**Breaking Changes**:
+- Store `currentStep` type changed from 3 values to 4 (`refine` added)
+- New `keyClaims`, `tensions`, `alternatives` state fields required
+- `presentationStyle` object added to store
+
+**Migration Steps**:
+1. Update store consumers to handle `refine` step
+2. Initialize new state fields with defaults
+3. Update components using themes to check for changes
+
+### 0.3.x → 0.4.x
+
+**No Breaking Changes**
+
+New optional features:
+- Haptic feedback (automatically enabled on supported devices)
+- Mobile animations (automatic on mobile)
+- Inline notifications (replaces toasts transparently)
+
+### 0.2.x → 0.3.x
+
+**No Breaking Changes**
+
+New optional features:
+- Loading stages (automatically used by InputScreen)
+- Error recovery (automatically used by API)
+
 ### 0.1.x → 0.2.x
 
 **Breaking Changes**:
@@ -189,31 +275,28 @@ Changelog and version history for conclusiv.
 2. Replace individual API calls with `buildNarrative`
 3. Update routing logic for 3-step flow
 
-### 0.2.x → 0.3.x
-
-**No Breaking Changes**
-
-New optional features:
-- Loading stages (automatically used by InputScreen)
-- Error recovery (automatically used by API)
-- Documentation (no code impact)
-
 ---
 
 ## Roadmap
 
-### Planned for 0.4.0
-- [ ] PDF export functionality
-- [ ] Shareable links with unique URLs
+### Recently Completed ✅
+- [x] PDF export functionality (jsPDF)
+- [x] PowerPoint export (pptxgenjs)
+- [x] Shareable links with unique URLs
+- [x] Password protection for shares
+- [x] File upload (PDF, DOCX, Google Docs)
+- [x] Section images via Pexels
+- [x] Brand data integration
+
+### Planned
 - [ ] Keyboard shortcuts throughout app
-
-### Planned for 0.5.0
-- [ ] File upload (PDF, DOCX)
-- [ ] Custom color themes
+- [ ] Custom color themes builder
 - [ ] Section reordering via drag and drop
+- [ ] Collaboration features
+- [ ] Version history per narrative
+- [ ] Analytics dashboard
+- [ ] Mobile app (React Native)
 
-### Future Considerations
-- Collaboration features
-- Version history per narrative
-- Analytics dashboard
-- Mobile app
+---
+
+*Last updated: 2025-01-03*

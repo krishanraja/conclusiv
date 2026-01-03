@@ -69,7 +69,7 @@ interface NarrativeState {
   setKeyClaims: (claims: KeyClaim[]) => void;
   approveClaim: (claimId: string) => void;
   rejectClaim: (claimId: string) => void;
-  updateClaim: (claimId: string, updates: { title?: string; text?: string }) => void;
+  updateClaim: (claimId: string, updates: { title?: string; text?: string; verification?: import("@/lib/types").ClaimVerification }) => void;
   swapClaimAlternative: (claimId: string, alternativeIndex: number) => void;
   voiceFeedback: string;
   setVoiceFeedback: (feedback: string) => void;
@@ -272,15 +272,23 @@ export const useNarrativeStore = create<NarrativeState>((set, get) => ({
   })),
   
   updateClaim: (claimId, updates) => set((state) => ({
-    keyClaims: state.keyClaims.map((c) =>
-      c.id === claimId ? { 
-        ...c, 
+    keyClaims: state.keyClaims.map((c) => {
+      if (c.id !== claimId) return c;
+      
+      // Only mark as edited if title or text is being changed (not verification-only updates)
+      const isContentEdit = updates.title !== undefined || updates.text !== undefined;
+      
+      return {
+        ...c,
         ...updates,
-        edited: true,
-        originalTitle: c.originalTitle ?? c.title,
-        originalText: c.originalText ?? c.text,
-      } : c
-    ),
+        // Only set edited flag and preserve originals when content is actually edited
+        ...(isContentEdit && {
+          edited: true,
+          originalTitle: c.originalTitle ?? c.title,
+          originalText: c.originalText ?? c.text,
+        }),
+      };
+    }),
   })),
   
   swapClaimAlternative: (claimId, alternativeIndex) => set((state) => ({

@@ -20,21 +20,31 @@ import { cn } from "@/lib/utils";
 import { normalizeClaim, verifyClaim } from "@/lib/api";
 import type { KeyClaim, ClaimVerification } from "@/lib/types";
 
-// Verification badge component
-const VerificationBadge = ({ verification, isLoading }: { verification?: ClaimVerification; isLoading?: boolean }) => {
+// Verification badge component with retry support
+const VerificationBadge = ({ 
+  verification, 
+  isLoading,
+  onRetry 
+}: { 
+  verification?: ClaimVerification; 
+  isLoading?: boolean;
+  onRetry?: () => void;
+}) => {
   if (isLoading) {
     return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted/50 text-muted-foreground">
-            <CircleDashed className="w-3 h-3 animate-spin" />
-            <span className="hidden sm:inline">Checking</span>
-          </span>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-[200px]">
-          <p>Verifying this claim...</p>
-        </TooltipContent>
-      </Tooltip>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted/50 text-muted-foreground">
+              <CircleDashed className="w-3 h-3 animate-spin" />
+              <span className="hidden sm:inline">Checking</span>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-[200px]">
+            <p>Verifying this claim...</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
   
@@ -45,17 +55,17 @@ const VerificationBadge = ({ verification, isLoading }: { verification?: ClaimVe
   const config = {
     verified: {
       icon: ShieldCheck,
-      className: "bg-green-500/10 text-green-600",
+      className: "bg-green-500/10 text-green-600 hover:bg-green-500/20",
       label: "Verified",
     },
     unverified: {
       icon: ShieldAlert,
-      className: "bg-amber-500/10 text-amber-600",
+      className: "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20",
       label: "Unverified",
     },
     uncertain: {
       icon: ShieldQuestion,
-      className: "bg-muted/50 text-muted-foreground",
+      className: "bg-muted/50 text-muted-foreground hover:bg-muted/70",
       label: "Uncertain",
     },
     checking: {
@@ -71,15 +81,22 @@ const VerificationBadge = ({ verification, isLoading }: { verification?: ClaimVe
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className={cn("inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium", className)}>
+          <button 
+            onClick={onRetry}
+            className={cn(
+              "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer transition-colors",
+              className
+            )}
+          >
             <Icon className="w-3 h-3" />
             <span className="hidden sm:inline">{label}</span>
-          </span>
+          </button>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-[250px]">
           <p className="text-xs">
             {verification.summary || `${label} (${verification.confidence}% confidence)`}
           </p>
+          <p className="text-xs text-muted-foreground mt-1">Click to re-verify</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -121,28 +138,41 @@ export const ClaimCard = ({
   const isRejected = claim.approved === false;
   const isEdited = claim.edited;
 
+  // Verify claim (used for both auto-verify and retry)
+  const runVerification = async () => {
+    if (isVerifying) return;
+    
+    setIsVerifying(true);
+    try {
+      const result = await verifyClaim(claim.text, claim.title);
+      if (result.status) {
+        onUpdate({
+          verification: {
+            status: result.status,
+            confidence: result.confidence,
+            summary: result.summary,
+            checkedAt: Date.now(),
+          },
+        });
+      }
+    } catch (err) {
+      console.error('[ClaimCard] Verification failed:', err);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // Retry verification handler - clears current and re-runs
+  const handleRetryVerification = () => {
+    if (isVerifying) return;
+    runVerification();
+  };
+
   // Auto-verify claim if enabled and not already verified
   useEffect(() => {
     if (autoVerify && !claim.verification && !isVerifying) {
       const doVerify = async () => {
-        setIsVerifying(true);
-        try {
-          const result = await verifyClaim(claim.text, claim.title);
-          if (result.status) {
-            onUpdate({
-              verification: {
-                status: result.status,
-                confidence: result.confidence,
-                summary: result.summary,
-                checkedAt: Date.now(),
-              },
-            });
-          }
-        } catch (err) {
-          console.error('[ClaimCard] Verification failed:', err);
-        } finally {
-          setIsVerifying(false);
-        }
+        await runVerification();
       };
       
       // Stagger verification calls to avoid rate limiting
@@ -324,7 +354,7 @@ export const ClaimCard = ({
               Edited
             </span>
           )}
-          <VerificationBadge verification={claim.verification} isLoading={isVerifying} />
+          <VerificationBadge verification={claim.verification} isLoading={isVerifying} onRetry={handleRetryVerification} />
         </div>
         
         {/* Actions */}

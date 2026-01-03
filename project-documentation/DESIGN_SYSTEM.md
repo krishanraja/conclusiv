@@ -2,12 +2,12 @@
 
 ## Overview
 
-conclusiv uses a dark, cinematic aesthetic with shimmer accents. The design prioritizes clarity, focus, and professional presentation.
+conclusiv uses a dark, cinematic aesthetic with shimmer accents. The design prioritizes clarity, focus, and professional presentation. Mobile-first with haptic feedback and smooth animations.
 
 ## Brand Guidelines
 
-- **Name**: Always "conclusiv" (lowercase 's', never "Conclusiv" or "CONCLUSIV")
-- **C. Icon**: Used as favicon, app icon, watermark in presentations
+- **Name**: Always "conclusiv" (lowercase 'c', never "Conclusiv" or "CONCLUSIV")
+- **C. Icon**: Used as favicon, app icon, loading indicator, watermark in presentations
 - **Text Logo**: Used in header alongside the C. icon
 - **Aspect Ratios**: Never distort logo assets - always preserve proportions
 
@@ -36,6 +36,7 @@ conclusiv uses a dark, cinematic aesthetic with shimmer accents. The design prio
 /* Semantic colors */
 --destructive: 0 72% 51%;      /* Error red */
 --success: 142 76% 36%;        /* Success green */
+--warning: 45 93% 47%;         /* Warning amber */
 ```
 
 ### Color Usage
@@ -49,6 +50,22 @@ conclusiv uses a dark, cinematic aesthetic with shimmer accents. The design prio
 | Interactive elements | `text-primary` |
 | Borders | `border-border` |
 | Shimmer effects | `from-shimmer-start to-shimmer-end` |
+| Error states | `text-destructive` |
+| Success states | `text-success` |
+
+### Color Do's and Don'ts
+
+```tsx
+// ✅ Correct - use semantic tokens
+className="bg-primary text-primary-foreground"
+className="text-muted-foreground"
+className="bg-card border-border"
+
+// ❌ Wrong - no hardcoded colors
+className="bg-cyan-500 text-black"
+className="bg-[#1a1a2e]"
+className="text-gray-500"
+```
 
 ## Typography
 
@@ -95,6 +112,9 @@ font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
 
 // Ghost/subtle
 <Button variant="ghost">Back</Button>
+
+// Destructive
+<Button variant="destructive">Delete</Button>
 ```
 
 ### Shimmer Border Effect
@@ -112,6 +132,15 @@ font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
 <Card className="bg-card/50 border-border/30 backdrop-blur-sm">
   <CardContent>...</CardContent>
 </Card>
+```
+
+### Inputs
+
+```tsx
+<Input 
+  className="bg-background border-border focus:border-primary"
+  placeholder="Enter text..."
+/>
 ```
 
 ## Animation
@@ -139,6 +168,9 @@ animate={{ opacity: 1, scale: 1 }}
 
 // Exit
 exit={{ opacity: 0, y: -10 }}
+
+// Spring animation
+transition={{ type: "spring", stiffness: 300, damping: 30 }}
 ```
 
 ### Loading Animation
@@ -197,7 +229,13 @@ import { LoadingOverlay } from "@/components/ui/loading";
 
 ```tsx
 // Import mobile-optimized animations
-import { PulseRing, CardStackSwipe, ScrollRevealItem, MagneticButton, RadialProgress } from '@/components/mobile/MobileAnimations';
+import { 
+  PulseRing, 
+  CardStackSwipe, 
+  ScrollRevealItem, 
+  MagneticButton, 
+  RadialProgress 
+} from '@/components/mobile/MobileAnimations';
 
 // Pulse Ring - Expands with haptic on interaction
 <PulseRing isActive={true} onPulse={() => console.log('Pulsed')}>
@@ -256,6 +294,11 @@ Using Lucide React for consistent iconography.
 | `Check` | Success state |
 | `X` | Close/cancel |
 | `Loader2` | Loading spinner |
+| `PanelLeftOpen/RightOpen` | Sidebar toggles |
+| `Crown` | Executive mode |
+| `TrendingUp` | Investors mode |
+| `Users` | Clients mode |
+| `Target` | Briefing mode |
 
 ### Icon Sizing
 
@@ -295,6 +338,20 @@ Using Lucide React for consistent iconography.
 </div>
 ```
 
+### Mobile Edge Buttons
+
+```tsx
+// Always-visible edge buttons for sidebar access
+<motion.button
+  className="fixed left-0 top-1/2 -translate-y-1/2 z-50"
+  initial={{ x: -50, opacity: 0 }}
+  animate={{ x: 0, opacity: 1 }}
+  transition={{ delay: 0.5 }}
+>
+  <PanelLeftOpen className="w-5 h-5" />
+</motion.button>
+```
+
 ## Responsive Breakpoints
 
 | Breakpoint | Width | Use |
@@ -322,3 +379,46 @@ focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
   * { animation-duration: 0.01ms !important; }
 }
 ```
+
+### Haptic Accessibility
+```tsx
+// Check for reduced motion before haptics
+const haptics = useHaptics();
+if (!reducedMotion) {
+  haptics.medium();
+}
+```
+
+## Notification System
+
+```tsx
+import { useNotification } from '@/components/ui/InlineNotification';
+
+const { show } = useNotification();
+
+// Success notification
+show({ type: 'success', message: 'Narrative built successfully!' });
+
+// Error notification
+show({ type: 'error', message: 'Failed to process. Try again.' });
+
+// Info notification
+show({ type: 'info', message: 'Processing your request...' });
+```
+
+## Z-Index Scale
+
+| Layer | Z-Index | Use |
+|-------|---------|-----|
+| Background | 0 | Base layer |
+| Content | 10 | Main content |
+| Elevated | 20 | Cards, panels |
+| Sidebar | 50 | Side panels |
+| Modal Backdrop | 100 | Modal backgrounds |
+| Modal | 101 | Modal content |
+| Tooltip | 200 | Tooltips |
+| Toast | 300 | Notifications |
+
+---
+
+*Last updated: 2025-01-03*
