@@ -24,6 +24,7 @@ import { useNarrativeStore } from '@/store/narrativeStore';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { SectionErrorBoundary } from '@/components/ui/ErrorBoundary';
 import type { NarrativeSchema } from '@/lib/types';
 
 interface Narrative {
@@ -258,7 +259,9 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      <SectionErrorBoundary name="Header">
+        <Header />
+      </SectionErrorBoundary>
       
       <main className="flex-1 container mx-auto px-4 sm:px-6 py-8 sm:py-12 max-w-4xl">
         {/* Back button */}
@@ -543,7 +546,9 @@ export default function Profile() {
         </motion.div>
       </main>
 
-      <Footer />
+      <SectionErrorBoundary name="Footer">
+        <Footer />
+      </SectionErrorBoundary>
     </div>
   );
 }

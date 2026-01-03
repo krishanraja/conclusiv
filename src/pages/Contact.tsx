@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { SectionErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -90,7 +91,9 @@ const Contact = () => {
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        <Header />
+        <SectionErrorBoundary name="Header">
+          <Header />
+        </SectionErrorBoundary>
         <main className="flex-1 flex items-center justify-center p-6">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -119,14 +122,18 @@ const Contact = () => {
             </Link>
           </motion.div>
         </main>
-        <Footer />
+        <SectionErrorBoundary name="Footer">
+          <Footer />
+        </SectionErrorBoundary>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Header />
+      <SectionErrorBoundary name="Header">
+        <Header />
+      </SectionErrorBoundary>
       <main className="flex-1 py-12 px-6">
         <div className="max-w-xl mx-auto">
           <motion.div
@@ -273,7 +280,9 @@ const Contact = () => {
           </motion.p>
         </div>
       </main>
-      <Footer />
+      <SectionErrorBoundary name="Footer">
+        <Footer />
+      </SectionErrorBoundary>
     </div>
   );
 };

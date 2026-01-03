@@ -11,7 +11,7 @@ import { useHaptics } from '@/hooks/useHaptics';
 
 export const AccountMenu = () => {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isLoading: authLoading } = useAuth();
   const { isPro, isTrial, trialDaysRemaining, usage, limits } = useSubscription();
   const isMobile = useIsMobile();
   const haptics = useHaptics();
@@ -28,6 +28,13 @@ export const AccountMenu = () => {
       };
     }
   }, [isOpen, isMobile]);
+
+  // Show loading state while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="w-7 h-7 rounded-full bg-muted/50 animate-pulse" />
+    );
+  }
 
   if (!user) {
     return (
@@ -107,8 +114,9 @@ export const AccountMenu = () => {
     }
   };
 
-  const displayName = user.user_metadata?.display_name || user.email?.split('@')[0] || 'User';
-  const buildsRemaining = isPro ? '∞' : Math.max(0, limits.buildsPerWeek - usage.buildsThisWeek);
+  // Defensive null checks even after !user guard - user could be in transitional state
+  const displayName = user?.user_metadata?.display_name ?? user?.email?.split('@')[0] ?? 'User';
+  const buildsRemaining = isPro ? '∞' : Math.max(0, (limits?.buildsPerWeek ?? 1) - (usage?.buildsThisWeek ?? 0));
 
   // Staggered animation for menu items
   const menuItemVariants = {
@@ -203,7 +211,7 @@ export const AccountMenu = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-foreground text-lg truncate">{displayName}</p>
-                      <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                      <p className="text-sm text-muted-foreground truncate">{user?.email ?? ''}</p>
                     </div>
                   </div>
                   
@@ -305,7 +313,7 @@ export const AccountMenu = () => {
                 {/* User info */}
                 <div className="p-4 border-b border-border/30">
                   <p className="font-medium text-foreground">{displayName}</p>
-                  <p className="text-sm text-muted-foreground truncate mt-0.5">{user.email}</p>
+                  <p className="text-sm text-muted-foreground truncate mt-0.5">{user?.email ?? ''}</p>
                   
                   {/* Plan status */}
                   <div className="mt-3 flex items-center gap-2">

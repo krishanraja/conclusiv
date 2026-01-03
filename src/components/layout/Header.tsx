@@ -11,8 +11,8 @@ import { UpgradePrompt } from "@/components/subscription/UpgradePrompt";
 import { cn } from "@/lib/utils";
 
 export const Header = () => {
-  const { user } = useAuth();
-  const { isPro, isTrial, limits, usage, trialDaysRemaining, isLoading } = useSubscription();
+  const { user, isLoading: authLoading } = useAuth();
+  const { isPro, isTrial, limits, usage, trialDaysRemaining, isLoading: subLoading } = useSubscription();
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [logoReady, setLogoReady] = useState(() => isImageReady("conclusivIcon"));
 
@@ -21,12 +21,14 @@ export const Header = () => {
     return onImageReady("conclusivIcon", () => setLogoReady(true));
   }, [logoReady]);
 
-  const buildsRemaining = limits.buildsPerWeek === Infinity 
-    ? null 
-    : Math.max(0, limits.buildsPerWeek - usage.buildsThisWeek);
+  // Guard: Only compute user-dependent values when auth is stable
+  // Use safe defaults when loading to prevent crashes
+  const buildsRemaining = (!authLoading && limits?.buildsPerWeek !== undefined)
+    ? (limits.buildsPerWeek === Infinity ? null : Math.max(0, limits.buildsPerWeek - (usage?.buildsThisWeek ?? 0)))
+    : null;
 
-  const showUpgradeButton = user && !isPro && !isLoading;
-  const showBuildsCounter = user && !isLoading && buildsRemaining !== null;
+  const showUpgradeButton = !authLoading && user && !isPro && !subLoading;
+  const showBuildsCounter = !authLoading && user && !subLoading && buildsRemaining !== null;
 
   return (
     <>
@@ -69,8 +71,8 @@ export const Header = () => {
               </motion.div>
             )}
 
-            {/* Trial badge */}
-            {user && isTrial && trialDaysRemaining !== null && (
+            {/* Trial badge - only show when auth is ready */}
+            {!authLoading && user && isTrial && trialDaysRemaining !== null && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -94,9 +96,10 @@ export const Header = () => {
               </Button>
             )}
 
-            {/* Company Brain indicator - only for authenticated users */}
-            {user && <CompanyBrainIndicator />}
+            {/* Company Brain indicator - only for authenticated users when auth is ready */}
+            {!authLoading && user && <CompanyBrainIndicator />}
 
+            {/* AccountMenu handles its own loading state */}
             <AccountMenu />
           </div>
         </div>

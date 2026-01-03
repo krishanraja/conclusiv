@@ -105,7 +105,9 @@ const Index = () => {
             className="flex flex-col overflow-x-hidden max-w-[100vw] min-h-screen min-h-[100dvh]"
             style={{ willChange: "opacity" }}
           >
-            <Header />
+            <SectionErrorBoundary name="Header">
+              <Header />
+            </SectionErrorBoundary>
             
             <AnimatePresence>
               {isLoading && (
@@ -148,7 +150,9 @@ const Index = () => {
             {/* Footer only on desktop for input step */}
             {currentStep === "input" && (
               <div className="hidden md:block">
-                <Footer />
+                <SectionErrorBoundary name="Footer">
+                  <Footer />
+                </SectionErrorBoundary>
               </div>
             )}
             

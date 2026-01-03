@@ -228,13 +228,16 @@ export const useSubscription = () => {
     }
   }, [user, usage.buildsThisWeek, hasEverBuilt]);
 
-  // Initial load
+  // Initial load - wait for auth to be fully stable before fetching
+  // We check both authLoading AND explicitly track user to prevent race conditions
   useEffect(() => {
-    if (!authLoading) {
-      checkSubscription();
-      fetchUsage();
-    }
-  }, [authLoading, checkSubscription, fetchUsage]);
+    // Only proceed when auth is no longer loading
+    if (authLoading) return;
+    
+    // Now auth is stable - we know definitively whether user is logged in or not
+    checkSubscription();
+    fetchUsage();
+  }, [authLoading, user, checkSubscription, fetchUsage]);
 
   // Refresh subscription periodically (every minute)
   useEffect(() => {

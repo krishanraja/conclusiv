@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -20,9 +20,16 @@ export const useAuth = () => {
     error: null,
   });
 
+  // Track initialization state to prevent race conditions
+  const initialSessionCheckedRef = useRef(false);
+  const authStateReceivedRef = useRef(false);
+
   useEffect(() => {
     let retryCount = 0;
     let mounted = true;
+
+    // Helper to check if auth is ready (both checks complete)
+    const isAuthReady = () => initialSessionCheckedRef.current && authStateReceivedRef.current;
 
     const loadSession = async (): Promise<void> => {
       try {
@@ -42,31 +49,37 @@ export const useAuth = () => {
             return;
           }
           
+          initialSessionCheckedRef.current = true;
           if (mounted) {
             setAuthState({
               session: null,
               user: null,
-              isLoading: false,
+              // Only set isLoading to false if we've received at least one auth state event
+              // OR if this is our final attempt (we need to show something)
+              isLoading: !authStateReceivedRef.current,
               error: error,
             });
           }
           return;
         }
 
+        initialSessionCheckedRef.current = true;
         if (mounted) {
           setAuthState({
             session: session,
             user: session?.user ?? null,
-            isLoading: false,
+            // Only fully loaded when both session check AND auth state listener have fired
+            isLoading: !authStateReceivedRef.current,
             error: null,
           });
         }
       } catch (err) {
+        initialSessionCheckedRef.current = true;
         if (mounted) {
           setAuthState({
             session: null,
             user: null,
-            isLoading: false,
+            isLoading: !authStateReceivedRef.current,
             error: err instanceof Error ? err : new Error('Failed to load session'),
           });
         }
@@ -74,25 +87,44 @@ export const useAuth = () => {
     };
 
     // Set up auth state listener FIRST
+    // This listener fires on: INITIAL_SESSION, SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED, etc.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (mounted) {
-          setAuthState({
-            session,
-            user: session?.user ?? null,
-            isLoading: false,
-            error: null,
-          });
-        }
+        if (!mounted) return;
+        
+        // Mark that we've received at least one auth state event
+        authStateReceivedRef.current = true;
+        
+        // Now we can safely set isLoading to false if session was also checked
+        setAuthState({
+          session,
+          user: session?.user ?? null,
+          // Only set loading to false if initial session check is also complete
+          isLoading: !initialSessionCheckedRef.current,
+          error: null,
+        });
       }
     );
 
     // THEN check for existing session with retry logic
     loadSession();
 
+    // Safety timeout: ensure we don't stay in loading state forever
+    // If after 5 seconds we're still loading, force loading to false
+    const safetyTimeout = setTimeout(() => {
+      if (mounted && authState.isLoading) {
+        console.warn('[useAuth] Safety timeout triggered - forcing loading state to false');
+        setAuthState(prev => ({
+          ...prev,
+          isLoading: false,
+        }));
+      }
+    }, 5000);
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      clearTimeout(safetyTimeout);
     };
   }, []);
 
