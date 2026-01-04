@@ -743,79 +743,82 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="flex flex-col items-center justify-center py-12 space-y-6"
               >
-                {/* Orbital Animation: C wraps around central Sparkles */}
-                <div className="relative w-36 h-36 flex items-center justify-center">
-                  {/* Outer glow ring */}
+                {/* Branded AI Loading: C icon center with Sparkles overlay - matches LoadingOverlay pattern */}
+                <div className="relative flex items-center justify-center">
+                  {/* Outer glow effect - same as LoadingOverlay */}
                   <motion.div
-                    className="absolute w-32 h-32 rounded-full"
-                    style={{
-                      background: "radial-gradient(circle, hsl(var(--primary) / 0.15) 0%, transparent 70%)",
-                    }}
-                    animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.3, 0.5] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute w-28 h-28 rounded-full bg-shimmer-start/10 blur-xl"
+                    initial={{ opacity: 0.3, scale: 0.95 }}
+                    animate={{ opacity: [0.3, 0.4, 0.3], scale: [0.95, 1, 0.95] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                   />
                   
-                  {/* Central magic icon - fixed in place */}
-                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center z-10 backdrop-blur-sm border border-primary/20">
-                    <Sparkles className="w-6 h-6 text-primary animate-pulse" />
-                  </div>
+                  {/* Progress ring - indeterminate spinner matching LoadingOverlay */}
+                  <svg className="w-24 h-24" viewBox="0 0 96 96" style={{ transform: 'rotate(-90deg)' }}>
+                    {/* Background circle */}
+                    <circle
+                      cx="48"
+                      cy="48"
+                      r="42"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      fill="none"
+                      className="text-muted/20"
+                    />
+                    {/* Spinning arc */}
+                    <motion.circle
+                      cx="48"
+                      cy="48"
+                      r="42"
+                      stroke="url(#research-gradient)"
+                      strokeWidth="3"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeDasharray="66 264"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+                      style={{ transformOrigin: "center" }}
+                    />
+                    <defs>
+                      <linearGradient id="research-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="hsl(var(--shimmer-start))" />
+                        <stop offset="100%" stopColor="hsl(var(--shimmer-end))" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
                   
-                  {/* Pulsing ring around sparkle */}
-                  <motion.div
-                    className="absolute w-16 h-16 rounded-full border-2 border-primary/30"
-                    animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                  />
-                  
-                  {/* Orbiting C icon - wraps around the center like an embrace */}
-                  <motion.div
-                    className="absolute w-32 h-32"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 3.5, repeat: Infinity, ease: "linear" }}
-                    style={{ transformOrigin: "center center" }}
-                  >
-                    {/* C icon positioned at outer orbit edge - appears to wrap around */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                  {/* Center content: C logo with Sparkles overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    {/* Semi-transparent Sparkles behind C logo */}
+                    <motion.div
+                      className="absolute"
+                      animate={{ opacity: [0.3, 0.5, 0.3], scale: [0.9, 1, 0.9] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <Sparkles className="w-12 h-12 text-shimmer-end/40" />
+                    </motion.div>
+                    
+                    {/* Rotating C logo - same as LoadingOverlay */}
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                      className="relative z-10"
+                    >
+                      {/* Subtle glow behind logo */}
                       <motion.div
-                        animate={{ rotate: -360 }}
-                        transition={{ duration: 3.5, repeat: Infinity, ease: "linear" }}
-                      >
-                        <motion.div
-                          className="relative"
-                          animate={{ scale: [1, 1.05, 1] }}
-                          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                        >
-                          <img 
-                            src={conclusivIcon} 
-                            alt="" 
-                            className="w-9 h-9 object-contain drop-shadow-lg"
-                          />
-                          {/* Subtle glow trail */}
-                          <motion.div
-                            className="absolute inset-0 rounded-lg bg-primary/30 blur-md -z-10"
-                            animate={{ opacity: [0.5, 0.8, 0.5] }}
-                            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                          />
-                        </motion.div>
-                      </motion.div>
-                    </div>
-                  </motion.div>
-                  
-                  {/* Secondary smaller orbiting particle for depth */}
-                  <motion.div
-                    className="absolute w-24 h-24"
-                    animate={{ rotate: -360 }}
-                    transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-                    style={{ transformOrigin: "center center" }}
-                  >
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2">
-                      <motion.div
-                        className="w-2 h-2 rounded-full bg-shimmer-start/60"
-                        animate={{ scale: [1, 1.5, 1], opacity: [0.6, 1, 0.6] }}
+                        className="absolute inset-0 w-10 h-10 bg-shimmer-start/20 rounded-full blur-lg"
+                        style={{ transform: 'translate(-5px, -5px)' }}
+                        animate={{ opacity: [0.4, 0.6, 0.4] }}
                         transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                       />
-                    </div>
-                  </motion.div>
+                      {/* C logo */}
+                      <img 
+                        src={conclusivIcon} 
+                        alt="" 
+                        className="w-10 h-10 object-contain relative z-10"
+                      />
+                    </motion.div>
+                  </div>
                 </div>
 
                 <div className="text-center space-y-2">

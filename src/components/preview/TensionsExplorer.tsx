@@ -5,7 +5,6 @@ import {
   Eye, 
   Lightbulb, 
   GitBranch, 
-  X, 
   CheckCircle2, 
   ChevronRight,
   Plus,
@@ -270,17 +269,12 @@ export const TensionsExplorer = ({ isOpen, onClose }: TensionsExplorerProps) => 
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
         <SheetHeader className="px-6 py-4 border-b border-border/50">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-amber-400/10">
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
-              </div>
-              Tensions Explorer
-            </SheetTitle>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          <SheetTitle className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-amber-400/10">
+              <AlertTriangle className="w-4 h-4 text-amber-400" />
+            </div>
+            Tensions Explorer
+          </SheetTitle>
           
           {/* Progress indicator */}
           <div className="mt-4 p-3 rounded-lg bg-card border border-border/50">

@@ -11,11 +11,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { normalizeClaim, verifyClaim } from "@/lib/api";
 import type { KeyClaim, ClaimVerification, ClaimFreshnessStatus } from "@/lib/types";
@@ -73,37 +72,41 @@ const VerificationBadge = ({
   const { icon: Icon, bgClass, textClass, label, description } = statusConfig;
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <motion.span 
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            className={cn(
-              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all",
-              bgClass,
-              textClass
-            )}
-          >
-            <Icon className="w-3 h-3" />
-            <span className="hidden sm:inline">{label}</span>
-          </motion.span>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-[280px]">
-          <p className="text-xs font-medium">{label}</p>
+    <Popover>
+      <PopoverTrigger asChild>
+        <motion.button 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          className={cn(
+            "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all cursor-pointer",
+            bgClass,
+            textClass
+          )}
+          type="button"
+        >
+          <Icon className="w-3 h-3" />
+          <span className="hidden sm:inline">{label}</span>
+        </motion.button>
+      </PopoverTrigger>
+      <PopoverContent side="top" className="w-72 p-3" align="start">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Icon className={cn("w-4 h-4", textClass)} />
+            <p className="text-sm font-medium">{label}</p>
+          </div>
           <p className="text-xs text-muted-foreground">{description}</p>
           {verification.summary && (
-            <p className="text-xs mt-1 pt-1 border-t border-border/50">{verification.summary}</p>
+            <p className="text-xs pt-2 border-t border-border/50">{verification.summary}</p>
           )}
           {verification.confidence !== undefined && (
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-[10px] text-muted-foreground">
               Confidence: {verification.confidence}%
             </p>
           )}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 
@@ -148,32 +151,36 @@ const FreshnessBadge = ({
   const { dotClass, textClass, bgClass, label, description } = freshnessConfig;
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <motion.span 
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30, delay: 0.1 }}
-            className={cn(
-              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium",
-              bgClass,
-              textClass
-            )}
-          >
-            <span className={cn("w-1.5 h-1.5 rounded-full", dotClass)} />
-            <span className="hidden sm:inline">{label}</span>
-          </motion.span>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-[250px]">
-          <p className="text-xs font-medium">{label}</p>
+    <Popover>
+      <PopoverTrigger asChild>
+        <motion.button 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 500, damping: 30, delay: 0.1 }}
+          className={cn(
+            "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium cursor-pointer",
+            bgClass,
+            textClass
+          )}
+          type="button"
+        >
+          <span className={cn("w-1.5 h-1.5 rounded-full", dotClass)} />
+          <span className="hidden sm:inline">{label}</span>
+        </motion.button>
+      </PopoverTrigger>
+      <PopoverContent side="top" className="w-64 p-3" align="start">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className={cn("w-2 h-2 rounded-full", dotClass)} />
+            <p className="text-sm font-medium">{label}</p>
+          </div>
           <p className="text-xs text-muted-foreground">{description}</p>
           {reason && (
-            <p className="text-xs mt-1 pt-1 border-t border-border/50">{reason}</p>
+            <p className="text-xs pt-2 border-t border-border/50">{reason}</p>
           )}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 
