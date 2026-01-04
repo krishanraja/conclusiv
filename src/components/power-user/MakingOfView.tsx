@@ -26,13 +26,13 @@ export const MakingOfView = ({ isOpen, onClose }: MakingOfViewProps) => {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [showAllSuggestions, setShowAllSuggestions] = useState(false);
 
-  // Calculate quality metrics
-  const { overall, metrics } = useMemo(() => 
-    calculateNarrativeQuality(narrative, rawText, tensions, businessContext, keyClaims),
-    [narrative, rawText, tensions, businessContext, keyClaims]
-  );
-
-  if (!narrative) return null;
+  // Calculate quality metrics (safe for null narrative)
+  const { overall, metrics } = useMemo(() => {
+    if (!narrative) {
+      return { overall: 0, metrics: [] };
+    }
+    return calculateNarrativeQuality(narrative, rawText, tensions, businessContext, keyClaims);
+  }, [narrative, rawText, tensions, businessContext, keyClaims]);
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return "text-green-400";
@@ -150,6 +150,9 @@ export const MakingOfView = ({ isOpen, onClose }: MakingOfViewProps) => {
     
     return items;
   }, [metrics, tensions]);
+
+  // Early return AFTER all hooks are defined (React Rules of Hooks)
+  if (!narrative) return null;
 
   const processingStats = {
     inputChars: rawText.length,

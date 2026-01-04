@@ -224,9 +224,13 @@ export const templateConfigs: Record<TemplateName, TemplateAnimationConfig> = {
   PriorityLadder,
 };
 
-// Get animation config for a template
-export const getTemplateConfig = (template: TemplateName): TemplateAnimationConfig => {
-  return templateConfigs[template] || LinearStoryboard;
+// Default template used when none is selected
+const DEFAULT_TEMPLATE: TemplateName = "LinearStoryboard";
+
+// Get animation config for a template (null-safe)
+export const getTemplateConfig = (template: TemplateName | null | undefined): TemplateAnimationConfig => {
+  const safeTemplate = template || DEFAULT_TEMPLATE;
+  return templateConfigs[safeTemplate] || LinearStoryboard;
 };
 
 // Generate node positions based on layout type
@@ -315,9 +319,10 @@ export const generateNodePositions = (
   return positions;
 };
 
-// Get transition type sequence for a template
-export const getTransitionSequence = (template: TemplateName, sectionCount: number): TransitionType[] => {
+// Get transition type sequence for a template (null-safe)
+export const getTransitionSequence = (template: TemplateName | null | undefined, sectionCount: number): TransitionType[] => {
   const transitions: TransitionType[] = [];
+  const safeTemplate = template || DEFAULT_TEMPLATE;
   
   const templateTransitions: Record<TemplateName, TransitionType[]> = {
     ZoomReveal: ["zoom_in", "zoom_out", "pan", "zoom_in", "orbit", "zoom_out", "pan_to_node"],
@@ -327,7 +332,7 @@ export const getTransitionSequence = (template: TemplateName, sectionCount: numb
     PriorityLadder: ["step_up", "step_up", "highlight", "step_up", "zoom_in", "step_up"],
   };
   
-  const sequence = templateTransitions[template] || templateTransitions.LinearStoryboard;
+  const sequence = templateTransitions[safeTemplate] || templateTransitions.LinearStoryboard;
   
   for (let i = 0; i < sectionCount; i++) {
     transitions.push(sequence[i % sequence.length]);
@@ -336,8 +341,9 @@ export const getTransitionSequence = (template: TemplateName, sectionCount: numb
   return transitions;
 };
 
-// Calculate content enter animations per template
-export const getContentEnterAnimation = (template: TemplateName) => {
+// Calculate content enter animations per template (null-safe)
+export const getContentEnterAnimation = (template: TemplateName | null | undefined) => {
+  const safeTemplate = template || DEFAULT_TEMPLATE;
   const configs: Record<TemplateName, {
     title: { initial: object; animate: object; transition: object };
     content: { initial: object; animate: object; transition: object };
@@ -430,22 +436,25 @@ export const getContentEnterAnimation = (template: TemplateName) => {
     },
   };
   
-  return configs[template] || configs.LinearStoryboard;
+  return configs[safeTemplate] || configs.LinearStoryboard;
 };
 
-// Mobile-optimized configs (simplified animations)
-export const getMobileConfig = (template: TemplateName): Partial<TemplateAnimationConfig> => {
+// Mobile-optimized configs (simplified animations, null-safe)
+export const getMobileConfig = (template: TemplateName | null | undefined): Partial<TemplateAnimationConfig> => {
+  const safeTemplate = template || DEFAULT_TEMPLATE;
+  const baseConfig = templateConfigs[safeTemplate];
+  
   return {
     cameraSpring: { stiffness: 100, damping: 30, mass: 0.7 },
     zoomSpring: { stiffness: 80, damping: 25, mass: 0.5 },
-    maxZoomOut: Math.min(0.15, templateConfigs[template].maxZoomOut),
+    maxZoomOut: Math.min(0.15, baseConfig.maxZoomOut),
     useRotation: false,
     use3D: false,
-    particleCount: Math.min(20, templateConfigs[template].particleCount),
-    nebulaCount: Math.min(2, templateConfigs[template].nebulaCount),
+    particleCount: Math.min(20, baseConfig.particleCount),
+    nebulaCount: Math.min(2, baseConfig.nebulaCount),
     transitionDuration: { 
-      base: templateConfigs[template].transitionDuration.base * 0.6,
-      perStep: templateConfigs[template].transitionDuration.perStep * 0.5,
+      base: baseConfig.transitionDuration.base * 0.6,
+      perStep: baseConfig.transitionDuration.perStep * 0.5,
     },
   };
 };
