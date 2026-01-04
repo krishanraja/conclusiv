@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
 import { getIcon } from "@/lib/icons";
-import { TransitionType } from "@/lib/types";
+import { TransitionType, TemplateName } from "@/lib/types";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Watermark } from "@/components/subscription/Watermark";
 import { UpgradePrompt } from "@/components/subscription/UpgradePrompt";
@@ -14,6 +14,13 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { TitleSequence } from "@/components/cinematic/TitleSequence";
 import { useBrandLogo } from "@/hooks/useBrandLogo";
 import { MobilePresentScreen } from "./MobilePresentScreen";
+import { 
+  getTemplateConfig, 
+  generateNodePositions as generateTemplateNodePositions, 
+  getContentEnterAnimation,
+  getMobileConfig,
+  type TemplateAnimationConfig 
+} from "@/lib/animationTemplates";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 // Canvas size for infinite canvas
@@ -46,57 +53,54 @@ const generateParticles = (count: number) => {
   return particles;
 };
 
-// Generate positions for nodes in a spiral/organic pattern
-const generateNodePositions = (count: number) => {
-  const positions: Array<{ x: number; y: number; scale: number; rotation: number }> = [];
-  const centerX = CANVAS_SIZE / 2;
-  const centerY = CANVAS_SIZE / 2;
-  
-  for (let i = 0; i < count; i++) {
-    const angle = (i * 137.5 * Math.PI) / 180;
-    const radius = 500 + i * 200;
-    const x = centerX + Math.cos(angle) * radius;
-    const y = centerY + Math.sin(angle) * radius;
-    const scale = 1 + (Math.random() * 0.2 - 0.1);
-    const rotation = Math.sin(i * 0.5) * 5;
-    
-    positions.push({ x, y, scale, rotation });
-  }
-  
-  return positions;
+// Legacy generateNodePositions is now in animationTemplates.ts
+// This wraps it for backward compatibility
+const generateNodePositions = (count: number, template: TemplateName = "LinearStoryboard") => {
+  const config = getTemplateConfig(template);
+  return generateTemplateNodePositions(count, config, CANVAS_SIZE);
 };
 
-// Refined dramatic transition configurations - faster on mobile
-const getTransitionConfig = (type: TransitionType, fromIdx: number, toIdx: number, isMobile: boolean) => {
-  const isForward = toIdx > fromIdx;
+// Template-aware transition configurations
+const getTransitionConfig = (
+  type: TransitionType, 
+  fromIdx: number, 
+  toIdx: number, 
+  isMobile: boolean,
+  templateConfig: TemplateAnimationConfig
+) => {
   const distance = Math.abs(toIdx - fromIdx);
   
-  // Mobile gets 40% faster animations
+  // Mobile gets faster animations
   const mobileMultiplier = isMobile ? 0.6 : 1;
   
-  const configs: Record<TransitionType, { duration: number; ease: number[]; zoomOut: number; rotationDelta: number }> = {
-    zoom_in: { duration: 1.4, ease: [0.16, 1, 0.3, 1], zoomOut: 0.15, rotationDelta: 0 },
-    zoom_out: { duration: 1.2, ease: [0.22, 1, 0.36, 1], zoomOut: 0.2, rotationDelta: 0 },
-    pan: { duration: 1.0, ease: [0.33, 1, 0.68, 1], zoomOut: 0.08, rotationDelta: 0 },
-    slide_left: { duration: 1.2, ease: [0.16, 1, 0.3, 1], zoomOut: 0.12, rotationDelta: 0 },
-    fade: { duration: 0.8, ease: [0.4, 0, 0.2, 1], zoomOut: 0.05, rotationDelta: 0 },
-    card_expand: { duration: 1.4, ease: [0.16, 1, 0.3, 1], zoomOut: 0.18, rotationDelta: 0 },
-    pan_to_node: { duration: 1.4, ease: [0.12, 0.8, 0.25, 1], zoomOut: 0.15, rotationDelta: 0 },
-    orbit: { duration: 1.6, ease: [0.16, 1, 0.3, 1], zoomOut: 0.2, rotationDelta: 0 },
-    tilt: { duration: 1.2, ease: [0.22, 1, 0.36, 1], zoomOut: 0.12, rotationDelta: 0 },
-    split_reveal: { duration: 1.2, ease: [0.33, 1, 0.68, 1], zoomOut: 0.12, rotationDelta: 0 },
-    side_flip: { duration: 1.4, ease: [0.16, 1, 0.3, 1], zoomOut: 0.15, rotationDelta: 0 },
-    step_up: { duration: 1.0, ease: [0.22, 1, 0.36, 1], zoomOut: 0.1, rotationDelta: 0 },
-    highlight: { duration: 1.0, ease: [0.33, 1, 0.68, 1], zoomOut: 0.08, rotationDelta: 0 },
+  // Base configs per transition type - enhanced for variety
+  const typeConfigs: Record<TransitionType, { duration: number; ease: number[]; zoomOut: number; rotationDelta: number }> = {
+    zoom_in: { duration: 1.8, ease: [0.16, 1, 0.3, 1], zoomOut: 0.25, rotationDelta: 2 },
+    zoom_out: { duration: 1.5, ease: [0.22, 1, 0.36, 1], zoomOut: 0.35, rotationDelta: -1.5 },
+    pan: { duration: 1.2, ease: [0.33, 1, 0.68, 1], zoomOut: 0.1, rotationDelta: 0 },
+    slide_left: { duration: 0.9, ease: [0.16, 1, 0.3, 1], zoomOut: 0.08, rotationDelta: 0 },
+    fade: { duration: 0.7, ease: [0.4, 0, 0.2, 1], zoomOut: 0.05, rotationDelta: 0 },
+    card_expand: { duration: 1.6, ease: [0.16, 1, 0.3, 1], zoomOut: 0.3, rotationDelta: 3 },
+    pan_to_node: { duration: 1.6, ease: [0.12, 0.8, 0.25, 1], zoomOut: 0.2, rotationDelta: 1 },
+    orbit: { duration: 2.0, ease: [0.16, 1, 0.3, 1], zoomOut: 0.4, rotationDelta: 8 },
+    tilt: { duration: 1.4, ease: [0.22, 1, 0.36, 1], zoomOut: 0.15, rotationDelta: 5 },
+    split_reveal: { duration: 1.3, ease: [0.33, 1, 0.68, 1], zoomOut: 0.12, rotationDelta: 0 },
+    side_flip: { duration: 1.5, ease: [0.16, 1, 0.3, 1], zoomOut: 0.2, rotationDelta: -3 },
+    step_up: { duration: 0.9, ease: [0.22, 1, 0.36, 1], zoomOut: 0.08, rotationDelta: 0 },
+    highlight: { duration: 0.8, ease: [0.33, 1, 0.68, 1], zoomOut: 0.06, rotationDelta: 0 },
   };
   
-  const config = configs[type] || configs.fade;
+  const baseConfig = typeConfigs[type] || typeConfigs.fade;
+  
+  // Apply template-specific modifiers
+  const baseDuration = templateConfig.transitionDuration.base;
+  const perStepDuration = templateConfig.transitionDuration.perStep;
+  
   return {
-    ...config,
-    duration: (config.duration + distance * 0.2) * mobileMultiplier,
-    zoomOut: Math.min(0.65, config.zoomOut + distance * 0.06),
-    // Disable rotation on mobile
-    rotationDelta: isMobile ? 0 : config.rotationDelta,
+    duration: (baseDuration + distance * perStepDuration) * mobileMultiplier,
+    ease: templateConfig.ease,
+    zoomOut: Math.min(templateConfig.maxZoomOut, baseConfig.zoomOut + distance * 0.04),
+    rotationDelta: templateConfig.useRotation && !isMobile ? baseConfig.rotationDelta : 0,
   };
 };
 
@@ -209,7 +213,19 @@ export const PresentScreen = () => {
     setCurrentStep,
     businessContext,
     presentationStyle,
+    selectedTemplate,
   } = useNarrativeStore();
+  
+  // Get template-specific animation configuration
+  const templateConfig = useMemo(() => {
+    const config = getTemplateConfig(selectedTemplate);
+    return config;
+  }, [selectedTemplate]);
+  
+  // Get content enter animations for this template
+  const contentAnimations = useMemo(() => {
+    return getContentEnterAnimation(selectedTemplate);
+  }, [selectedTemplate]);
 
   const { isPro, limits } = useSubscription();
   const isMobile = useIsMobile();
@@ -313,11 +329,12 @@ export const PresentScreen = () => {
     return styles;
   }, [presentationStyle]);
 
-  // Reduce particles and effects on mobile
-  const particleCount = isMobile ? 15 : 80;
-  const nebulaCount = isMobile ? 2 : 5;
+  // Template-aware particle and effect counts
+  const mobileConfig = useMemo(() => getMobileConfig(selectedTemplate), [selectedTemplate]);
+  const particleCount = isMobile ? mobileConfig.particleCount ?? 15 : templateConfig.particleCount;
+  const nebulaCount = isMobile ? mobileConfig.nebulaCount ?? 2 : templateConfig.nebulaCount;
 
-  // Generate particles and node positions once
+  // Generate particles and node positions based on template
   const particles = useMemo(() => generateParticles(particleCount), [particleCount]);
   const nebulaPositions = useMemo(() => [
     { x: CANVAS_SIZE * 0.2, y: CANVAS_SIZE * 0.3, size: 600, color: "hsl(var(--primary))", delay: 0 },
@@ -327,19 +344,24 @@ export const PresentScreen = () => {
     { x: CANVAS_SIZE * 0.8, y: CANVAS_SIZE * 0.7, size: 550, color: "hsl(var(--primary))", delay: 4 },
   ].slice(0, nebulaCount), [nebulaCount]);
 
+  // Generate node positions using template-specific layout
   const nodePositions = useMemo(() => {
     if (!narrative) return [];
-    return generateNodePositions(narrative.sections.length);
-  }, [narrative?.sections.length]);
+    return generateNodePositions(narrative.sections.length, selectedTemplate);
+  }, [narrative?.sections.length, selectedTemplate]);
 
-  // Spring-based camera - simpler physics on mobile
+  // Template-aware spring configurations
   const springConfig = isMobile 
-    ? { stiffness: 100, damping: 30, mass: 0.8 } // Faster, snappier on mobile
-    : { stiffness: 40, damping: 20, mass: 1.2 };
+    ? mobileConfig.cameraSpring ?? { stiffness: 100, damping: 30, mass: 0.8 }
+    : templateConfig.cameraSpring;
+  
+  const zoomSpringConfig = isMobile
+    ? mobileConfig.zoomSpring ?? { stiffness: 80, damping: 25, mass: 0.6 }
+    : templateConfig.zoomSpring;
   
   const cameraX = useSpring(CANVAS_SIZE / 2, springConfig);
   const cameraY = useSpring(CANVAS_SIZE / 2, springConfig);
-  const cameraZoom = useSpring(1, isMobile ? { stiffness: 80, damping: 25, mass: 0.6 } : { stiffness: 35, damping: 18, mass: 1 });
+  const cameraZoom = useSpring(1, zoomSpringConfig);
   const cameraRotation = useSpring(0, { stiffness: 30, damping: 15, mass: 0.8 });
 
   const blurAmount = useMotionValue(0);
@@ -365,7 +387,8 @@ export const PresentScreen = () => {
       currentTransition?.type || "fade",
       prevIndex,
       currentSectionIndex,
-      isMobile
+      isMobile,
+      templateConfig
     );
 
     setIsTransitioning(true);
@@ -634,9 +657,16 @@ export const PresentScreen = () => {
             const isPast = i < currentSectionIndex;
             const distance = Math.abs(i - currentSectionIndex);
             
-            // Disable blur on mobile
-            const nodeBlur = isMobile ? 0 : (isActive ? 0 : Math.min(5, distance * 1.2));
-            const nodeOpacity = isActive ? 1 : Math.max(0.35, 1 - distance * 0.12);
+            // Template-aware blur and opacity
+            const nodeBlur = isMobile 
+              ? 0 
+              : (isActive ? templateConfig.cardBlur.active : Math.min(templateConfig.cardBlur.inactive, distance * 1.5));
+            const nodeOpacity = isActive 
+              ? templateConfig.cardOpacity.active 
+              : Math.max(templateConfig.cardOpacity.inactive, 1 - distance * 0.15);
+            const nodeScale = isActive 
+              ? templateConfig.nodeScale.active 
+              : templateConfig.nodeScale.inactive;
             
             return (
               <motion.div
@@ -647,23 +677,26 @@ export const PresentScreen = () => {
                   top: pos.y,
                   x: "-50%",
                   y: "-50%",
-                  transformStyle: isMobile ? "flat" : "preserve-3d",
+                  // Template-aware 3D
+                  transformStyle: isMobile || !templateConfig.use3D ? "flat" : "preserve-3d",
                   backfaceVisibility: "hidden",
+                  // Z-positioning for 3D templates
+                  ...(templateConfig.use3D && !isMobile && pos.z ? { transform: `translateZ(${pos.z}px)` } : {}),
                 }}
                 initial={{ opacity: 0, scale: 0.3 }}
                 animate={{ 
                   opacity: nodeOpacity,
-                  scale: isActive ? 1 : 0.85,
+                  scale: nodeScale,
                   filter: isMobile ? "none" : `blur(${nodeBlur}px)`,
                 }}
                 transition={{ 
-                  duration: shouldSimplifyAnimations ? 0.3 : 0.8, 
-                  ease: shouldSimplifyAnimations ? "easeOut" : [0.16, 1, 0.3, 1] 
+                  duration: shouldSimplifyAnimations ? 0.3 : templateConfig.transitionDuration.base * 0.5, 
+                  ease: shouldSimplifyAnimations ? "easeOut" : templateConfig.ease 
                 }}
               >
                 <div 
                   className={cn(
-                    "w-[520px] max-w-[90vw] rounded-2xl border bg-card/95 backdrop-blur-md p-8 text-center shadow-2xl transition-all",
+                    "max-w-[90vw] border bg-card/95 backdrop-blur-md p-8 text-center shadow-2xl transition-all",
                     shouldSimplifyAnimations ? "duration-300" : "duration-700",
                     isActive 
                       ? "border-primary/60 shadow-primary/30" 
@@ -672,7 +705,9 @@ export const PresentScreen = () => {
                         : "border-border/20 shadow-none"
                   )}
                   style={{
-                    transform: isMobile ? "none" : `rotateZ(${pos.rotation}deg)`,
+                    width: templateConfig.cardWidth,
+                    borderRadius: templateConfig.cardBorderRadius,
+                    transform: isMobile || !templateConfig.useRotation ? "none" : `rotateZ(${pos.rotation}deg)`,
                   }}
                 >
                   {/* Pulsing glow effect for active node - simplified on mobile */}
@@ -724,55 +759,74 @@ export const PresentScreen = () => {
                     )} />
                   </motion.div>
 
-                  {/* Title */}
-                  <h2 
-                    className={cn(
-                      "text-2xl font-semibold mb-3 tracking-tight transition-colors duration-300",
-                      isActive ? "text-foreground" : "text-muted-foreground"
-                    )}
-                    style={presentationStyle?.primaryFont ? { fontFamily: presentationStyle.primaryFont } : undefined}
-                  >
-                    {section.title}
-                  </h2>
+                  {/* Title - Template-aware animation */}
+                  {isActive ? (
+                    <motion.h2
+                      initial={shouldSimplifyAnimations ? { opacity: 0 } : contentAnimations.title.initial}
+                      animate={shouldSimplifyAnimations ? { opacity: 1 } : contentAnimations.title.animate}
+                      transition={shouldSimplifyAnimations 
+                        ? { duration: 0.3 } 
+                        : contentAnimations.title.transition
+                      }
+                      className="text-2xl font-semibold mb-3 tracking-tight text-foreground"
+                      style={presentationStyle?.primaryFont ? { fontFamily: presentationStyle.primaryFont } : undefined}
+                    >
+                      {section.title}
+                    </motion.h2>
+                  ) : (
+                    <h2 
+                      className={cn(
+                        "text-2xl font-semibold mb-3 tracking-tight transition-colors duration-300",
+                        "text-muted-foreground"
+                      )}
+                      style={presentationStyle?.primaryFont ? { fontFamily: presentationStyle.primaryFont } : undefined}
+                    >
+                      {section.title}
+                    </h2>
+                  )}
 
-                  {/* Content */}
+                  {/* Content - Template-aware animation */}
                   {section.content && isActive && (
                     <motion.p
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ 
-                        delay: shouldSimplifyAnimations ? 0.15 : 0.4, 
-                        duration: shouldSimplifyAnimations ? 0.3 : 0.6, 
-                        ease: "easeOut" 
-                      }}
+                      initial={shouldSimplifyAnimations ? { opacity: 0 } : contentAnimations.content.initial}
+                      animate={shouldSimplifyAnimations ? { opacity: 1 } : contentAnimations.content.animate}
+                      transition={shouldSimplifyAnimations 
+                        ? { delay: 0.15, duration: 0.3 } 
+                        : { 
+                            ...contentAnimations.content.transition,
+                            delay: templateConfig.contentDelay,
+                          }
+                      }
                       className="text-base text-muted-foreground max-w-md mx-auto mb-4"
                     >
                       {section.content}
                     </motion.p>
                   )}
 
-                  {/* Items */}
+                  {/* Items - Template-aware staggered animation */}
                   {section.items && section.items.length > 0 && isActive && (
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ 
-                        delay: shouldSimplifyAnimations ? 0.2 : 0.5, 
-                        duration: shouldSimplifyAnimations ? 0.2 : 0.5 
+                        delay: shouldSimplifyAnimations ? 0.2 : templateConfig.contentDelay + 0.1, 
+                        duration: 0.3 
                       }}
                       className="grid grid-cols-1 gap-2 mt-4 text-left"
                     >
                       {section.items.slice(0, 4).map((item, idx) => (
                         <motion.div
                           key={idx}
-                          initial={{ opacity: 0, x: -15 }}
-                          animate={{ opacity: 1, x: 0 }}
+                          initial={shouldSimplifyAnimations ? { opacity: 0 } : contentAnimations.items.initial}
+                          animate={shouldSimplifyAnimations ? { opacity: 1 } : contentAnimations.items.animate}
                           transition={{ 
-                            delay: shouldSimplifyAnimations ? 0.2 + idx * 0.05 : 0.5 + idx * 0.1, 
-                            duration: shouldSimplifyAnimations ? 0.2 : 0.5, 
-                            ease: "easeOut" 
+                            delay: shouldSimplifyAnimations 
+                              ? 0.2 + idx * 0.05 
+                              : templateConfig.contentDelay + templateConfig.staggerDelay * (idx + 1), 
+                            ...contentAnimations.items.transition,
                           }}
                           className="p-2.5 rounded-lg bg-background/60 border border-border/20"
+                          style={{ borderRadius: templateConfig.cardBorderRadius * 0.5 }}
                         >
                           <div className="flex items-start gap-2">
                             <motion.div 

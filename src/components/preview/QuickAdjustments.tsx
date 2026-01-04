@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Layers, Layout, List, Lock, Users, AlertTriangle, Clock, Paintbrush, Save, Wand2, Minimize2, Maximize2, ShieldAlert, RotateCcw, BookOpen, Loader2 } from "lucide-react";
+import { ChevronRight, Layers, Film, List, Lock, Users, Clock, Paintbrush, Save, Wand2, Minimize2, Maximize2, ShieldAlert, RotateCcw, BookOpen, Loader2 } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { TemplateName } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useFeatureGate } from "@/components/subscription/FeatureGate";
 import { AudienceSelector } from "./AudienceSelector";
-import { TensionCard } from "./TensionCard";
+import { TensionsExplorer, TensionsExplorerTrigger } from "./TensionsExplorer";
 import { DurationSelector } from "./DurationSelector";
 import { BrandStyleEditor } from "@/components/editor/BrandStyleEditor";
 import { SaveNarrativeDialog } from "./SaveNarrativeDialog";
@@ -62,6 +62,7 @@ export const QuickAdjustments = () => {
   const [expandedPanel, setExpandedPanel] = useState<string | null>(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [isRemixing, setIsRemixing] = useState<RemixOption | null>(null);
+  const [tensionsExplorerOpen, setTensionsExplorerOpen] = useState(false);
   const { toast } = useToast();
   const { 
     themes, 
@@ -212,50 +213,9 @@ export const QuickAdjustments = () => {
           </AnimatePresence>
         </div>
 
-        {/* Tensions Panel - NEW */}
+        {/* Tensions - Opens full explorer panel */}
         {tensions.length > 0 && (
-          <div className="rounded-lg border border-border/50 overflow-hidden">
-            <button
-              onClick={() => togglePanel("tensions")}
-              className="w-full flex items-center justify-between p-3 hover:bg-card/50 transition-colors"
-            >
-              <div className="flex items-center gap-2 text-sm">
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
-                <span>Tensions</span>
-                <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-400/20 text-amber-400">
-                  {tensions.length}
-                </span>
-              </div>
-              <motion.div
-                animate={{ rotate: expandedPanel === "tensions" ? 90 : 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </motion.div>
-            </button>
-
-            <AnimatePresence>
-              {expandedPanel === "tensions" && (
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: "auto" }}
-                  exit={{ height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <div className="p-3 pt-0 space-y-2 max-h-64 overflow-y-auto">
-                    {tensions.map((tension) => (
-                      <TensionCard 
-                        key={tension.id} 
-                        tension={tension}
-                        onAddToNarrative={() => setIncludeTensionSlide(true)}
-                      />
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          <TensionsExplorerTrigger onClick={() => setTensionsExplorerOpen(true)} />
         )}
 
         {/* Story Pillars Panel */}
@@ -315,21 +275,21 @@ export const QuickAdjustments = () => {
           </AnimatePresence>
         </div>
 
-        {/* Template Panel */}
+        {/* Animation Panel */}
         <div className="rounded-lg border border-border/50 overflow-hidden">
           <button
-            onClick={() => togglePanel("template")}
+            onClick={() => togglePanel("animation")}
             className="w-full flex items-center justify-between p-3 hover:bg-card/50 transition-colors"
           >
             <div className="flex items-center gap-2 text-sm">
-              <Layout className="w-4 h-4 text-muted-foreground" />
-              <span>Template</span>
+              <Film className="w-4 h-4 text-muted-foreground" />
+              <span>Animation</span>
               <span className="text-xs text-muted-foreground">
                 {templates.find((t) => t.name === selectedTemplate)?.label}
               </span>
             </div>
             <motion.div
-              animate={{ rotate: expandedPanel === "template" ? 90 : 0 }}
+              animate={{ rotate: expandedPanel === "animation" ? 90 : 0 }}
               transition={{ duration: 0.2 }}
             >
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
@@ -337,7 +297,7 @@ export const QuickAdjustments = () => {
           </button>
 
           <AnimatePresence>
-            {expandedPanel === "template" && (
+            {expandedPanel === "animation" && (
               <motion.div
                 initial={{ height: 0 }}
                 animate={{ height: "auto" }}
@@ -547,6 +507,12 @@ export const QuickAdjustments = () => {
       <SaveNarrativeDialog 
         open={saveDialogOpen} 
         onOpenChange={setSaveDialogOpen} 
+      />
+
+      {/* Tensions Explorer Panel */}
+      <TensionsExplorer 
+        isOpen={tensionsExplorerOpen} 
+        onClose={() => setTensionsExplorerOpen(false)} 
       />
     </>
   );

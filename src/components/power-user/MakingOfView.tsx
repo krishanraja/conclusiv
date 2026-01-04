@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Film, X, ChevronRight, Lightbulb, Target, AlertTriangle, Layers } from "lucide-react";
+import { Film, X, ChevronRight, Lightbulb, Target, AlertTriangle, Layers, TrendingUp, FileText, Sparkles, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
+import { calculateNarrativeQuality } from "@/components/intelligence/NarrativeQualityScore";
 
 interface MakingOfViewProps {
   isOpen: boolean;
@@ -18,12 +19,35 @@ export const MakingOfView = ({ isOpen, onClose }: MakingOfViewProps) => {
     tensions,
     businessContext,
     rawText,
-    duration
+    duration,
+    keyClaims,
   } = useNarrativeStore();
 
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [showAllSuggestions, setShowAllSuggestions] = useState(false);
+
+  // Calculate quality metrics
+  const { overall, metrics } = useMemo(() => 
+    calculateNarrativeQuality(narrative, rawText, tensions, businessContext, keyClaims),
+    [narrative, rawText, tensions, businessContext, keyClaims]
+  );
 
   if (!narrative) return null;
+
+  const getScoreColor = (score: number) => {
+    if (score >= 85) return "text-green-400";
+    if (score >= 70) return "text-shimmer-start";
+    if (score >= 50) return "text-amber-400";
+    return "text-red-400";
+  };
+
+  const getScoreLabel = (score: number) => {
+    if (score >= 90) return "Excellent";
+    if (score >= 75) return "Strong";
+    if (score >= 60) return "Good";
+    if (score >= 40) return "Fair";
+    return "Needs Work";
+  };
 
   const insights = [
     {
@@ -75,6 +99,58 @@ export const MakingOfView = ({ isOpen, onClose }: MakingOfViewProps) => {
     },
   ];
 
+  // Generate improvement suggestions based on metrics
+  const suggestions = useMemo(() => {
+    const items: { metric: string; action: string; priority: 'high' | 'medium' | 'low' }[] = [];
+    
+    const structure = metrics.find(m => m.name === "Structure");
+    const dataDensity = metrics.find(m => m.name === "Data Density");
+    const cta = metrics.find(m => m.name === "Call to Action");
+    const personalization = metrics.find(m => m.name === "Personalization");
+    
+    if (structure && structure.score < 80) {
+      items.push({
+        metric: "Structure",
+        action: "Add more sections with clear titles and content",
+        priority: structure.score < 60 ? "high" : "medium",
+      });
+    }
+    
+    if (dataDensity && dataDensity.score < 75) {
+      items.push({
+        metric: "Data Density",
+        action: "Include specific metrics and percentages",
+        priority: dataDensity.score < 50 ? "high" : "medium",
+      });
+    }
+    
+    if (cta && cta.score < 80) {
+      items.push({
+        metric: "Call to Action",
+        action: "Add clear recommendations in your input",
+        priority: cta.score < 50 ? "high" : "medium",
+      });
+    }
+    
+    if (personalization && personalization.score < 70) {
+      items.push({
+        metric: "Personalization",
+        action: "Add company context for tailored messaging",
+        priority: "medium",
+      });
+    }
+    
+    if (tensions.length > 0 && tensions.some(t => t.severity === "high")) {
+      items.push({
+        metric: "Tension Balance",
+        action: "Address high-severity tensions in the Tensions panel",
+        priority: "high",
+      });
+    }
+    
+    return items;
+  }, [metrics, tensions]);
+
   const processingStats = {
     inputChars: rawText.length,
     inputWords: rawText.split(/\s+/).filter(Boolean).length,
@@ -112,6 +188,124 @@ export const MakingOfView = ({ isOpen, onClose }: MakingOfViewProps) => {
             </div>
 
             <div className="p-4 space-y-6">
+              {/* NARRATIVE QUALITY SCORE - Merged from NarrativeQualityScore */}
+              <div className="p-4 rounded-xl bg-gradient-to-br from-shimmer-start/10 via-transparent to-shimmer-end/10 border border-shimmer-start/20">
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 className="w-4 h-4 text-shimmer-start" />
+                  <h3 className="text-sm font-medium">Narrative Score</h3>
+                </div>
+                
+                <div className="flex items-center gap-6">
+                  {/* Main score gauge */}
+                  <div className="relative w-24 h-24 flex-shrink-0">
+                    <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
+                      <circle
+                        cx="48"
+                        cy="48"
+                        r="40"
+                        fill="none"
+                        stroke="hsl(var(--border))"
+                        strokeWidth="6"
+                      />
+                      <motion.circle
+                        cx="48"
+                        cy="48"
+                        r="40"
+                        fill="none"
+                        stroke="hsl(var(--shimmer-start))"
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                        strokeDasharray={251}
+                        initial={{ strokeDashoffset: 251 }}
+                        animate={{ strokeDashoffset: 251 - (overall / 100) * 251 }}
+                        transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <motion.span 
+                        className={cn("text-2xl font-bold", getScoreColor(overall))}
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.3 }}
+                      >
+                        {overall}
+                      </motion.span>
+                      <span className="text-[10px] text-muted-foreground">{getScoreLabel(overall)}</span>
+                    </div>
+                  </div>
+
+                  {/* Metrics breakdown */}
+                  <div className="flex-1 space-y-2">
+                    {metrics.slice(0, 4).map((metric) => (
+                      <div key={metric.name} className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between text-xs mb-0.5">
+                            <span className="text-muted-foreground">{metric.name}</span>
+                            <span className={getScoreColor(metric.score)}>{Math.round(metric.score)}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
+                            <motion.div
+                              className="h-full bg-shimmer-start"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${metric.score}%` }}
+                              transition={{ duration: 0.8, delay: 0.2 }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* IMPROVE SUGGESTIONS - Merged from ImproveMyScore */}
+              {suggestions.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-shimmer-start" />
+                      Improve Your Score
+                    </h3>
+                    {suggestions.length > 3 && (
+                      <button
+                        onClick={() => setShowAllSuggestions(!showAllSuggestions)}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        {showAllSuggestions ? "Show less" : `+${suggestions.length - 3} more`}
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {(showAllSuggestions ? suggestions : suggestions.slice(0, 3)).map((suggestion, idx) => (
+                      <motion.div
+                        key={suggestion.metric}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                        className={cn(
+                          "p-3 rounded-lg border text-sm",
+                          suggestion.priority === "high" 
+                            ? "bg-red-500/5 border-red-500/20" 
+                            : "bg-muted/30 border-border/50"
+                        )}
+                      >
+                        <div className="flex items-start gap-2">
+                          <TrendingUp className={cn(
+                            "w-4 h-4 mt-0.5 flex-shrink-0",
+                            suggestion.priority === "high" ? "text-red-400" : "text-shimmer-start"
+                          )} />
+                          <div>
+                            <span className="font-medium">{suggestion.metric}:</span>{" "}
+                            <span className="text-muted-foreground">{suggestion.action}</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Processing stats */}
               <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
                 <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">

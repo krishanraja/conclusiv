@@ -336,11 +336,15 @@ export const normalizeClaim = async (title: string, text: string): Promise<Norma
   }
 };
 
-// Verify a claim using AI-powered fact checking
+// Verify a claim using AI-powered multi-source fact checking
 export interface VerifyClaimResponse {
-  status: "verified" | "unverified" | "uncertain";
+  status: "verified" | "reliable" | "unreliable";
   confidence: number;
   summary?: string;
+  freshness?: "fresh" | "dated" | "stale";
+  freshnessReason?: string;
+  dataDate?: string;
+  sources?: { title: string; url: string; publishedAt?: string }[];
   error?: string;
 }
 
@@ -353,15 +357,21 @@ export const verifyClaim = async (claim: string, context?: string): Promise<Veri
     if (error) throw new Error(error.message);
     
     return {
-      status: data.status || "uncertain",
+      status: data.status || "reliable",
       confidence: data.confidence || 50,
       summary: data.summary,
+      freshness: data.freshness || "dated",
+      freshnessReason: data.freshnessReason,
+      dataDate: data.dataDate,
+      sources: data.sources || [],
     };
   } catch (err) {
     console.error('[verifyClaim] Error:', err);
     return { 
-      status: "uncertain", 
-      confidence: 0,
+      status: "reliable", 
+      confidence: 50,
+      freshness: "dated",
+      freshnessReason: "Could not verify",
       error: err instanceof Error ? err.message : 'Failed to verify claim' 
     };
   }

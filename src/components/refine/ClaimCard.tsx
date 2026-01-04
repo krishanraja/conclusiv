@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, X, Pencil, ChevronDown, ChevronUp, Loader2, ArrowRightLeft, ShieldCheck, ShieldAlert, ShieldQuestion, CircleDashed } from "lucide-react";
+import { Check, X, Pencil, ChevronDown, ChevronUp, Loader2, ArrowRightLeft, ShieldCheck, Shield, ShieldAlert, Clock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,85 +18,159 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { normalizeClaim, verifyClaim } from "@/lib/api";
-import type { KeyClaim, ClaimVerification } from "@/lib/types";
+import type { KeyClaim, ClaimVerification, ClaimFreshnessStatus } from "@/lib/types";
 
-// Verification badge component with retry support
+// Simplified auto-verify badge - color coded, no click needed
 const VerificationBadge = ({ 
   verification, 
   isLoading,
-  onRetry 
 }: { 
   verification?: ClaimVerification; 
   isLoading?: boolean;
-  onRetry?: () => void;
 }) => {
   if (isLoading) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted/50 text-muted-foreground">
-              <CircleDashed className="w-3 h-3 animate-spin" />
-              <span className="hidden sm:inline">Checking</span>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-[200px]">
-            <p>Verifying this claim...</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <motion.span 
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted/50 text-muted-foreground"
+      >
+        <Loader2 className="w-3 h-3 animate-spin" />
+        <span className="hidden sm:inline">Verifying</span>
+      </motion.span>
     );
   }
   
-  if (!verification || verification.status === "pending") {
+  if (!verification || verification.status === "pending" || verification.status === "checking") {
     return null;
   }
 
   const config = {
     verified: {
       icon: ShieldCheck,
-      className: "bg-green-500/10 text-green-600 hover:bg-green-500/20",
+      bgClass: "bg-green-500/15",
+      textClass: "text-green-500",
       label: "Verified",
+      description: "Confirmed by external sources",
     },
-    unverified: {
+    reliable: {
+      icon: Shield,
+      bgClass: "bg-amber-500/15",
+      textClass: "text-amber-500",
+      label: "Reliable",
+      description: "Appears consistent with sources",
+    },
+    unreliable: {
       icon: ShieldAlert,
-      className: "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20",
-      label: "Unverified",
-    },
-    uncertain: {
-      icon: ShieldQuestion,
-      className: "bg-muted/50 text-muted-foreground hover:bg-muted/70",
-      label: "Uncertain",
-    },
-    checking: {
-      icon: CircleDashed,
-      className: "bg-muted/50 text-muted-foreground",
-      label: "Checking",
+      bgClass: "bg-red-500/15",
+      textClass: "text-red-500",
+      label: "Unreliable",
+      description: "Could not find supporting evidence",
     },
   };
 
-  const { icon: Icon, className, label } = config[verification.status];
+  const statusConfig = config[verification.status] || config.reliable;
+  const { icon: Icon, bgClass, textClass, label, description } = statusConfig;
 
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button 
-            onClick={onRetry}
+          <motion.span 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
             className={cn(
-              "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer transition-colors",
-              className
+              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all",
+              bgClass,
+              textClass
             )}
           >
             <Icon className="w-3 h-3" />
             <span className="hidden sm:inline">{label}</span>
-          </button>
+          </motion.span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-[280px]">
+          <p className="text-xs font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground">{description}</p>
+          {verification.summary && (
+            <p className="text-xs mt-1 pt-1 border-t border-border/50">{verification.summary}</p>
+          )}
+          {verification.confidence !== undefined && (
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Confidence: {verification.confidence}%
+            </p>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
+// Freshness badge - shows data currency
+const FreshnessBadge = ({ 
+  freshness,
+  reason,
+}: { 
+  freshness?: ClaimFreshnessStatus;
+  reason?: string;
+}) => {
+  if (!freshness) return null;
+
+  const config = {
+    fresh: {
+      icon: Clock,
+      bgClass: "bg-green-500/15",
+      dotClass: "bg-green-500",
+      textClass: "text-green-500",
+      label: "Fresh",
+      description: "Data is current",
+    },
+    dated: {
+      icon: Clock,
+      bgClass: "bg-amber-500/15",
+      dotClass: "bg-amber-500",
+      textClass: "text-amber-500",
+      label: "Dated",
+      description: "Data may be outdated",
+    },
+    stale: {
+      icon: AlertCircle,
+      bgClass: "bg-red-500/15",
+      dotClass: "bg-red-500",
+      textClass: "text-red-500",
+      label: "Stale",
+      description: "Data is outdated",
+    },
+  };
+
+  const freshnessConfig = config[freshness] || config.dated;
+  const { dotClass, textClass, bgClass, label, description } = freshnessConfig;
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <motion.span 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30, delay: 0.1 }}
+            className={cn(
+              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium",
+              bgClass,
+              textClass
+            )}
+          >
+            <span className={cn("w-1.5 h-1.5 rounded-full", dotClass)} />
+            <span className="hidden sm:inline">{label}</span>
+          </motion.span>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-[250px]">
-          <p className="text-xs">
-            {verification.summary || `${label} (${verification.confidence}% confidence)`}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">Click to re-verify</p>
+          <p className="text-xs font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground">{description}</p>
+          {reason && (
+            <p className="text-xs mt-1 pt-1 border-t border-border/50">{reason}</p>
+          )}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -138,7 +212,7 @@ export const ClaimCard = ({
   const isRejected = claim.approved === false;
   const isEdited = claim.edited;
 
-  // Verify claim (used for both auto-verify and retry)
+  // Auto-verify claim - runs automatically, no user interaction needed
   const runVerification = async () => {
     if (isVerifying) return;
     
@@ -152,35 +226,40 @@ export const ClaimCard = ({
             confidence: result.confidence,
             summary: result.summary,
             checkedAt: Date.now(),
+            freshness: result.freshness,
+            freshnessReason: result.freshnessReason,
+            dataDate: result.dataDate,
+            sources: result.sources,
           },
         });
       }
     } catch (err) {
       console.error('[ClaimCard] Verification failed:', err);
+      // Set as reliable by default on error
+      onUpdate({
+        verification: {
+          status: "reliable",
+          confidence: 50,
+          summary: "Could not verify - marked as reliable by default",
+          checkedAt: Date.now(),
+          freshness: "dated",
+          freshnessReason: "Verification error",
+        },
+      });
     } finally {
       setIsVerifying(false);
     }
   };
 
-  // Retry verification handler - clears current and re-runs
-  const handleRetryVerification = () => {
-    if (isVerifying) return;
-    runVerification();
-  };
-
   // Auto-verify claim if enabled and not already verified
   useEffect(() => {
     if (autoVerify && !claim.verification && !isVerifying) {
-      const doVerify = async () => {
-        await runVerification();
-      };
-      
-      // Stagger verification calls to avoid rate limiting
-      const delay = index * 500;
-      const timer = setTimeout(doVerify, delay);
+      // Stagger verification calls to avoid rate limiting (1.5s between each)
+      const delay = index * 1500;
+      const timer = setTimeout(runVerification, delay);
       return () => clearTimeout(timer);
     }
-  }, [autoVerify, claim.verification, claim.text, claim.title, index, onUpdate, isVerifying]);
+  }, [autoVerify, claim.verification, index]);
 
   // Show truncated text if longer than 120 chars and not expanded
   const shouldTruncate = claim.text.length > 120;
@@ -210,7 +289,6 @@ export const ClaimCard = ({
         const result = await normalizeClaim(editTitle, editText);
         if (result.error) {
           console.error('[ClaimCard] Normalization error:', result.error);
-          // Fall back to truncation
           onUpdate({ 
             title: editTitle.slice(0, TITLE_MAX), 
             text: editText.slice(0, TEXT_MAX) 
@@ -231,7 +309,6 @@ export const ClaimCard = ({
         setIsNormalizing(false);
       }
     } else {
-      // Just save with truncation if needed
       onUpdate({ 
         title: editTitle.slice(0, TITLE_MAX), 
         text: editText.slice(0, TEXT_MAX) 
@@ -343,9 +420,9 @@ export const ClaimCard = ({
         !isApproved && !isRejected && !isEdited && "border-border/50 bg-card hover:border-border"
       )}
     >
-      {/* Header row: number + actions */}
+      {/* Header row: number + badges + actions */}
       <div className="flex items-center justify-between gap-3 mb-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-muted-foreground font-medium">
             {index + 1} of {total}
           </span>
@@ -354,11 +431,16 @@ export const ClaimCard = ({
               Edited
             </span>
           )}
-          <VerificationBadge verification={claim.verification} isLoading={isVerifying} onRetry={handleRetryVerification} />
+          {/* Verification + Freshness badges - auto displayed */}
+          <VerificationBadge verification={claim.verification} isLoading={isVerifying} />
+          <FreshnessBadge 
+            freshness={claim.verification?.freshness} 
+            reason={claim.verification?.freshnessReason} 
+          />
         </div>
         
         {/* Actions */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           <Button
             variant={isApproved ? "default" : "outline"}
             size="sm"

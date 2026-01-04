@@ -1,17 +1,86 @@
-import { useState, useCallback, useEffect } from "react";
-import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { X, ChevronLeft, ChevronRight, StickyNote, RotateCcw, List, PanelLeftOpen, PanelRightOpen, Edit3 } from "lucide-react";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from "framer-motion";
+import { X, ChevronLeft, ChevronRight, StickyNote, RotateCcw, List, PanelLeftOpen, PanelRightOpen, Sparkles } from "lucide-react";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
 import { getIcon } from "@/lib/icons";
 import { useBrandLogo } from "@/hooks/useBrandLogo";
 import { useHaptics } from "@/hooks/useHaptics";
+import { getTemplateConfig, getMobileConfig } from "@/lib/animationTemplates";
 import conclusivIcon from "@/assets/conclusiv-icon.png";
 
 interface MobilePresentScreenProps {
   onExit: () => void;
   onStartOver?: () => void;
 }
+
+// Innovative mobile-specific transitions
+const mobileTransitionVariants = {
+  // Card stack effect - cards fly in from bottom
+  cardStack: {
+    initial: { opacity: 0, y: 100, scale: 0.85, rotateX: -15 },
+    animate: { opacity: 1, y: 0, scale: 1, rotateX: 0 },
+    exit: { opacity: 0, y: -50, scale: 0.9, rotateX: 10 },
+    transition: { type: "spring", stiffness: 400, damping: 35 },
+  },
+  // Parallax slide - content slides with depth layers
+  parallaxSlide: {
+    initial: (direction: number) => ({ 
+      opacity: 0, 
+      x: direction * 150,
+      scale: 0.92,
+    }),
+    animate: { opacity: 1, x: 0, scale: 1 },
+    exit: (direction: number) => ({ 
+      opacity: 0, 
+      x: direction * -100,
+      scale: 0.95,
+    }),
+    transition: { type: "spring", stiffness: 300, damping: 30 },
+  },
+  // Morph reveal - content morphs in with blur
+  morphReveal: {
+    initial: { opacity: 0, scale: 1.1, filter: "blur(20px)" },
+    animate: { opacity: 1, scale: 1, filter: "blur(0px)" },
+    exit: { opacity: 0, scale: 0.95, filter: "blur(10px)" },
+    transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] },
+  },
+  // Flip card - 3D flip effect
+  flipCard: {
+    initial: { opacity: 0, rotateY: 90, scale: 0.8 },
+    animate: { opacity: 1, rotateY: 0, scale: 1 },
+    exit: { opacity: 0, rotateY: -90, scale: 0.8 },
+    transition: { type: "spring", stiffness: 200, damping: 25 },
+  },
+  // Elastic bounce - bouncy entrance
+  elasticBounce: {
+    initial: { opacity: 0, y: 80, scale: 0.7 },
+    animate: { opacity: 1, y: 0, scale: 1 },
+    exit: { opacity: 0, y: -40, scale: 0.9 },
+    transition: { type: "spring", stiffness: 500, damping: 25 },
+  },
+};
+
+// Get animation variant based on template and section index
+const getTransitionVariant = (templateName: string, sectionIndex: number) => {
+  const variants = Object.keys(mobileTransitionVariants);
+  
+  // Map templates to preferred variants
+  const templateMap: Record<string, string> = {
+    ZoomReveal: "morphReveal",
+    LinearStoryboard: "parallaxSlide",
+    FlyoverMap: "cardStack",
+    ContrastSplit: "flipCard",
+    PriorityLadder: "elasticBounce",
+  };
+  
+  const preferred = templateMap[templateName];
+  if (preferred) return mobileTransitionVariants[preferred as keyof typeof mobileTransitionVariants];
+  
+  // Fallback to cycling through variants
+  const variantKey = variants[sectionIndex % variants.length];
+  return mobileTransitionVariants[variantKey as keyof typeof mobileTransitionVariants];
+};
 
 export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreenProps) => {
   const {
@@ -21,6 +90,8 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
     prevSection,
     setCurrentSectionIndex,
     reset,
+    selectedTemplate,
+    presentationStyle,
   } = useNarrativeStore();
 
   const { logoUrl, showLogo } = useBrandLogo();
@@ -29,7 +100,20 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
   const [showExitMenu, setShowExitMenu] = useState(false);
   const [showNarrativePanel, setShowNarrativePanel] = useState(false);
   const [showNotesPanel, setShowNotesPanel] = useState(false);
-  const [dragDirection, setDragDirection] = useState<'left' | 'right' | null>(null);
+  const [direction, setDirection] = useState(0);
+  
+  // Motion values for tilt/parallax effect
+  const dragX = useMotionValue(0);
+  const tiltRotation = useTransform(dragX, [-150, 0, 150], [-8, 0, 8]);
+  const parallaxOffset = useTransform(dragX, [-150, 0, 150], [20, 0, -20]);
+  const scaleOnDrag = useTransform(dragX, [-150, 0, 150], [0.95, 1, 0.95]);
+  
+  // Template-specific config
+  const mobileConfig = useMemo(() => getMobileConfig(selectedTemplate), [selectedTemplate]);
+  const transitionVariant = useMemo(() => 
+    getTransitionVariant(selectedTemplate, currentSectionIndex),
+    [selectedTemplate, currentSectionIndex]
+  );
 
   const handleStartOver = () => {
     haptics.heavy();
@@ -41,10 +125,11 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
     }
   };
 
-  // Haptic navigation
+  // Haptic navigation with direction tracking
   const handleNextWithHaptics = useCallback(() => {
     if (currentSectionIndex < (narrative?.sections.length ?? 0) - 1) {
       haptics.light();
+      setDirection(1);
       nextSection();
     }
   }, [currentSectionIndex, narrative?.sections.length, haptics, nextSection]);
@@ -52,6 +137,7 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
   const handlePrevWithHaptics = useCallback(() => {
     if (currentSectionIndex > 0) {
       haptics.light();
+      setDirection(-1);
       prevSection();
     }
   }, [currentSectionIndex, haptics, prevSection]);
@@ -76,9 +162,11 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight" || e.key === " ") {
         e.preventDefault();
+        setDirection(1);
         nextSection();
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
+        setDirection(-1);
         prevSection();
       } else if (e.key === "Escape") {
         onExit();
@@ -89,29 +177,32 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [nextSection, prevSection, onExit]);
 
-  // Swipe handling - full screen swipe with haptics
+  // Enhanced swipe handling with physics-based momentum
   const handleDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const threshold = 50;
+    const velocity = info.velocity.x;
     
-    if (info.offset.x < -threshold && currentSectionIndex < (narrative?.sections.length ?? 0) - 1) {
-      haptics.medium();
-      nextSection();
-    } else if (info.offset.x > threshold && currentSectionIndex > 0) {
-      haptics.medium();
-      prevSection();
+    // Use velocity for momentum-based navigation
+    const shouldNavigate = Math.abs(velocity) > 500 || Math.abs(info.offset.x) > threshold;
+    
+    if (shouldNavigate) {
+      if ((info.offset.x < 0 || velocity < -500) && currentSectionIndex < (narrative?.sections.length ?? 0) - 1) {
+        haptics.medium();
+        setDirection(1);
+        nextSection();
+      } else if ((info.offset.x > 0 || velocity > 500) && currentSectionIndex > 0) {
+        haptics.medium();
+        setDirection(-1);
+        prevSection();
+      }
     }
-    setDragDirection(null);
-  }, [currentSectionIndex, narrative?.sections.length, nextSection, prevSection, haptics]);
+    
+    dragX.set(0);
+  }, [currentSectionIndex, narrative?.sections.length, nextSection, prevSection, haptics, dragX]);
 
   const handleDrag = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    if (info.offset.x < -30) {
-      setDragDirection('left');
-    } else if (info.offset.x > 30) {
-      setDragDirection('right');
-    } else {
-      setDragDirection(null);
-    }
-  }, []);
+    dragX.set(info.offset.x);
+  }, [dragX]);
 
   if (!narrative || narrative.sections.length === 0) {
     return (
@@ -134,8 +225,31 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
   const progress = ((currentSectionIndex + 1) / narrative.sections.length) * 100;
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-background to-background/95 flex flex-col touch-none">
-      {/* Header - Minimal, safe area aware, separated from content */}
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-background to-background/95 flex flex-col touch-none overflow-hidden">
+      {/* Ambient background particles - template aware */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {[...Array(mobileConfig.particleCount ?? 8)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1 h-1 rounded-full bg-primary/30"
+            style={{
+              left: `${10 + (i * 17) % 80}%`,
+              top: `${15 + (i * 23) % 70}%`,
+            }}
+            animate={{
+              opacity: [0.2, 0.5, 0.2],
+              scale: [1, 1.5, 1],
+            }}
+            transition={{
+              duration: 3 + i * 0.5,
+              repeat: Infinity,
+              delay: i * 0.3,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Header - Minimal, safe area aware */}
       <div className="flex-shrink-0 pt-safe bg-background/90 backdrop-blur-sm z-20">
         <div className="flex items-center justify-between px-4 py-2.5">
           {/* Brand/Logo */}
@@ -147,10 +261,15 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
             )}
           </div>
 
-          {/* Section counter */}
-          <div className="text-xs text-muted-foreground font-medium">
+          {/* Section counter with animated badge */}
+          <motion.div 
+            key={currentSectionIndex}
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-xs text-muted-foreground font-medium px-2.5 py-1 bg-muted/30 rounded-full"
+          >
             {currentSectionIndex + 1} / {narrative.sections.length}
-          </div>
+          </motion.div>
 
           {/* Exit button */}
           <button
@@ -161,28 +280,40 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
           </button>
         </div>
 
-        {/* Progress bar - with proper spacing below header */}
-        <div className="h-1 bg-muted/20 mx-4 rounded-full overflow-hidden mb-2">
+        {/* Progress bar with glow effect */}
+        <div className="h-1 bg-muted/20 mx-4 rounded-full overflow-hidden mb-2 relative">
           <motion.div
-            className="h-full bg-primary rounded-full"
+            className="h-full bg-primary rounded-full relative"
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-          />
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {/* Glow pulse at the end */}
+            <motion.div
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-primary"
+              animate={{
+                opacity: [0.5, 1, 0.5],
+                scale: [1, 1.5, 1],
+              }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+              style={{ filter: "blur(4px)" }}
+            />
+          </motion.div>
         </div>
       </div>
 
-      {/* Edge Arrow Buttons - Always visible for opening sidebars */}
+      {/* Edge Navigation Tabs with preview peek */}
       <motion.button
         onClick={() => {
           haptics.light();
           setShowNarrativePanel(true);
         }}
-        className="fixed left-0 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center w-8 h-16 bg-card/80 backdrop-blur-sm border border-border/30 rounded-r-xl shadow-lg"
+        className="fixed left-0 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center w-8 h-16 bg-card/90 backdrop-blur-sm border border-border/30 rounded-r-xl shadow-lg"
         initial={{ x: -32, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        transition={{ delay: 1, type: "spring", stiffness: 300, damping: 25 }}
-        whileTap={{ scale: 0.95 }}
+        transition={{ delay: 0.8, type: "spring", stiffness: 300, damping: 25 }}
+        whileTap={{ scale: 0.95, x: 4 }}
+        whileHover={{ x: 4 }}
         aria-label="View all sections"
       >
         <PanelLeftOpen className="w-4 h-4 text-primary" />
@@ -193,176 +324,254 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
           haptics.light();
           setShowNotesPanel(true);
         }}
-        className="fixed right-0 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center w-8 h-16 bg-card/80 backdrop-blur-sm border border-border/30 rounded-l-xl shadow-lg"
+        className="fixed right-0 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center w-8 h-16 bg-card/90 backdrop-blur-sm border border-border/30 rounded-l-xl shadow-lg"
         initial={{ x: 32, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        transition={{ delay: 1, type: "spring", stiffness: 300, damping: 25 }}
-        whileTap={{ scale: 0.95 }}
+        transition={{ delay: 0.8, type: "spring", stiffness: 300, damping: 25 }}
+        whileTap={{ scale: 0.95, x: -4 }}
+        whileHover={{ x: -4 }}
         aria-label="View speaker notes"
       >
         <PanelRightOpen className="w-4 h-4 text-primary" />
       </motion.button>
 
-      {/* Main Content - Swipeable, fills remaining space with proper margins */}
+      {/* Main Content - Swipeable with parallax/tilt effects */}
       <motion.div
         className="flex-1 min-h-0 relative flex items-center justify-center px-6 py-4"
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.15}
+        dragElastic={0.2}
         onDrag={handleDrag}
         onDragEnd={handleDragEnd}
+        style={{
+          perspective: 1000,
+        }}
       >
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={currentSectionIndex}
-            initial={{ opacity: 0, x: 80 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -80 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            custom={direction}
+            initial={transitionVariant.initial}
+            animate={transitionVariant.animate}
+            exit={transitionVariant.exit}
+            transition={transitionVariant.transition}
+            style={{
+              rotateY: tiltRotation,
+              x: parallaxOffset,
+              scale: scaleOnDrag,
+              transformStyle: "preserve-3d",
+            }}
             className="w-full max-w-sm text-center"
           >
-            {/* Icon - sized appropriately to avoid header overlap */}
+            {/* Icon with magic glow effect */}
             <motion.div
-              className="w-14 h-14 mx-auto mb-4 rounded-xl bg-primary/10 flex items-center justify-center"
-              initial={{ scale: 0.8, opacity: 0 }}
+              className="relative w-16 h-16 mx-auto mb-5"
+              initial={{ scale: 0.7, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.05 }}
+              transition={{ delay: 0.1, type: "spring", stiffness: 400, damping: 25 }}
             >
-              <Icon className="w-7 h-7 text-primary" />
+              {/* Glow rings */}
+              <motion.div
+                className="absolute inset-0 rounded-xl bg-primary/20"
+                animate={{
+                  scale: [1, 1.3, 1],
+                  opacity: [0.3, 0, 0.3],
+                }}
+                transition={{ duration: 2.5, repeat: Infinity }}
+              />
+              <motion.div
+                className="absolute inset-0 rounded-xl bg-primary/10"
+                animate={{
+                  scale: [1, 1.5, 1],
+                  opacity: [0.2, 0, 0.2],
+                }}
+                transition={{ duration: 2.5, repeat: Infinity, delay: 0.3 }}
+              />
+              {/* Icon container */}
+              <div className="relative w-full h-full rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                <Icon className="w-8 h-8 text-primary" />
+              </div>
             </motion.div>
 
-            {/* Title */}
+            {/* Title with staggered letter animation on first render */}
             <motion.h1
               className="text-2xl font-bold mb-4 text-foreground px-2"
-              initial={{ y: 15, opacity: 0 }}
+              initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.1 }}
+              transition={{ delay: 0.15, type: "spring", stiffness: 300, damping: 25 }}
+              style={presentationStyle?.primaryFont ? { fontFamily: presentationStyle.primaryFont } : undefined}
             >
               {currentSection.title}
             </motion.h1>
 
-            {/* Content */}
+            {/* Content with reveal animation */}
             {currentSection.content && (
               <motion.p
                 className="text-base text-muted-foreground leading-relaxed"
-                initial={{ y: 15, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.15 }}
+                initial={{ y: 20, opacity: 0, filter: "blur(4px)" }}
+                animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+                transition={{ delay: 0.2, duration: 0.4 }}
               >
                 {currentSection.content}
               </motion.p>
             )}
 
-            {/* Items - Show only first 3 for cleaner mobile view */}
+            {/* Items with staggered entrance */}
             {currentSection.items && currentSection.items.length > 0 && (
               <motion.ul
                 className="mt-5 text-left space-y-2.5 mx-auto max-w-xs"
-                initial={{ y: 15, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  hidden: { opacity: 0 },
+                  visible: { 
+                    opacity: 1,
+                    transition: { staggerChildren: 0.08, delayChildren: 0.25 }
+                  },
+                }}
               >
                 {currentSection.items.slice(0, 3).map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                    <span className="w-1.5 h-1.5 mt-2 rounded-full bg-primary shrink-0" />
+                  <motion.li 
+                    key={idx} 
+                    className="flex items-start gap-2.5 text-sm text-muted-foreground"
+                    variants={{
+                      hidden: { opacity: 0, x: -20, scale: 0.95 },
+                      visible: { opacity: 1, x: 0, scale: 1 },
+                    }}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  >
+                    <motion.span 
+                      className="w-1.5 h-1.5 mt-2 rounded-full bg-primary shrink-0"
+                      animate={{ scale: [1, 1.3, 1] }}
+                      transition={{ duration: 2, repeat: Infinity, delay: idx * 0.2 }}
+                    />
                     <span className="line-clamp-2">{item}</span>
-                  </li>
+                  </motion.li>
                 ))}
                 {currentSection.items.length > 3 && (
-                  <li className="text-xs text-muted-foreground/60 pl-4">
+                  <motion.li 
+                    className="text-xs text-muted-foreground/60 pl-4 flex items-center gap-1"
+                    variants={{
+                      hidden: { opacity: 0 },
+                      visible: { opacity: 1 },
+                    }}
+                  >
+                    <Sparkles className="w-3 h-3" />
                     +{currentSection.items.length - 3} more
-                  </li>
+                  </motion.li>
                 )}
               </motion.ul>
             )}
           </motion.div>
         </AnimatePresence>
 
-        {/* Swipe hint indicators */}
+        {/* Edge peek preview - shows next/prev section hint on drag */}
         <AnimatePresence>
-          {dragDirection === 'left' && currentSectionIndex < narrative.sections.length - 1 && (
+          {dragX.get() < -30 && currentSectionIndex < narrative.sections.length - 1 && (
             <motion.div
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 0.7, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
-              className="absolute right-2 top-1/2 -translate-y-1/2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 0.6, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-center"
             >
-              <ChevronRight className="w-10 h-10 text-primary" />
+              <ChevronRight className="w-8 h-8 text-primary" />
+              <span className="text-[10px] text-muted-foreground mt-1 max-w-[60px] text-center truncate">
+                {narrative.sections[currentSectionIndex + 1]?.title}
+              </span>
             </motion.div>
           )}
-          {dragDirection === 'right' && currentSectionIndex > 0 && (
+          {dragX.get() > 30 && currentSectionIndex > 0 && (
             <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 0.7, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              className="absolute left-2 top-1/2 -translate-y-1/2"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 0.6, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="absolute left-3 top-1/2 -translate-y-1/2 flex flex-col items-center"
             >
-              <ChevronLeft className="w-10 h-10 text-primary" />
+              <ChevronLeft className="w-8 h-8 text-primary" />
+              <span className="text-[10px] text-muted-foreground mt-1 max-w-[60px] text-center truncate">
+                {narrative.sections[currentSectionIndex - 1]?.title}
+              </span>
             </motion.div>
           )}
         </AnimatePresence>
       </motion.div>
 
-      {/* Bottom Navigation - Fixed, safe area aware */}
+      {/* Bottom Navigation - Floating pill design */}
       <div className="flex-shrink-0 pb-safe">
         <div className="px-4 py-3">
-          {/* Dot navigation */}
+          {/* Dot navigation with active indicator animation */}
           <div className="flex justify-center gap-1.5 mb-3">
             {narrative.sections.map((_, idx) => (
-              <button
+              <motion.button
                 key={idx}
                 onClick={() => {
                   haptics.selection();
+                  setDirection(idx > currentSectionIndex ? 1 : -1);
                   setCurrentSectionIndex(idx);
                 }}
                 className={cn(
-                  "h-2 rounded-full transition-all duration-200",
+                  "h-2 rounded-full transition-all duration-300",
                   idx === currentSectionIndex
-                    ? "w-6 bg-primary"
-                    : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                    ? "bg-primary"
+                    : "bg-muted-foreground/30"
                 )}
+                animate={{
+                  width: idx === currentSectionIndex ? 24 : 8,
+                }}
+                whileTap={{ scale: 0.9 }}
               />
             ))}
           </div>
 
-          {/* Navigation buttons */}
+          {/* Navigation buttons with micro-interactions */}
           <div className="flex items-center justify-center gap-3">
-            <button
+            <motion.button
               onClick={handlePrevWithHaptics}
               disabled={currentSectionIndex === 0}
               className={cn(
                 "flex-1 max-w-[140px] py-3 rounded-xl flex items-center justify-center gap-2 transition-all font-medium",
                 currentSectionIndex === 0
                   ? "bg-muted/30 text-muted-foreground/40"
-                  : "bg-muted text-foreground active:scale-[0.98]"
+                  : "bg-muted text-foreground"
               )}
+              whileTap={currentSectionIndex > 0 ? { scale: 0.95, x: -4 } : {}}
             >
               <ChevronLeft className="w-4 h-4" />
               <span className="text-sm">Back</span>
-            </button>
+            </motion.button>
 
-            <button
+            <motion.button
               onClick={() => {
                 haptics.selection();
                 setShowNotes(!showNotes);
               }}
-              className="p-3 rounded-xl bg-muted/30 text-muted-foreground active:bg-muted/50 transition-colors"
+              className="p-3 rounded-xl bg-muted/30 text-muted-foreground transition-colors relative overflow-hidden"
+              whileTap={{ scale: 0.92 }}
             >
-              <StickyNote className="w-5 h-5" />
-            </button>
+              <StickyNote className="w-5 h-5 relative z-10" />
+              {/* Ripple effect */}
+              <motion.div
+                className="absolute inset-0 bg-primary/20 rounded-xl"
+                initial={{ scale: 0, opacity: 0 }}
+                whileTap={{ scale: 2, opacity: [0.5, 0] }}
+                transition={{ duration: 0.4 }}
+              />
+            </motion.button>
 
-            <button
+            <motion.button
               onClick={handleNextWithHaptics}
               disabled={currentSectionIndex === narrative.sections.length - 1}
               className={cn(
-                "flex-1 max-w-[140px] py-3 rounded-xl flex items-center justify-center gap-2 transition-all font-medium",
+                "flex-1 max-w-[140px] py-3 rounded-xl flex items-center justify-center gap-2 transition-all font-medium relative overflow-hidden",
                 currentSectionIndex === narrative.sections.length - 1
                   ? "bg-primary/30 text-primary-foreground/40"
-                  : "bg-primary text-primary-foreground active:scale-[0.98]"
+                  : "bg-primary text-primary-foreground"
               )}
+              whileTap={currentSectionIndex < narrative.sections.length - 1 ? { scale: 0.95, x: 4 } : {}}
             >
               <span className="text-sm">Next</span>
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </motion.button>
           </div>
         </div>
       </div>
@@ -411,10 +620,11 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
                   const SectionIcon = getIcon(section.icon);
                   const isActive = idx === currentSectionIndex;
                   return (
-                    <button
+                    <motion.button
                       key={idx}
                       onClick={() => {
                         haptics.medium();
+                        setDirection(idx > currentSectionIndex ? 1 : -1);
                         setCurrentSectionIndex(idx);
                         setShowNarrativePanel(false);
                       }}
@@ -424,6 +634,7 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
                           ? "bg-primary/10 border border-primary/30" 
                           : "hover:bg-muted/50 active:bg-muted"
                       )}
+                      whileTap={{ scale: 0.98 }}
                     >
                       <div className={cn(
                         "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
@@ -446,9 +657,12 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
                         </p>
                       </div>
                       {isActive && (
-                        <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2" />
+                        <motion.div 
+                          className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2"
+                          layoutId="activeIndicator"
+                        />
                       )}
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
@@ -578,21 +792,23 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
                   <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
                 </div>
                 
-                <button
+                <motion.button
                   onClick={onExit}
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-muted/50 text-foreground font-medium transition-colors active:bg-muted"
+                  whileTap={{ scale: 0.98 }}
                 >
                   <X className="w-5 h-5" />
                   Exit to Preview
-                </button>
+                </motion.button>
                 
-                <button
+                <motion.button
                   onClick={handleStartOver}
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-primary/10 text-primary font-medium transition-colors active:bg-primary/20"
+                  whileTap={{ scale: 0.98 }}
                 >
                   <RotateCcw className="w-5 h-5" />
                   Start Over
-                </button>
+                </motion.button>
                 
                 <button
                   onClick={() => setShowExitMenu(false)}

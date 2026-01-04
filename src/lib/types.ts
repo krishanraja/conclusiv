@@ -148,13 +148,18 @@ export interface ClaimAlternative {
   text: string;
 }
 
-export type ClaimVerificationStatus = "pending" | "checking" | "verified" | "unverified" | "uncertain";
+export type ClaimVerificationStatus = "pending" | "checking" | "verified" | "reliable" | "unreliable";
+export type ClaimFreshnessStatus = "fresh" | "dated" | "stale";
 
 export interface ClaimVerification {
   status: ClaimVerificationStatus;
   confidence: number; // 0-100
   summary?: string;
   checkedAt?: number; // timestamp
+  freshness?: ClaimFreshnessStatus;
+  freshnessReason?: string;
+  dataDate?: string;
+  sources?: { title: string; url: string; publishedAt?: string }[];
 }
 
 export interface KeyClaim {
