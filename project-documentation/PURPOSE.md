@@ -107,8 +107,4 @@ conclusiv applies 7 progressive intelligence phases:
 | Mobile Web (iOS) | ✅ Full support | Optimized with haptics |
 | Mobile Web (Android) | ✅ Full support | Optimized with haptics |
 | Native Mobile | ⏳ Planned | React Native |
-| Desktop App | ⏳ Planned | Electron |
-
----
-
-*Last updated: 2025-01-03*
+| Desktop App | ⏳ Planned | Electron |---*Last updated: 2025-01-03*

@@ -8,6 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { ImagePicker, ImagePickerTrigger } from "@/components/editor/ImagePicker";
 import { useBrandLogo } from "@/hooks/useBrandLogo";
+import { useBrandFonts } from "@/hooks/useBrandFonts";
 import { InlineTensionBadge } from "./TensionIndicator";
 import type { ViewMode } from "@/lib/types";
 
@@ -45,6 +46,9 @@ export const NarrativePreview = ({ showLogo: showLogoProp = false }: NarrativePr
   
   // Use brand logo hook for dark mode detection
   const { logoUrl, showLogo, logoPosition, logoSize } = useBrandLogo();
+  
+  // Ensure brand fonts are loaded for presentation
+  useBrandFonts();
 
   // Track scroll progress for reader mode
   useEffect(() => {

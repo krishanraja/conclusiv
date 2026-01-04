@@ -413,8 +413,4 @@ When reporting issues, include:
 - Steps to reproduce
 - Edge function logs if available
 - User subscription status
-- Device type (desktop/mobile)
-
----
-
-*Last updated: 2025-01-03*
+- Device type (desktop/mobile)---*Last updated: 2025-01-03*

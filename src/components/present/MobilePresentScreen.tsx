@@ -5,6 +5,7 @@ import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
 import { getIcon } from "@/lib/icons";
 import { useBrandLogo } from "@/hooks/useBrandLogo";
+import { useBrandFonts } from "@/hooks/useBrandFonts";
 import { useHaptics } from "@/hooks/useHaptics";
 import { getTemplateConfig, getMobileConfig } from "@/lib/animationTemplates";
 import conclusivIcon from "@/assets/conclusiv-icon.png";
@@ -95,6 +96,7 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
   } = useNarrativeStore();
 
   const { logoUrl, showLogo } = useBrandLogo();
+  useBrandFonts(); // Ensure brand fonts are loaded for presentation
   const haptics = useHaptics();
   const [showNotes, setShowNotes] = useState(false);
   const [showExitMenu, setShowExitMenu] = useState(false);
@@ -361,7 +363,7 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
               scale: scaleOnDrag,
               transformStyle: "preserve-3d",
             }}
-            className="w-full max-w-sm text-center"
+            className="w-full max-w-md text-center px-2"
           >
             {/* Icon with magic glow effect */}
             <motion.div
@@ -416,51 +418,53 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
               </motion.p>
             )}
 
-            {/* Items with staggered entrance */}
+            {/* Items with staggered entrance - scrollable for long content */}
             {currentSection.items && currentSection.items.length > 0 && (
-              <motion.ul
-                className="mt-5 text-left space-y-2.5 mx-auto max-w-xs"
+              <motion.div
+                className="mt-5 max-h-[40vh] overflow-y-auto scrollbar-thin scrollbar-thumb-muted/30"
                 initial="hidden"
                 animate="visible"
                 variants={{
                   hidden: { opacity: 0 },
                   visible: { 
                     opacity: 1,
-                    transition: { staggerChildren: 0.08, delayChildren: 0.25 }
+                    transition: { staggerChildren: 0.06, delayChildren: 0.25 }
                   },
                 }}
               >
-                {currentSection.items.slice(0, 3).map((item, idx) => (
-                  <motion.li 
-                    key={idx} 
-                    className="flex items-start gap-2.5 text-sm text-muted-foreground"
-                    variants={{
-                      hidden: { opacity: 0, x: -20, scale: 0.95 },
-                      visible: { opacity: 1, x: 0, scale: 1 },
-                    }}
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  >
-                    <motion.span 
-                      className="w-1.5 h-1.5 mt-2 rounded-full bg-primary shrink-0"
-                      animate={{ scale: [1, 1.3, 1] }}
-                      transition={{ duration: 2, repeat: Infinity, delay: idx * 0.2 }}
-                    />
-                    <span className="line-clamp-2">{item}</span>
-                  </motion.li>
-                ))}
-                {currentSection.items.length > 3 && (
-                  <motion.li 
-                    className="text-xs text-muted-foreground/60 pl-4 flex items-center gap-1"
-                    variants={{
-                      hidden: { opacity: 0 },
-                      visible: { opacity: 1 },
-                    }}
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    +{currentSection.items.length - 3} more
-                  </motion.li>
-                )}
-              </motion.ul>
+                <ul className="text-left space-y-2.5 mx-auto max-w-sm">
+                  {currentSection.items.slice(0, 5).map((item, idx) => (
+                    <motion.li 
+                      key={idx} 
+                      className="flex items-start gap-2.5 text-sm text-muted-foreground"
+                      variants={{
+                        hidden: { opacity: 0, x: -20, scale: 0.95 },
+                        visible: { opacity: 1, x: 0, scale: 1 },
+                      }}
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    >
+                      <motion.span 
+                        className="w-1.5 h-1.5 mt-2 rounded-full bg-primary shrink-0"
+                        animate={{ scale: [1, 1.3, 1] }}
+                        transition={{ duration: 2, repeat: Infinity, delay: idx * 0.2 }}
+                      />
+                      <span className="line-clamp-3">{item}</span>
+                    </motion.li>
+                  ))}
+                  {currentSection.items.length > 5 && (
+                    <motion.li 
+                      className="text-xs text-muted-foreground/60 pl-4 flex items-center gap-1"
+                      variants={{
+                        hidden: { opacity: 0 },
+                        visible: { opacity: 1 },
+                      }}
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      +{currentSection.items.length - 5} more
+                    </motion.li>
+                  )}
+                </ul>
+              </motion.div>
             )}
           </motion.div>
         </AnimatePresence>

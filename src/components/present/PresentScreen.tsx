@@ -13,6 +13,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { TitleSequence } from "@/components/cinematic/TitleSequence";
 import { useBrandLogo } from "@/hooks/useBrandLogo";
+import { useBrandFonts } from "@/hooks/useBrandFonts";
 import { MobilePresentScreen } from "./MobilePresentScreen";
 import { 
   getTemplateConfig, 
@@ -230,6 +231,7 @@ export const PresentScreen = () => {
   const { isPro, limits } = useSubscription();
   const isMobile = useIsMobile();
   const reducedMotion = useReducedMotion();
+  useBrandFonts(); // Ensure brand fonts are loaded for presentation
   
   // Theme toggle state for presentation mode
   const [presentationTheme, setPresentationTheme] = useState<'auto' | 'light' | 'dark'>('auto');

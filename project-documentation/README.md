@@ -143,8 +143,4 @@ Input → Refine → Preview → Present
 See the root directory for deployment guides:
 - [SUPABASE_SETUP.md](../SUPABASE_SETUP.md) - Supabase configuration
 - [NEXT_STEPS_GUIDE.md](../NEXT_STEPS_GUIDE.md) - Step-by-step deployment
-- [MIGRATION_SUMMARY.md](../MIGRATION_SUMMARY.md) - Migration notes
-
----
-
-*Last updated: 2025-01-03*
+- [MIGRATION_SUMMARY.md](../MIGRATION_SUMMARY.md) - Migration notes---*Last updated: 2025-01-03*

@@ -8,7 +8,9 @@ import {
   Check,
   AlertCircle,
   Crown,
-  Settings
+  Settings,
+  Mic,
+  MicOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +22,7 @@ import { parseDocument } from "@/lib/api";
 import { ResearchAssistant } from "./ResearchAssistant";
 import { SeeExampleButton } from "./SeeExampleButton";
 import { SetupSheet, useSetupSheet } from "./SetupSheet";
+import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 const MIN_CHARS = 50;
@@ -56,6 +59,20 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
   const [showPostSetupGuidance, setShowPostSetupGuidance] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Voice recording integration
+  const { isRecording, isSupported: isVoiceSupported, toggleRecording } = useVoiceRecorder({
+    onTranscript: (text) => {
+      setRawText((prev) => prev ? `${prev} ${text}` : text);
+    },
+    onError: (error) => {
+      toast({
+        title: "Voice error",
+        description: error,
+        variant: "destructive",
+      });
+    },
+  });
   
   const charCount = rawText.length;
   const hasContent = charCount > 0;
@@ -190,8 +207,72 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         </p>
       </div>
 
-      {/* Primary Action Buttons - Upload & Research ONLY */}
-      <div className="flex-shrink-0 flex items-center justify-center gap-3 px-4 pb-3">
+      {/* Voice-First Hero Button */}
+      {isVoiceSupported && (
+        <div className="flex-shrink-0 flex justify-center pb-4">
+          <motion.button
+            onClick={toggleRecording}
+            className={cn(
+              "relative w-20 h-20 rounded-full flex items-center justify-center transition-all",
+              isRecording 
+                ? "bg-red-500/20 text-red-400 border-2 border-red-400/50" 
+                : "bg-gradient-to-br from-primary/20 to-primary/5 text-primary border-2 border-primary/30 hover:border-primary/50"
+            )}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            {/* Pulse rings when recording */}
+            <AnimatePresence>
+              {isRecording && (
+                <>
+                  <motion.div
+                    className="absolute inset-0 rounded-full border-2 border-red-400/50"
+                    initial={{ scale: 1, opacity: 0.5 }}
+                    animate={{ scale: 1.5, opacity: 0 }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  />
+                  <motion.div
+                    className="absolute inset-0 rounded-full border-2 border-red-400/30"
+                    initial={{ scale: 1, opacity: 0.3 }}
+                    animate={{ scale: 2, opacity: 0 }}
+                    transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
+                  />
+                </>
+              )}
+            </AnimatePresence>
+            
+            {isRecording ? (
+              <MicOff className="w-8 h-8" />
+            ) : (
+              <Mic className="w-8 h-8" />
+            )}
+          </motion.button>
+        </div>
+      )}
+      
+      {/* Voice status indicator */}
+      <AnimatePresence>
+        {isRecording && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex-shrink-0 text-center pb-3"
+          >
+            <p className="text-sm text-red-400 font-medium flex items-center justify-center gap-2">
+              <motion.span 
+                animate={{ opacity: [1, 0.4, 1] }}
+                transition={{ duration: 1, repeat: Infinity }}
+                className="w-2 h-2 rounded-full bg-red-400"
+              />
+              Listening... Speak now
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Primary Action Buttons - Upload, Generate & Voice */}
+      <div className="flex-shrink-0 flex items-center justify-center gap-2 px-4 pb-3">
         <div className={cn(
           "flex-1 rounded-lg transition-all duration-300",
           businessContext && !hasContent && "shimmer-border"
@@ -199,8 +280,8 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
           <Button
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isParsingDocument}
-            className="w-full h-12 text-sm font-medium border-0 bg-card/50"
+            disabled={isParsingDocument || isRecording}
+            className="w-full h-11 text-sm font-medium border-0 bg-card/50"
           >
             <Upload className="w-4 h-4 mr-2" />
             Upload
@@ -213,7 +294,8 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
           <Button
             variant="outline"
             onClick={() => setShowResearchAssistant(true)}
-            className="w-full h-12 text-sm font-medium border-0 bg-card/50"
+            disabled={isRecording}
+            className="w-full h-11 text-sm font-medium border-0 bg-card/50"
           >
             <Sparkles className="w-4 h-4 mr-2" />
             Generate

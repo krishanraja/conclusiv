@@ -482,22 +482,37 @@ export const QuickAdjustments = () => {
         <AnimatePresence>
           {showSaveButton && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={{ duration: 0.2 }}
-              className="pt-3"
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+              transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 25 }}
+              className="pt-3 sticky bottom-0 bg-gradient-to-t from-background via-background to-transparent pb-2 -mx-1 px-1"
             >
-              <Button
-                onClick={() => setSaveDialogOpen(true)}
-                className="w-full gap-2 bg-shimmer-start hover:bg-shimmer-start/90 text-background"
-              >
-                <Save className="w-4 h-4" />
-                Save Changes
-              </Button>
-              <p className="text-xs text-muted-foreground text-center mt-2">
-                Changes detected. Save to regenerate your narrative.
-              </p>
+              {/* Visual emphasis border */}
+              <div className="rounded-lg border-2 border-shimmer-start/50 p-3 bg-shimmer-start/5">
+                <motion.div
+                  animate={{ 
+                    boxShadow: [
+                      "0 0 0 0 rgba(110, 231, 183, 0.4)",
+                      "0 0 0 8px rgba(110, 231, 183, 0)",
+                    ]
+                  }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  className="rounded-lg"
+                >
+                  <Button
+                    onClick={() => setSaveDialogOpen(true)}
+                    className="w-full gap-2 bg-shimmer-start hover:bg-shimmer-start/90 text-background font-medium"
+                    size="lg"
+                  >
+                    <Save className="w-4 h-4" />
+                    Save & Regenerate
+                  </Button>
+                </motion.div>
+                <p className="text-xs text-shimmer-start text-center mt-2 font-medium">
+                  Your narrative will be regenerated with these changes
+                </p>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

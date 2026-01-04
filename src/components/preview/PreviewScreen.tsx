@@ -343,14 +343,20 @@ export const PreviewScreen = () => {
         } else {
           await exportToPDF(narrative, businessContext, title, { watermark: !isPro });
         }
-        // Download initiated by browser - no toast needed
+        toast({
+          title: "Export started",
+          description: `Your ${type.toUpperCase()} is being downloaded${!isPro ? " (with watermark)" : ""}.`,
+        });
       } else {
         if (useBranded) {
           await exportBrandedPPTX(narrative, businessContext, title, exportOptions);
         } else {
           await exportToPPTX(narrative, businessContext, title);
         }
-        // Download initiated by browser - no toast needed
+        toast({
+          title: "Export started",
+          description: `Your ${type.toUpperCase()} is being downloaded${!isPro ? " (with watermark)" : ""}.`,
+        });
       }
     } catch (err) {
       toast({
@@ -362,7 +368,13 @@ export const PreviewScreen = () => {
   };
 
   const handleShare = async () => {
+    // Check if user has access to share feature
     if (!requireFeature('export')) {
+      // Show explicit feedback on mobile that sharing requires Pro
+      toast({
+        title: "Pro feature",
+        description: "Upgrade to Pro to create shareable links with password protection.",
+      });
       return;
     }
 

@@ -23,6 +23,7 @@ import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
 import { getIcon } from "@/lib/icons";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useBrandFonts } from "@/hooks/useBrandFonts";
 
 interface MobilePreviewLayoutProps {
   onBack: () => void;
@@ -37,8 +38,9 @@ export const MobilePreviewLayout = ({
   onShare,
   onExport,
 }: MobilePreviewLayoutProps) => {
-  const { narrative, businessContext } = useNarrativeStore();
+  const { narrative, businessContext, presentationStyle } = useNarrativeStore();
   const haptics = useHaptics();
+  useBrandFonts(); // Ensure brand fonts are loaded for presentation
   const [leftPanelOpen, setLeftPanelOpen] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -198,7 +200,7 @@ export const MobilePreviewLayout = ({
             {/* Section Content */}
             {currentSection.content && (
               <motion.p
-                className="text-sm text-muted-foreground text-center leading-relaxed max-w-xs"
+                className="text-sm text-muted-foreground text-center leading-relaxed max-w-sm px-2"
                 initial={{ y: 10, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
@@ -207,21 +209,28 @@ export const MobilePreviewLayout = ({
               </motion.p>
             )}
 
-            {/* Section Items */}
+            {/* Section Items - scrollable for long content */}
             {currentSection.items && currentSection.items.length > 0 && (
-              <motion.ul
-                className="mt-4 space-y-2 w-full max-w-xs"
+              <motion.div
+                className="mt-4 w-full max-w-sm max-h-[35vh] overflow-y-auto px-2"
                 initial={{ y: 10, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.25 }}
               >
-                {currentSection.items.slice(0, 4).map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-primary shrink-0" />
-                    <span className="line-clamp-2">{item}</span>
-                  </li>
-                ))}
-              </motion.ul>
+                <ul className="space-y-2">
+                  {currentSection.items.slice(0, 5).map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-primary shrink-0" />
+                      <span className="line-clamp-3">{item}</span>
+                    </li>
+                  ))}
+                  {currentSection.items.length > 5 && (
+                    <li className="text-xs text-muted-foreground/60 pl-3">
+                      +{currentSection.items.length - 5} more items
+                    </li>
+                  )}
+                </ul>
+              </motion.div>
             )}
           </motion.div>
         </AnimatePresence>

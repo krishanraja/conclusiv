@@ -12,11 +12,12 @@ import { MobileInputFlow } from "./MobileInputFlow";
 import { SetupSheet, useSetupSheet } from "./SetupSheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, AlertCircle, Crown, Check, Search, Settings2, Upload, FileText, Link, X, Loader2 } from "lucide-react";
+import { Sparkles, AlertCircle, Crown, Check, Search, Settings2, Upload, FileText, Link, X, Loader2, Mic, MicOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useFeatureGate } from "@/components/subscription/FeatureGate";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { criticalImages, isImageReady, onImageReady } from "@/lib/imagePreloader";
 
 const MIN_CHARS = 50;
@@ -71,6 +72,20 @@ export const InputScreen = () => {
   const [showGoogleDocInput, setShowGoogleDocInput] = useState(false);
   const [googleDocUrl, setGoogleDocUrl] = useState("");
   const [isParsingGoogleDoc, setIsParsingGoogleDoc] = useState(false);
+  
+  // Voice recording integration
+  const { isRecording, isSupported: isVoiceSupported, toggleRecording } = useVoiceRecorder({
+    onTranscript: (text) => {
+      setRawText((prev) => prev ? `${prev} ${text}` : text);
+    },
+    onError: (error) => {
+      toast({
+        title: "Voice error",
+        description: error,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Derived state - must be defined before hooks that reference them
   const charCount = rawText.length;
@@ -428,18 +443,57 @@ export const InputScreen = () => {
           )}
         </AnimatePresence>
 
-        {/* Primary Action Cards - Upload, Google Doc & Generate */}
+        {/* Primary Action Cards - Upload, Google Doc, Generate & Voice */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="grid grid-cols-3 gap-3"
+          className={`grid gap-3 ${isVoiceSupported ? 'grid-cols-4' : 'grid-cols-3'}`}
         >
+          {/* Voice Input Card - Voice-First when supported */}
+          {isVoiceSupported && (
+            <button
+              type="button"
+              onClick={toggleRecording}
+              disabled={isParsingDocument || isParsingGoogleDoc}
+              className={`flex items-center gap-3 px-4 py-4 rounded-xl border transition-all group bg-card/50 backdrop-blur-sm text-left disabled:opacity-50 ${
+                isRecording 
+                  ? 'border-red-400/50 bg-red-500/10' 
+                  : 'border-primary/50 hover:border-primary bg-primary/5'
+              }`}
+            >
+              <div className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors relative ${
+                isRecording ? 'bg-red-500/20' : 'bg-primary/20 group-hover:bg-primary/30'
+              }`}>
+                {isRecording ? (
+                  <MicOff className="w-5 h-5 text-red-400" />
+                ) : (
+                  <Mic className="w-5 h-5 text-primary" />
+                )}
+                {isRecording && (
+                  <motion.span 
+                    animate={{ opacity: [1, 0.4, 1] }}
+                    transition={{ duration: 1, repeat: Infinity }}
+                    className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-400"
+                  />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className={`text-sm font-medium block ${isRecording ? 'text-red-400' : 'text-foreground'}`}>
+                  {isRecording ? 'Listening...' : 'Speak'}
+                </span>
+                <p className="text-xs text-muted-foreground truncate">
+                  {isRecording ? 'Tap to stop' : 'Voice input'}
+                </p>
+              </div>
+            </button>
+          )}
+          
           {/* Upload Document Card */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isParsingDocument || isParsingGoogleDoc}
+            disabled={isParsingDocument || isParsingGoogleDoc || isRecording}
             className="flex items-center gap-3 px-4 py-4 rounded-xl border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group bg-card/50 backdrop-blur-sm text-left disabled:opacity-50"
             data-onboarding="document-upload"
           >
@@ -456,7 +510,7 @@ export const InputScreen = () => {
           <button
             type="button"
             onClick={() => setShowGoogleDocInput(!showGoogleDocInput)}
-            disabled={isParsingDocument || isParsingGoogleDoc}
+            disabled={isParsingDocument || isParsingGoogleDoc || isRecording}
             className={`flex items-center gap-3 px-4 py-4 rounded-xl border transition-all group bg-card/50 backdrop-blur-sm text-left disabled:opacity-50 ${
               showGoogleDocInput 
                 ? 'border-primary/50 bg-primary/5' 
@@ -476,7 +530,7 @@ export const InputScreen = () => {
           <button
             type="button"
             onClick={() => setShowResearchAssistant(true)}
-            disabled={isParsingDocument || isParsingGoogleDoc}
+            disabled={isParsingDocument || isParsingGoogleDoc || isRecording}
             className="flex items-center gap-3 px-4 py-4 rounded-xl border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group bg-card/50 backdrop-blur-sm text-left disabled:opacity-50"
             data-onboarding="research-assistant"
           >
