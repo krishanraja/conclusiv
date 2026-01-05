@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, ArrowRight, Loader2, ExternalLink, Mic, MicOff, CheckCircle2, Clock, RefreshCw, ChevronDown, ChevronUp, Edit3, Building2, Target, Users, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -131,9 +131,19 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     rawContent: string;
   } | null>(null);
 
+  // Track mounted state to prevent state updates after unmount
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Auto-populate from store when opening - ALWAYS sync, don't guard with existing values
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && isMountedRef.current) {
       // Always sync from store to ensure latest data
       if (businessContext?.companyName) {
         setCompanyName(businessContext.companyName);
@@ -152,6 +162,8 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
 
   // Background job hook
   const handleJobComplete = useCallback((job: ResearchJob) => {
+    if (!isMountedRef.current) return;
+    
     if (job.results) {
       setResults(job.results);
       setStep("results");
@@ -166,13 +178,18 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
           audience: job.audience,
           results: job.results,
         }).then(({ error }) => {
-          if (error) console.error('Failed to save research history:', error);
+          // Only log if component is still mounted
+          if (isMountedRef.current && error) {
+            console.error('Failed to save research history:', error);
+          }
         });
       }
     }
   }, [user]);
 
   const handleJobError = useCallback((error: string) => {
+    if (!isMountedRef.current) return;
+    
     setResearchError(error);
     setIsLoading(false);
     toast({
@@ -196,19 +213,21 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
 
   // Check for existing jobs when opening
   useEffect(() => {
-    if (isOpen && user) {
+    if (isOpen && user && isMountedRef.current) {
       checkExistingJobs().then((job) => {
-        if (job) {
+        if (job && isMountedRef.current) {
           setStep("research");
           setIsLoading(true);
           // Silently resume - UI shows progress
         }
       });
     }
-  }, [isOpen, user, checkExistingJobs, toast]);
+  }, [isOpen, user, checkExistingJobs]);
 
   // Voice recorder with AI structuring
   const handleTranscript = useCallback(async (transcript: string) => {
+    if (!isMountedRef.current) return;
+    
     setPrimaryQuestion(prev => prev ? prev + " " + transcript : transcript);
     
     // Structure the voice input with AI
@@ -216,6 +235,8 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
       setIsStructuringVoice(true);
       try {
         const result = await structureVoiceInput(transcript, decisionLabels[decisionType] || "analysis");
+        if (!isMountedRef.current) return;
+        
         if (result.structured) {
           // Auto-fill company if extracted and we don't have one
           if (result.structured.companyName && !companyName) {
@@ -235,9 +256,13 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
           // Silently extracted - no toast needed
         }
       } catch (err) {
-        console.error("Voice structuring error:", err);
+        if (isMountedRef.current) {
+          console.error("Voice structuring error:", err);
+        }
       } finally {
-        setIsStructuringVoice(false);
+        if (isMountedRef.current) {
+          setIsStructuringVoice(false);
+        }
       }
     }
   }, [companyName, industry, decisionType]);
@@ -272,17 +297,25 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
     if (cleanUrl.length < 4) return;
 
     const timeoutId = setTimeout(async () => {
+      if (!isMountedRef.current) return;
+      
       setIsFetchingBrand(true);
       try {
         const result = await fetchBrandData(cleanUrl);
+        if (!isMountedRef.current) return;
+        
         if (result.data?.companyName && !companyName) {
           setCompanyName(result.data.companyName);
         }
         setBrandFetched(true);
       } catch (err) {
-        console.error("Brand fetch error:", err);
+        if (isMountedRef.current) {
+          console.error("Brand fetch error:", err);
+        }
       } finally {
-        setIsFetchingBrand(false);
+        if (isMountedRef.current) {
+          setIsFetchingBrand(false);
+        }
       }
     }, 800);
 
@@ -298,7 +331,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
   const canStartResearch = primaryQuestion.trim().length >= 5 && companyName.trim().length >= 2;
 
   const handleStartResearch = async () => {
-    if (!canStartResearch) return;
+    if (!canStartResearch || !isMountedRef.current) return;
 
     setStep("research");
     setIsLoading(true);
@@ -317,6 +350,8 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
         audience: audience || undefined,
       });
 
+      if (!isMountedRef.current) return;
+
       const query = formResult.suggestedQuery || primaryQuestion;
 
       if (researchDepth === "deep" && user) {
@@ -328,12 +363,16 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
           audience: audience || undefined,
         });
 
+        if (!isMountedRef.current) return;
+
         if (!job) {
           setStep("input");
           setIsLoading(false);
         }
       } else {
         const result = await executeResearch(query, researchDepth);
+        if (!isMountedRef.current) return;
+        
         if (result.error) {
           setResearchError(result.error);
           toast({
@@ -363,7 +402,7 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
                 results: researchResults,
               });
               
-              if (error) {
+              if (error && isMountedRef.current) {
                 console.error("Failed to save research history:", error);
               }
             } catch (err) {
@@ -371,13 +410,17 @@ export const ResearchAssistant = ({ isOpen, onClose, onComplete }: ResearchAssis
             }
           }
         }
-        setIsLoading(false);
+        if (isMountedRef.current) {
+          setIsLoading(false);
+        }
       }
     } catch (err) {
-      console.error("Research error:", err);
-      setResearchError(err instanceof Error ? err.message : "Research failed");
-      setStep("input");
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        console.error("Research error:", err);
+        setResearchError(err instanceof Error ? err.message : "Research failed");
+        setStep("input");
+        setIsLoading(false);
+      }
     }
   };
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,16 +42,18 @@ export const ResearchHistory = ({ onContinueResearch, onUseResults }: ResearchHi
   const [isExpanded, setIsExpanded] = useState(false);
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
   const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
+  
+  // Track mounted state to prevent state updates after unmount
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    if (!user) {
-      setIsLoading(false);
-      return;
-    }
-    loadHistory();
-  }, [user]);
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     if (!user) return;
     
     setIsLoading(true);
@@ -63,19 +65,38 @@ export const ResearchHistory = ({ onContinueResearch, onUseResults }: ResearchHi
         .order("created_at", { ascending: false });
 
       if (!error && data) {
+        // Check if component is still mounted before updating state
+        if (!isMountedRef.current) return;
+        
         setHistory(data as ResearchEntry[]);
         // Auto-expand first brand group if only one exists
+        // Use functional update to avoid unnecessary re-renders
         if (data.length > 0) {
           const firstBrand = data[0]?.subject || "Other";
-          setExpandedBrands(new Set([firstBrand]));
+          setExpandedBrands(prev => {
+            // Only set if not already set to avoid unnecessary updates
+            if (prev.has(firstBrand)) return prev;
+            return new Set([firstBrand]);
+          });
         }
       }
     } catch (err) {
       console.error("Failed to load research history:", err);
     } finally {
-      setIsLoading(false);
+      // Only update loading state if still mounted
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+    loadHistory();
+  }, [user, loadHistory]);
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -87,20 +108,23 @@ export const ResearchHistory = ({ onContinueResearch, onUseResults }: ResearchHi
         .eq("id", id);
 
       if (!error) {
-        setHistory(prev => prev.filter(h => h.id !== id));
-        // Visual feedback from item disappearing - no toast needed
-        // If this was the last entry in a brand group, collapse it
-        const entry = history.find(h => h.id === id);
-        if (entry?.subject) {
-          const remainingEntries = history.filter(h => h.id !== id && h.subject === entry.subject);
-          if (remainingEntries.length === 0) {
-            setExpandedBrands(prev => {
-              const next = new Set(prev);
-              next.delete(entry.subject!);
-              return next;
-            });
+        // Use functional update to get current state and avoid stale closure
+        setHistory(prev => {
+          const entry = prev.find(h => h.id === id);
+          if (entry?.subject) {
+            const remainingEntries = prev.filter(h => h.id !== id && h.subject === entry.subject);
+            if (remainingEntries.length === 0) {
+              // Update expandedBrands using functional update
+              setExpandedBrands(brandPrev => {
+                const next = new Set(brandPrev);
+                next.delete(entry.subject!);
+                return next;
+              });
+            }
           }
-        }
+          return prev.filter(h => h.id !== id);
+        });
+        // Visual feedback from item disappearing - no toast needed
       }
     } catch (err) {
       toast({
@@ -111,33 +135,20 @@ export const ResearchHistory = ({ onContinueResearch, onUseResults }: ResearchHi
     }
   };
 
-  const handleContinue = (entry: ResearchEntry) => {
+  const handleContinue = useCallback((entry: ResearchEntry) => {
     const previousContent = entry.results?.rawContent || entry.results?.summary || "";
     onContinueResearch(entry.query, previousContent);
-  };
+  }, [onContinueResearch]);
 
-  const handleUse = (entry: ResearchEntry, e: React.MouseEvent) => {
+  const handleUse = useCallback((entry: ResearchEntry, e: React.MouseEvent) => {
     e.stopPropagation();
     if (entry.results?.rawContent) {
       onUseResults(entry.results.rawContent);
       // Content appears in input field - no toast needed
     }
-  };
+  }, [onUseResults]);
 
-  if (!user) {
-    return null;
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-        <span>Loading history...</span>
-      </div>
-    );
-  }
-
-  // Group entries by brand (subject field)
+  // Group entries by brand (subject field) - must be before early returns
   const brandGroups = useMemo(() => {
     const groups: Map<string, ResearchEntry[]> = new Map();
     

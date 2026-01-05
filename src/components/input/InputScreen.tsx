@@ -154,7 +154,7 @@ export const InputScreen = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [rawText, isParsingDocument, canBuild]);
+  }, [rawText, isParsingDocument, canBuild, handleContinue]);
 
   const handleResearchComplete = (content: string) => {
     setRawText(content);
