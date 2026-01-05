@@ -12,11 +12,63 @@ serve(async (req) => {
   }
 
   try {
-    const { text } = await req.json();
+    // Log request details for debugging
+    console.log("[extract-claims] Request method:", req.method);
+    console.log("[extract-claims] Request headers:", Object.fromEntries(req.headers.entries()));
     
-    if (!text || typeof text !== "string") {
+    // Parse request body with error handling
+    let requestBody;
+    try {
+      const bodyText = await req.text();
+      console.log("[extract-claims] Request body preview:", bodyText.substring(0, 200));
+      
+      if (!bodyText || bodyText.trim() === '') {
+        return new Response(
+          JSON.stringify({ error: "Request body is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      requestBody = JSON.parse(bodyText);
+    } catch (parseError) {
+      console.error("[extract-claims] JSON parse error:", parseError);
       return new Response(
-        JSON.stringify({ error: "Text is required" }),
+        JSON.stringify({ 
+          error: "Invalid JSON in request body",
+          details: parseError instanceof Error ? parseError.message : "Unknown parse error"
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    const { text } = requestBody;
+    
+    // Validate text field
+    if (!text) {
+      return new Response(
+        JSON.stringify({ error: "Text field is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    if (typeof text !== "string") {
+      return new Response(
+        JSON.stringify({ error: "Text field must be a string", received: typeof text }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    if (text.trim().length === 0) {
+      return new Response(
+        JSON.stringify({ error: "Text field cannot be empty" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    // Enforce reasonable size limit (100k characters)
+    if (text.length > 100000) {
+      return new Response(
+        JSON.stringify({ error: "Text field exceeds maximum length of 100,000 characters" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

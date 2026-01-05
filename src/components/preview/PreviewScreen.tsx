@@ -139,7 +139,6 @@ export const PreviewScreen = () => {
   const [copied, setCopied] = useState(false);
   const [alternativesPanelOpen, setAlternativesPanelOpen] = useState(false);
   const [makingOfOpen, setMakingOfOpen] = useState(false);
-  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [lastShareId, setLastShareId] = useState<string | null>(null);
   
@@ -511,6 +510,7 @@ export const PreviewScreen = () => {
           onPresent={handlePresent}
           onShare={handleShare}
           onExport={() => handleExport('pdf')}
+          onGenerateAlternatives={handleGenerateAlternatives}
         />
       </>
     );
@@ -603,7 +603,7 @@ export const PreviewScreen = () => {
             <NarrativeRemix onRemixComplete={() => celebration.triggerMini()} />
             <MakingOfTrigger onClick={() => setMakingOfOpen(true)} />
             
-            {/* Alternatives button */}
+            {/* Re-Narrate button */}
             <Button
               variant="ghost"
               size="sm"
@@ -612,7 +612,7 @@ export const PreviewScreen = () => {
               disabled={!narrative || isGeneratingAlternatives}
             >
               <Sparkles className="w-4 h-4 mr-1" />
-              {alternatives.length > 0 ? `Alternatives (${alternatives.length})` : "Alternatives"}
+              {alternatives.length > 0 ? `Re-Narrate (${alternatives.length})` : "Re-Narrate"}
             </Button>
 
             {/* Export dropdown */}
@@ -654,89 +654,10 @@ export const PreviewScreen = () => {
 
         {/* Main Content */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Left Panel - Narrative Score (collapsible) */}
-          <AnimatePresence mode="wait">
-            {leftPanelOpen ? (
-              <motion.div
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: 280, opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="flex-shrink-0 border-r border-border/50 hidden lg:flex flex-col overflow-hidden"
-              >
-                <div className="p-4 overflow-y-auto flex-1 min-h-0">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                      <BarChart3 className="w-3.5 h-3.5" />
-                      Narrative Score
-                    </h3>
-                    <button
-                      onClick={() => setLeftPanelOpen(false)}
-                      className="p-1 rounded hover:bg-muted transition-colors"
-                    >
-                      <ChevronLeft className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                  </div>
-                  
-                  {/* Quality Score */}
-                  {narrative && (
-                    <div className="mb-6">
-                      <NarrativeQualityScore />
-                    </div>
-                  )}
-                  
-                  {/* Improve My Score */}
-                  {narrative && (
-                    <div className="mb-6">
-                      <ImproveMyScore />
-                    </div>
-                  )}
-                  
-                  {/* Executive Summary */}
-                  {narrative && (
-                    <ExecutiveSummary />
-                  )}
-                  
-                  {/* Compare Alternatives */}
-                  {alternatives.length > 0 && (
-                    <button
-                      onClick={() => setComparisonOpen(true)}
-                      className="w-full mt-4 p-3 rounded-lg bg-muted/30 border border-border/50 hover:border-primary/30 transition-colors text-sm text-left"
-                    >
-                      <span className="font-medium">Compare Alternatives</span>
-                      <span className="text-xs text-muted-foreground block mt-0.5">
-                        {alternatives.length} alternative{alternatives.length > 1 ? 's' : ''} available
-                      </span>
-                    </button>
-                  )}
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex-shrink-0 hidden lg:flex flex-col items-center py-4 px-2 border-r border-border/50"
-              >
-                <button
-                  onClick={() => setLeftPanelOpen(true)}
-                  className="p-2 rounded-lg hover:bg-muted transition-colors group"
-                  title="Show narrative score"
-                >
-                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
-                </button>
-                {narrative && (
-                  <div className="mt-4 writing-mode-vertical text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <BarChart3 className="w-3 h-3" />
-                      Score
-                    </span>
-                  </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Desktop: No left panel - all score info is in Making Of panel */}
+          {/* Mobile: Left panel handled by MobilePreviewLayout */}
 
-          {/* Preview Area */}
+          {/* Preview Area - Full width on desktop */}
           <div className="flex-1 flex flex-col overflow-hidden min-w-0">
             {/* Mode Toggle */}
             <div className="flex-shrink-0 flex justify-center py-4">

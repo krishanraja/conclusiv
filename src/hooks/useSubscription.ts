@@ -160,10 +160,38 @@ export const useSubscription = () => {
         .select('*')
         .eq('user_id', user.id)
         .eq('week_start', weekStart)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching usage:', error);
+      // Handle various error cases
+      if (error) {
+        // PGRST116 = no rows found (expected when user hasn't built yet)
+        if (error.code === 'PGRST116') {
+          // This is expected - user hasn't built this week yet
+          return;
+        }
+        
+        // 406 = Not Acceptable - usually content negotiation issue
+        if (error.code === 'PGRST301' || error.message?.includes('406')) {
+          console.warn('[useSubscription] 406 error fetching usage - possible format mismatch:', error);
+          // Try with explicit column selection
+          const { data: retryData, error: retryError } = await supabase
+            .from('usage')
+            .select('builds_count, last_build_at, week_start')
+            .eq('user_id', user.id)
+            .eq('week_start', weekStart)
+            .maybeSingle();
+          
+          if (!retryError && retryData) {
+            setUsage({
+              buildsThisWeek: retryData.builds_count || 0,
+              lastBuildAt: retryData.last_build_at,
+              weekStart,
+            });
+          }
+          return;
+        }
+        
+        console.error('[useSubscription] Error fetching usage:', error);
         return;
       }
 

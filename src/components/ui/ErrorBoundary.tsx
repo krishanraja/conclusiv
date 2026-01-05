@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { AlertTriangle, RefreshCw, Home, RotateCcw } from "lucide-react";
 import { Button } from "./button";
+import { logError } from "@/lib/errorLogger";
 
 interface Props {
   children: ReactNode;
@@ -65,6 +66,16 @@ export class ErrorBoundary extends Component<Props, State> {
     }
     
     this.setState({ errorInfo, errorId });
+    
+    // Log error to monitoring system
+    logError(error, {
+      component: name || 'ErrorBoundary',
+      errorId,
+      metadata: {
+        componentStack: errorInfo.componentStack,
+        hasErrorCallback: !!onError,
+      },
+    });
     
     // Call optional error callback
     onError?.(error, errorInfo);

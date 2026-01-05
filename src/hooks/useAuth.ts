@@ -110,16 +110,16 @@ export const useAuth = () => {
     loadSession();
 
     // Safety timeout: ensure we don't stay in loading state forever
-    // If after 5 seconds we're still loading, force loading to false
+    // Increased to 10 seconds to allow for slower networks, but still prevent infinite loading
     const safetyTimeout = setTimeout(() => {
       if (mounted && authState.isLoading) {
-        console.warn('[useAuth] Safety timeout triggered - forcing loading state to false');
+        console.warn('[useAuth] Safety timeout triggered after 10s - forcing loading state to false');
         setAuthState(prev => ({
           ...prev,
           isLoading: false,
         }));
       }
-    }, 5000);
+    }, 10000);
 
     return () => {
       mounted = false;

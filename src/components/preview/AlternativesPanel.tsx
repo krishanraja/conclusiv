@@ -40,7 +40,7 @@ export const AlternativesPanel = ({ isOpen, onClose }: AlternativesPanelProps) =
             <div className="flex items-center justify-between p-4 border-b border-border">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-shimmer-start" />
-                <h2 className="font-semibold">Alternative Narratives</h2>
+                <h2 className="font-semibold">Re-Narrate</h2>
               </div>
               <button
                 onClick={onClose}
@@ -63,7 +63,7 @@ export const AlternativesPanel = ({ isOpen, onClose }: AlternativesPanelProps) =
                     <Sparkles className="w-8 h-8 text-shimmer-start" />
                   </div>
                   <p className="text-sm text-muted-foreground max-w-xs">
-                    Click "Generate Alternatives" to see different framings of your story
+                    Click "Re-Narrate" to see different framings of your story
                   </p>
                 </div>
               ) : (

@@ -6,7 +6,9 @@ import {
   Play, 
   Share2, 
   Download,
-  BarChart3,
+  Wand2,
+  Film,
+  Sparkles,
   Sliders,
   ArrowLeft,
   X,
@@ -15,21 +17,21 @@ import {
   PanelRightOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NarrativeQualityScore } from "@/components/intelligence/NarrativeQualityScore";
-import { ExecutiveSummary } from "@/components/intelligence/ExecutiveSummary";
-import { ImproveMyScore } from "@/components/intelligence/ImproveMyScore";
 import { QuickAdjustments } from "./QuickAdjustments";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
 import { getIcon } from "@/lib/icons";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useBrandFonts } from "@/hooks/useBrandFonts";
+import { NarrativeRemix } from "@/components/power-user/NarrativeRemix";
+import { MakingOfView, MakingOfTrigger } from "@/components/power-user/MakingOfView";
 
 interface MobilePreviewLayoutProps {
   onBack: () => void;
   onPresent: () => void;
   onShare: () => void;
   onExport: () => void;
+  onGenerateAlternatives?: () => void;
 }
 
 export const MobilePreviewLayout = ({
@@ -37,12 +39,14 @@ export const MobilePreviewLayout = ({
   onPresent,
   onShare,
   onExport,
+  onGenerateAlternatives,
 }: MobilePreviewLayoutProps) => {
-  const { narrative, businessContext, presentationStyle } = useNarrativeStore();
+  const { narrative, businessContext, presentationStyle, alternatives, isGeneratingAlternatives } = useNarrativeStore();
   const haptics = useHaptics();
   useBrandFonts(); // Ensure brand fonts are loaded for presentation
   const [leftPanelOpen, setLeftPanelOpen] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
+  const [makingOfOpen, setMakingOfOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dragDirection, setDragDirection] = useState<'left' | 'right' | null>(null);
 
@@ -276,7 +280,10 @@ export const MobilePreviewLayout = ({
         ))}
       </div>
 
-      {/* Left Slide-in Panel - Score & Summary */}
+      {/* Making Of View */}
+      <MakingOfView isOpen={makingOfOpen} onClose={() => setMakingOfOpen(false)} />
+
+      {/* Left Slide-in Panel - Remix, Making Of, Re-Narrate */}
       <AnimatePresence>
         {leftPanelOpen && (
           <>
@@ -299,10 +306,7 @@ export const MobilePreviewLayout = ({
             >
               {/* Panel Header */}
               <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-primary" />
-                  <h3 className="font-semibold text-base">Narrative Analysis</h3>
-                </div>
+                <h3 className="font-semibold text-base">Narrative Tools</h3>
                 <button 
                   onClick={() => {
                     haptics.selection();
@@ -315,10 +319,69 @@ export const MobilePreviewLayout = ({
               </div>
               
               {/* Panel Content - Scrollable */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-safe">
-                <NarrativeQualityScore />
-                <ImproveMyScore />
-                <ExecutiveSummary />
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-safe">
+                {/* Remix */}
+                <div className="p-3 rounded-lg border border-border/50 bg-background/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wand2 className="w-4 h-4 text-primary" />
+                    <h4 className="font-medium text-sm">Remix</h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Transform your narrative style
+                  </p>
+                  <NarrativeRemix onRemixComplete={() => {
+                    haptics.success();
+                    setLeftPanelOpen(false);
+                  }} />
+                </div>
+
+                {/* Making Of */}
+                <button
+                  onClick={() => {
+                    haptics.selection();
+                    setMakingOfOpen(true);
+                    setLeftPanelOpen(false);
+                  }}
+                  className="w-full p-3 rounded-lg border border-border/50 bg-background/50 hover:bg-background transition-colors text-left"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Film className="w-4 h-4 text-primary" />
+                    <h4 className="font-medium text-sm">Making Of</h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    View narrative score, processing stats, and AI reasoning
+                  </p>
+                </button>
+
+                {/* Re-Narrate (Alternatives) */}
+                <button
+                  onClick={() => {
+                    haptics.selection();
+                    if (onGenerateAlternatives) {
+                      onGenerateAlternatives();
+                    }
+                    setLeftPanelOpen(false);
+                  }}
+                  disabled={!narrative || isGeneratingAlternatives}
+                  className="w-full p-3 rounded-lg border border-border/50 bg-background/50 hover:bg-background transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <h4 className="font-medium text-sm">Re-Narrate</h4>
+                    {alternatives.length > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        ({alternatives.length})
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {isGeneratingAlternatives 
+                      ? "Generating alternatives..." 
+                      : alternatives.length > 0
+                      ? "View different framings of your narrative"
+                      : "Generate alternative framings for different goals"}
+                  </p>
+                </button>
               </div>
             </motion.div>
           </>

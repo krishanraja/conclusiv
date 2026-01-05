@@ -68,10 +68,15 @@ export const ImagePicker = ({
         });
       }
     } catch (error) {
-      console.error('Error searching images:', error);
+      console.error('[ImagePicker] Error searching images:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toast({
         title: "Error searching images",
-        description: "Please try again",
+        description: errorMessage.includes('API key') 
+          ? "Image search is not configured. Please contact support."
+          : errorMessage.includes('Rate limit')
+          ? "Too many requests. Please wait a moment and try again."
+          : "Please try again or use a different search term",
         variant: "destructive",
       });
     } finally {
@@ -116,28 +121,44 @@ export const ImagePicker = ({
           className="overflow-hidden"
           onAnimationComplete={handleOpen}
         >
-          <div className="mt-4 p-4 bg-card/50 rounded-lg border border-border/50">
+          <div className="mt-4 p-4 bg-card rounded-lg border border-border shadow-lg">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Image className="w-4 h-4 text-primary" />
+                  Add Image to Section
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Search for images from Pexels
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+                className="h-8 w-8 p-0"
+                aria-label="Close image picker"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
             {/* Search bar */}
-            <form onSubmit={handleSearch} className="flex gap-2 mb-3">
+            <form onSubmit={handleSearch} className="flex gap-2 mb-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={`Search images for "${getSmartQuery()}"...`}
-                  className="pl-9 h-9 text-sm bg-background/50"
+                  className="pl-9 h-10 text-sm bg-background"
+                  aria-label="Image search query"
                 />
               </div>
-              <Button type="submit" size="sm" variant="secondary" disabled={isLoading}>
+              <Button type="submit" size="sm" variant="secondary" disabled={isLoading} className="h-10">
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Search"}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-              >
-                <X className="w-4 h-4" />
               </Button>
             </form>
 
@@ -216,7 +237,7 @@ export const ImagePicker = ({
   );
 };
 
-// Simple trigger button for inline use
+// Enhanced trigger button for section toolbar
 export const ImagePickerTrigger = ({
   hasImage,
   onClick,
@@ -227,15 +248,17 @@ export const ImagePickerTrigger = ({
   <motion.button
     onClick={onClick}
     className={cn(
-      "p-1.5 rounded-md transition-colors",
+      "flex items-center gap-2 px-3 py-2 rounded-lg border transition-all",
       hasImage 
-        ? "text-shimmer-start bg-shimmer-start/10" 
-        : "text-muted-foreground hover:text-foreground hover:bg-card"
+        ? "text-shimmer-start bg-shimmer-start/10 border-shimmer-start/30 hover:bg-shimmer-start/20" 
+        : "text-foreground bg-card border-border/50 hover:border-primary/50 hover:bg-muted/50"
     )}
-    whileHover={{ scale: 1.05 }}
-    whileTap={{ scale: 0.95 }}
-    title={hasImage ? "Change image" : "Add image"}
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.98 }}
+    title={hasImage ? "Change image" : "Add image to section"}
+    aria-label={hasImage ? "Change section image" : "Add image to section"}
   >
     <Image className="w-4 h-4" />
+    <span className="text-sm font-medium">{hasImage ? "Change Image" : "Add Image"}</span>
   </motion.button>
 );
