@@ -7,7 +7,7 @@ const corsHeaders = {
 
 // Types
 type ClaimType = "financial" | "news" | "general";
-type VerificationStatus = "verified" | "reliable" | "unreliable";
+type VerificationStatus = "verified" | "reliable" | "unreliable" | "unable_to_verify";
 type FreshnessStatus = "fresh" | "dated" | "stale";
 
 interface VerificationResult {
@@ -18,6 +18,7 @@ interface VerificationResult {
   freshness: FreshnessStatus;
   freshnessReason: string;
   dataDate?: string;
+  requiresManualReview?: boolean;
 }
 
 interface ClaimClassification {
@@ -497,15 +498,17 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("[verify-claim] Error:", error);
+    // Return explicit unable_to_verify status - never mask failures as "reliable"
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : "Unknown error",
-        status: "reliable",
-        confidence: 50,
+        status: "unable_to_verify",
+        confidence: 0,
         sources: [],
-        summary: "Verification encountered an error. Marking as reliable by default.",
+        summary: "Verification failed. Please verify this claim manually.",
         freshness: "dated",
         freshnessReason: "Could not determine freshness due to error",
+        requiresManualReview: true,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

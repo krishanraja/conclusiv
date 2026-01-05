@@ -141,6 +141,8 @@ export interface RefinementHighlight {
   start: number;
   end: number;
   text: string;
+  category?: HighlightCategory;
+  isAiSuggested?: boolean;
 }
 
 export interface ClaimAlternative {
@@ -148,8 +150,29 @@ export interface ClaimAlternative {
   text: string;
 }
 
-export type ClaimVerificationStatus = "pending" | "checking" | "verified" | "reliable" | "unreliable";
+export type ClaimVerificationStatus = "pending" | "checking" | "verified" | "reliable" | "unreliable" | "unable_to_verify";
 export type ClaimFreshnessStatus = "fresh" | "dated" | "stale";
+
+// ===== Narrative Goal & Intent =====
+export interface ExtractedNarrativeIntent {
+  coreMessage: string;
+  targetAudience?: string;
+  desiredOutcome?: string;
+  keyObjections?: string[];
+  priorityProofPoints?: string[];
+}
+
+export interface GuidedVoiceResponse {
+  coreMessage?: string;         // From prompt 1: "What's the ONE thing..."
+  objectionsAndRebuttals?: string; // From prompt 2: "What concerns..."
+  priorityProofPoints?: string;   // From prompt 3: "What proof points..."
+}
+
+// Claim alignment relative to narrative goal
+export type ClaimAlignment = "supports" | "potential_objection" | "undermines" | "neutral";
+
+// Highlight category for narrative-aware highlighting
+export type HighlightCategory = "proof_point" | "emotional_hook" | "credibility_signal" | "key_metric" | "general";
 
 export interface ClaimVerification {
   status: ClaimVerificationStatus;
@@ -173,6 +196,8 @@ export interface KeyClaim {
   originalText?: string;
   alternatives?: ClaimAlternative[];
   verification?: ClaimVerification;
+  alignment?: ClaimAlignment;
+  alignmentReason?: string;
 }
 
 export interface RefinementState {

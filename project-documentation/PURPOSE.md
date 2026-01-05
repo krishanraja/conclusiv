@@ -96,9 +96,7 @@ conclusiv applies 7 progressive intelligence phases:
 6. **Trust through transparency** - Show confidence scores, cite sources
 7. **Mobile-native** - First-class mobile experience with haptics
 
-## Target Platforms
-
-| Platform | Status | Notes |
+## Target Platforms| Platform | Status | Notes |
 |----------|--------|-------|
 | Desktop Web (Chrome) | ✅ Full support | Primary development target |
 | Desktop Web (Edge) | ✅ Full support | Full voice support |

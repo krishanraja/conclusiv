@@ -138,9 +138,7 @@ Input → Refine → Preview → Present
 - **Design Questions**: See [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md)
 - **Engineering Guidelines**: See [MASTER_INSTRUCTIONS.md](./MASTER_INSTRUCTIONS.md)
 
-## Deployment
-
-See the root directory for deployment guides:
+## DeploymentSee the root directory for deployment guides:
 - [SUPABASE_SETUP.md](../SUPABASE_SETUP.md) - Supabase configuration
 - [NEXT_STEPS_GUIDE.md](../NEXT_STEPS_GUIDE.md) - Step-by-step deployment
 - [MIGRATION_SUMMARY.md](../MIGRATION_SUMMARY.md) - Migration notes---*Last updated: 2025-01-03*

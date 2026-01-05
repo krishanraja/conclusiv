@@ -338,13 +338,14 @@ export const normalizeClaim = async (title: string, text: string): Promise<Norma
 
 // Verify a claim using AI-powered multi-source fact checking
 export interface VerifyClaimResponse {
-  status: "verified" | "reliable" | "unreliable";
+  status: "verified" | "reliable" | "unreliable" | "unable_to_verify";
   confidence: number;
   summary?: string;
   freshness?: "fresh" | "dated" | "stale";
   freshnessReason?: string;
   dataDate?: string;
   sources?: { title: string; url: string; publishedAt?: string }[];
+  requiresManualReview?: boolean;
   error?: string;
 }
 
@@ -357,21 +358,24 @@ export const verifyClaim = async (claim: string, context?: string): Promise<Veri
     if (error) throw new Error(error.message);
     
     return {
-      status: data.status || "reliable",
-      confidence: data.confidence || 50,
+      status: data.status || "unable_to_verify",
+      confidence: data.confidence ?? 0,
       summary: data.summary,
       freshness: data.freshness || "dated",
       freshnessReason: data.freshnessReason,
       dataDate: data.dataDate,
       sources: data.sources || [],
+      requiresManualReview: data.requiresManualReview,
     };
   } catch (err) {
     console.error('[verifyClaim] Error:', err);
+    // Return explicit unable_to_verify - never mask failures
     return { 
-      status: "reliable", 
-      confidence: 50,
+      status: "unable_to_verify", 
+      confidence: 0,
       freshness: "dated",
-      freshnessReason: "Could not verify",
+      freshnessReason: "Verification failed",
+      requiresManualReview: true,
       error: err instanceof Error ? err.message : 'Failed to verify claim' 
     };
   }
@@ -466,6 +470,94 @@ export const structureVoiceInput = async (
     };
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Failed to structure voice input' };
+  }
+};
+
+// ===== Narrative Goal Extraction (Refine Screen 10X) =====
+export interface ExtractNarrativeIntentResponse {
+  intent?: {
+    coreMessage: string;
+    targetAudience?: string;
+    desiredOutcome?: string;
+    keyObjections?: string[];
+    priorityProofPoints?: string[];
+  };
+  error?: string;
+}
+
+export const extractNarrativeIntent = async (
+  input: string,
+  type: 'goal' | 'objections' | 'proof_points' = 'goal'
+): Promise<ExtractNarrativeIntentResponse> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('extract-narrative-intent', {
+      body: { input, type }
+    });
+
+    if (error) throw new Error(error.message);
+    if (data.error) throw new Error(data.error);
+
+    return { intent: data.intent };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to extract narrative intent' };
+  }
+};
+
+// Analyze claims for alignment with narrative goal
+export interface AnalyzeClaimAlignmentResponse {
+  claims?: Array<{
+    id: string;
+    alignment: 'supports' | 'potential_objection' | 'undermines' | 'neutral';
+    reason: string;
+  }>;
+  error?: string;
+}
+
+export const analyzeClaimAlignment = async (
+  claims: Array<{ id: string; title: string; text: string }>,
+  narrativeGoal: string
+): Promise<AnalyzeClaimAlignmentResponse> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('analyze-claim-alignment', {
+      body: { claims, narrativeGoal }
+    });
+
+    if (error) throw new Error(error.message);
+    if (data.error) throw new Error(data.error);
+
+    return { claims: data.claims };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to analyze claim alignment' };
+  }
+};
+
+// Get AI-suggested highlights based on narrative goal
+export interface GetSuggestedHighlightsResponse {
+  highlights?: Array<{
+    start: number;
+    end: number;
+    text: string;
+    category: 'proof_point' | 'emotional_hook' | 'credibility_signal' | 'key_metric';
+    reason: string;
+  }>;
+  error?: string;
+}
+
+export const getSuggestedHighlights = async (
+  rawText: string,
+  narrativeGoal: string
+): Promise<GetSuggestedHighlightsResponse> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('suggest-highlights', {
+      body: { rawText, narrativeGoal }
+    });
+
+    if (error) throw new Error(error.message);
+    if (data.error) throw new Error(data.error);
+
+    return { highlights: data.highlights };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to get suggested highlights' };
   }
 };
 

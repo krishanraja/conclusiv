@@ -2,16 +2,18 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
-import { extractKeyClaims } from "@/lib/api";
+import { extractKeyClaims, analyzeClaimAlignment } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HighlightableText } from "./HighlightableText";
 import { ClaimCard } from "./ClaimCard";
-import { VoiceRefinement } from "./VoiceRefinement";
-import { ArrowLeft, ArrowRight, Highlighter, MessageCircleQuestion, Mic, Loader2, Sparkles, Check, Info } from "lucide-react";
+import { NarrativeGoalCapture } from "./NarrativeGoalCapture";
+import { GuidedVoiceFlow } from "./GuidedVoiceFlow";
+import { ArrowLeft, ArrowRight, Highlighter, MessageCircleQuestion, Mic, Loader2, Sparkles, Check, Info, Target, Edit3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useIsMobile } from "@/hooks/use-mobile";
+import type { ClaimAlignment } from "@/lib/types";
 
 export const RefineScreen = () => {
   const { toast } = useToast();
@@ -30,6 +32,11 @@ export const RefineScreen = () => {
     swapClaimAlternative,
     voiceFeedback,
     setVoiceFeedback,
+    // Narrative goal
+    narrativeGoal,
+    extractedNarrativeIntent,
+    narrativeGoalConfirmed,
+    setNarrativeGoalConfirmed,
   } = useNarrativeStore();
 
   const [activeTab, setActiveTab] = useState<string>("claims");
@@ -37,6 +44,8 @@ export const RefineScreen = () => {
   const [claimsLoaded, setClaimsLoaded] = useState(false);
   const [showHint, setShowHint] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(true);
+  const [isAnalyzingAlignment, setIsAnalyzingAlignment] = useState(false);
+  const [showGoalCapture, setShowGoalCapture] = useState(!narrativeGoalConfirmed);
 
   // Auto-hide hint after interaction or timeout
   useEffect(() => {
@@ -71,6 +80,34 @@ export const RefineScreen = () => {
     });
   };
 
+  // Analyze claim alignment with narrative goal
+  const analyzeClaimsAlignment = async (claims: typeof keyClaims) => {
+    if (!extractedNarrativeIntent?.coreMessage || claims.length === 0) return;
+    
+    setIsAnalyzingAlignment(true);
+    try {
+      const result = await analyzeClaimAlignment(
+        claims.map(c => ({ id: c.id, title: c.title, text: c.text })),
+        extractedNarrativeIntent.coreMessage
+      );
+      
+      if (result.claims) {
+        // Update claims with alignment data
+        result.claims.forEach(alignedClaim => {
+          updateClaim(alignedClaim.id, {
+            ...keyClaims.find(c => c.id === alignedClaim.id),
+            alignment: alignedClaim.alignment as ClaimAlignment,
+            alignmentReason: alignedClaim.reason,
+          } as any);
+        });
+      }
+    } catch (err) {
+      console.error("Failed to analyze claim alignment:", err);
+    } finally {
+      setIsAnalyzingAlignment(false);
+    }
+  };
+
   // Extract claims when switching to claims tab
   const handleTabChange = async (value: string) => {
     haptics.selection();
@@ -92,6 +129,11 @@ export const RefineScreen = () => {
           const filteredClaims = filterLowValueClaims(result.claims);
           setKeyClaims(filteredClaims);
           setClaimsLoaded(true);
+          
+          // Analyze alignment if we have a narrative goal
+          if (extractedNarrativeIntent?.coreMessage) {
+            await analyzeClaimsAlignment(filteredClaims);
+          }
         } else if (result.error) {
           toast({
             title: "Couldn't extract claims",
@@ -130,12 +172,51 @@ export const RefineScreen = () => {
   const rejectedCount = keyClaims.filter(c => c.approved === false).length;
   const editedCount = keyClaims.filter(c => c.edited).length;
 
-  // Tab descriptions for better guidance
-  const tabDescriptions: Record<string, string> = {
-    claims: "Review AI-extracted claims and approve or edit",
-    highlight: "Select key passages to emphasize",
-    voice: "Record voice notes for additional context",
+  // Handle goal capture completion
+  const handleGoalCaptureComplete = () => {
+    setShowGoalCapture(false);
+    // If we already have claims, analyze their alignment
+    if (keyClaims.length > 0 && extractedNarrativeIntent?.coreMessage) {
+      analyzeClaimsAlignment(keyClaims);
+    }
   };
+
+  // Tab descriptions - now context-aware
+  const getTabDescription = () => {
+    if (extractedNarrativeIntent?.coreMessage) {
+      const descriptions: Record<string, string> = {
+        claims: "Review claims aligned with your narrative goal",
+        highlight: "Select passages that support your message",
+        voice: "Add context with guided voice prompts",
+      };
+      return descriptions[activeTab];
+    }
+    return {
+      claims: "Review AI-extracted claims and approve or edit",
+      highlight: "Select key passages to emphasize",
+      voice: "Record voice notes for additional context",
+    }[activeTab];
+  };
+
+  // Show goal capture screen first if not confirmed
+  if (showGoalCapture) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex flex-col p-4 md:p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <Button variant="ghost" size="sm" onClick={handleBack} className="h-9 px-2 md:px-4">
+            <ArrowLeft className="w-4 h-4 mr-1 md:mr-2" />
+            <span className="hidden sm:inline">Back</span>
+          </Button>
+        </div>
+        
+        <NarrativeGoalCapture
+          onComplete={handleGoalCaptureComplete}
+          onSkip={handleGoalCaptureComplete}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex flex-col p-4 md:p-6 pt-4 md:pt-6">
@@ -156,6 +237,37 @@ export const RefineScreen = () => {
         animate={{ opacity: 1, y: 0 }}
         className="flex-1 max-w-4xl mx-auto w-full space-y-4 md:space-y-6"
       >
+        {/* Narrative Goal Banner - persistent reminder */}
+        {extractedNarrativeIntent?.coreMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-3 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-between gap-3"
+          >
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Target className="w-4 h-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground">Your narrative goal</p>
+                <p className="text-sm font-medium text-foreground truncate">
+                  {extractedNarrativeIntent.coreMessage}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setNarrativeGoalConfirmed(false);
+                setShowGoalCapture(true);
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 shrink-0"
+            >
+              <Edit3 className="w-3 h-3" />
+              Edit
+            </button>
+          </motion.div>
+        )}
+
         {/* Title - Compact on mobile */}
         <div className="text-center space-y-1 md:space-y-2">
           <h1 className="text-xl md:text-3xl font-bold text-foreground">
@@ -307,7 +419,7 @@ export const RefineScreen = () => {
             animate={{ opacity: 1 }}
             className="text-center text-sm text-muted-foreground mb-4"
           >
-            {tabDescriptions[activeTab]}
+            {getTabDescription()}
           </motion.p>
 
           {/* Claims Tab */}
@@ -374,12 +486,9 @@ export const RefineScreen = () => {
             </div>
           </TabsContent>
 
-          {/* Voice Tab */}
+          {/* Voice Tab - Now with guided prompts */}
           <TabsContent value="voice">
-            <VoiceRefinement
-              feedback={voiceFeedback}
-              onFeedbackChange={setVoiceFeedback}
-            />
+            <GuidedVoiceFlow />
           </TabsContent>
         </Tabs>
       </motion.div>

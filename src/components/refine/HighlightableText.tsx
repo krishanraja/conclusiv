@@ -1,9 +1,12 @@
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, Sparkles } from "lucide-react";
+import { X, Check, Sparkles, Loader2, Wand2, Target, Heart, Award, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { RefinementHighlight } from "@/lib/types";
+import { useNarrativeStore } from "@/store/narrativeStore";
+import { getSuggestedHighlights } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import type { RefinementHighlight, HighlightCategory } from "@/lib/types";
 
 interface HighlightableTextProps {
   text: string;
@@ -11,6 +14,28 @@ interface HighlightableTextProps {
   onHighlight: (highlight: RefinementHighlight) => void;
   onRemoveHighlight: (index: number) => void;
 }
+
+// Category badge component
+const CategoryBadge = ({ category }: { category?: HighlightCategory }) => {
+  if (!category || category === 'general') return null;
+  
+  const config: Record<HighlightCategory, { icon: typeof Target; label: string; className: string }> = {
+    proof_point: { icon: Target, label: "Proof", className: "text-blue-500 bg-blue-500/10" },
+    emotional_hook: { icon: Heart, label: "Hook", className: "text-pink-500 bg-pink-500/10" },
+    credibility_signal: { icon: Award, label: "Credibility", className: "text-amber-500 bg-amber-500/10" },
+    key_metric: { icon: BarChart3, label: "Metric", className: "text-green-500 bg-green-500/10" },
+    general: { icon: Sparkles, label: "", className: "" },
+  };
+  
+  const { icon: Icon, label, className } = config[category] || config.general;
+  
+  return (
+    <span className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium", className)}>
+      <Icon className="w-2.5 h-2.5" />
+      {label}
+    </span>
+  );
+};
 
 interface TextBlock {
   type: "paragraph" | "bullet" | "header";
@@ -125,14 +150,47 @@ const parseIntoSentences = (text: string): Sentence[] => {
   return sentences;
 };
 
-// Mobile-friendly chip-based highlighting
+// Mobile-friendly chip-based highlighting with AI suggestions
 const MobileHighlightChips = ({
   text,
   highlights,
   onHighlight,
   onRemoveHighlight,
 }: HighlightableTextProps) => {
+  const { extractedNarrativeIntent } = useNarrativeStore();
+  const [suggestedHighlights, setSuggestedHighlights] = useState<RefinementHighlight[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [suggestionsLoaded, setSuggestionsLoaded] = useState(false);
+  
   const sentences = useMemo(() => parseIntoSentences(text), [text]);
+  
+  // Load AI suggestions if we have a narrative goal
+  useEffect(() => {
+    const loadSuggestions = async () => {
+      if (!extractedNarrativeIntent?.coreMessage || suggestionsLoaded) return;
+      
+      setIsLoadingSuggestions(true);
+      try {
+        const result = await getSuggestedHighlights(text, extractedNarrativeIntent.coreMessage);
+        if (result.highlights) {
+          setSuggestedHighlights(result.highlights.map(h => ({
+            start: h.start,
+            end: h.end,
+            text: h.text,
+            category: h.category as HighlightCategory,
+            isAiSuggested: true,
+          })));
+        }
+      } catch (err) {
+        console.error("Failed to get highlight suggestions:", err);
+      } finally {
+        setIsLoadingSuggestions(false);
+        setSuggestionsLoaded(true);
+      }
+    };
+    
+    loadSuggestions();
+  }, [text, extractedNarrativeIntent?.coreMessage, suggestionsLoaded]);
   
   const isHighlighted = useCallback((sentence: Sentence) => {
     return highlights.some(h => 
@@ -141,6 +199,23 @@ const MobileHighlightChips = ({
       (h.end > sentence.startIndex && h.end <= sentence.endIndex)
     );
   }, [highlights]);
+  
+  const isSuggested = useCallback((sentence: Sentence) => {
+    return suggestedHighlights.some(h => 
+      (h.start <= sentence.startIndex && h.end >= sentence.endIndex) ||
+      (h.start >= sentence.startIndex && h.start < sentence.endIndex) ||
+      (h.end > sentence.startIndex && h.end <= sentence.endIndex)
+    );
+  }, [suggestedHighlights]);
+  
+  const getSuggestionCategory = useCallback((sentence: Sentence): HighlightCategory | undefined => {
+    const suggestion = suggestedHighlights.find(h => 
+      (h.start <= sentence.startIndex && h.end >= sentence.endIndex) ||
+      (h.start >= sentence.startIndex && h.start < sentence.endIndex) ||
+      (h.end > sentence.startIndex && h.end <= sentence.endIndex)
+    );
+    return suggestion?.category;
+  }, [suggestedHighlights]);
   
   const getHighlightIndex = useCallback((sentence: Sentence) => {
     return highlights.findIndex(h => 
@@ -153,13 +228,29 @@ const MobileHighlightChips = ({
     if (existingIndex !== -1) {
       onRemoveHighlight(existingIndex);
     } else {
+      const category = getSuggestionCategory(sentence);
       onHighlight({
         start: sentence.startIndex,
         end: sentence.endIndex,
         text: sentence.text,
+        category,
+        isAiSuggested: isSuggested(sentence),
       });
     }
-  }, [getHighlightIndex, onHighlight, onRemoveHighlight]);
+  }, [getHighlightIndex, onHighlight, onRemoveHighlight, getSuggestionCategory, isSuggested]);
+  
+  // Accept all AI suggestions
+  const acceptAllSuggestions = () => {
+    suggestedHighlights.forEach(suggestion => {
+      // Check if not already highlighted
+      const alreadyHighlighted = highlights.some(h => 
+        h.start === suggestion.start && h.end === suggestion.end
+      );
+      if (!alreadyHighlighted) {
+        onHighlight(suggestion);
+      }
+    });
+  };
   
   if (sentences.length === 0) {
     return (
@@ -171,14 +262,39 @@ const MobileHighlightChips = ({
   
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <Sparkles className="w-3.5 h-3.5 text-primary" />
-        <span>Tap to select key passages</span>
+      {/* Header with AI suggestions */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Sparkles className="w-3.5 h-3.5 text-primary" />
+          <span>Tap to select key passages</span>
+        </div>
+        
+        {isLoadingSuggestions && (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Finding suggestions...
+          </span>
+        )}
+        
+        {suggestedHighlights.length > 0 && !isLoadingSuggestions && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={acceptAllSuggestions}
+            className="h-7 text-xs text-primary"
+          >
+            <Wand2 className="w-3 h-3 mr-1" />
+            Accept {suggestedHighlights.length} AI suggestions
+          </Button>
+        )}
       </div>
       
       <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
         {sentences.map((sentence, idx) => {
           const highlighted = isHighlighted(sentence);
+          const suggested = isSuggested(sentence);
+          const category = getSuggestionCategory(sentence);
+          
           return (
             <motion.button
               key={idx}
@@ -187,6 +303,8 @@ const MobileHighlightChips = ({
                 "w-full text-left p-3 rounded-lg border transition-all text-sm leading-relaxed",
                 highlighted 
                   ? "bg-primary/10 border-primary/40 text-foreground" 
+                  : suggested
+                  ? "bg-amber-500/5 border-amber-500/30 text-foreground"
                   : "bg-card/50 border-border/50 text-muted-foreground hover:border-border hover:bg-card"
               )}
               whileTap={{ scale: 0.98 }}
@@ -197,10 +315,12 @@ const MobileHighlightChips = ({
                   "w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 transition-colors",
                   highlighted 
                     ? "bg-primary text-primary-foreground" 
+                    : suggested
+                    ? "bg-amber-500/20 border border-amber-500/50"
                     : "bg-muted/50 border border-border"
                 )}>
                   <AnimatePresence mode="wait">
-                    {highlighted && (
+                    {highlighted ? (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
@@ -208,10 +328,25 @@ const MobileHighlightChips = ({
                       >
                         <Check className="w-3 h-3" />
                       </motion.div>
-                    )}
+                    ) : suggested ? (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                      >
+                        <Wand2 className="w-2.5 h-2.5 text-amber-500" />
+                      </motion.div>
+                    ) : null}
                   </AnimatePresence>
                 </div>
-                <span className="flex-1 line-clamp-3">{sentence.text}</span>
+                <div className="flex-1">
+                  <span className="line-clamp-3">{sentence.text}</span>
+                  {suggested && category && (
+                    <div className="mt-1.5">
+                      <CategoryBadge category={category} />
+                    </div>
+                  )}
+                </div>
               </div>
             </motion.button>
           );
@@ -233,17 +368,61 @@ const MobileHighlightChips = ({
   );
 };
 
-// Desktop text selection highlighting (original behavior)
+// Desktop text selection highlighting with AI suggestions
 const DesktopHighlightableText = ({
   text,
   highlights,
   onHighlight,
   onRemoveHighlight,
 }: HighlightableTextProps) => {
+  const { extractedNarrativeIntent } = useNarrativeStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isSelecting, setIsSelecting] = useState(false);
+  const [suggestedHighlights, setSuggestedHighlights] = useState<RefinementHighlight[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [suggestionsLoaded, setSuggestionsLoaded] = useState(false);
 
   const blocks = useMemo(() => parseTextIntoBlocks(text), [text]);
+  
+  // Load AI suggestions if we have a narrative goal
+  useEffect(() => {
+    const loadSuggestions = async () => {
+      if (!extractedNarrativeIntent?.coreMessage || suggestionsLoaded) return;
+      
+      setIsLoadingSuggestions(true);
+      try {
+        const result = await getSuggestedHighlights(text, extractedNarrativeIntent.coreMessage);
+        if (result.highlights) {
+          setSuggestedHighlights(result.highlights.map(h => ({
+            start: h.start,
+            end: h.end,
+            text: h.text,
+            category: h.category as HighlightCategory,
+            isAiSuggested: true,
+          })));
+        }
+      } catch (err) {
+        console.error("Failed to get highlight suggestions:", err);
+      } finally {
+        setIsLoadingSuggestions(false);
+        setSuggestionsLoaded(true);
+      }
+    };
+    
+    loadSuggestions();
+  }, [text, extractedNarrativeIntent?.coreMessage, suggestionsLoaded]);
+  
+  // Accept all AI suggestions
+  const acceptAllSuggestions = () => {
+    suggestedHighlights.forEach(suggestion => {
+      const alreadyHighlighted = highlights.some(h => 
+        h.start === suggestion.start && h.end === suggestion.end
+      );
+      if (!alreadyHighlighted) {
+        onHighlight(suggestion);
+      }
+    });
+  };
 
   const handleMouseUp = useCallback(() => {
     const selection = window.getSelection();
@@ -403,13 +582,44 @@ const DesktopHighlightableText = ({
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="p-4 bg-card rounded-lg border border-border/50 max-h-[400px] overflow-y-auto text-sm select-text cursor-text"
-      onMouseDown={() => setIsSelecting(true)}
-      onMouseUp={handleMouseUp}
-    >
-      {renderBlocks()}
+    <div className="space-y-3">
+      {/* AI Suggestions header */}
+      {(isLoadingSuggestions || suggestedHighlights.length > 0) && (
+        <div className="flex items-center justify-between">
+          {isLoadingSuggestions ? (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Finding passages that support your goal...
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Wand2 className="w-3 h-3 text-amber-500" />
+              {suggestedHighlights.length} AI-suggested passages
+            </span>
+          )}
+          
+          {suggestedHighlights.length > 0 && !isLoadingSuggestions && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={acceptAllSuggestions}
+              className="h-7 text-xs text-primary"
+            >
+              <Check className="w-3 h-3 mr-1" />
+              Accept all suggestions
+            </Button>
+          )}
+        </div>
+      )}
+      
+      <div
+        ref={containerRef}
+        className="p-4 bg-card rounded-lg border border-border/50 max-h-[400px] overflow-y-auto text-sm select-text cursor-text"
+        onMouseDown={() => setIsSelecting(true)}
+        onMouseUp={handleMouseUp}
+      >
+        {renderBlocks()}
+      </div>
     </div>
   );
 };

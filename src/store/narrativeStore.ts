@@ -15,6 +15,8 @@ import type {
   NarrativeAlternative,
   CompanyBrain,
   PresentationStyle,
+  ExtractedNarrativeIntent,
+  GuidedVoiceResponse,
 } from "@/lib/types";
 
 // Settings snapshot for change detection
@@ -34,6 +36,17 @@ interface NarrativeState {
   // Voice
   isRecording: boolean;
   setIsRecording: (recording: boolean) => void;
+  
+  // ===== Narrative Goal (Refine Screen 10X) =====
+  narrativeGoal: string;
+  setNarrativeGoal: (goal: string) => void;
+  extractedNarrativeIntent: ExtractedNarrativeIntent | null;
+  setExtractedNarrativeIntent: (intent: ExtractedNarrativeIntent | null) => void;
+  guidedVoiceResponses: GuidedVoiceResponse;
+  setGuidedVoiceResponses: (responses: GuidedVoiceResponse) => void;
+  updateGuidedVoiceResponse: (key: keyof GuidedVoiceResponse, value: string) => void;
+  narrativeGoalConfirmed: boolean;
+  setNarrativeGoalConfirmed: (confirmed: boolean) => void;
   
   // Business Context
   businessWebsite: string;
@@ -150,6 +163,12 @@ interface NarrativeState {
 const initialState = {
   rawText: "",
   isRecording: false,
+  // Narrative Goal (Refine Screen 10X)
+  narrativeGoal: "",
+  extractedNarrativeIntent: null as ExtractedNarrativeIntent | null,
+  guidedVoiceResponses: {} as GuidedVoiceResponse,
+  narrativeGoalConfirmed: false,
+  // Rest of state
   businessWebsite: "",
   businessContext: null,
   userUploadedLogoUrl: null,
@@ -197,6 +216,19 @@ export const useNarrativeStore = create<NarrativeState>((set, get) => ({
   setRawText: (text) => set({ rawText: text }),
   
   setIsRecording: (recording) => set({ isRecording: recording }),
+  
+  // Narrative Goal (Refine Screen 10X)
+  setNarrativeGoal: (goal) => set({ narrativeGoal: goal }),
+  
+  setExtractedNarrativeIntent: (intent) => set({ extractedNarrativeIntent: intent }),
+  
+  setGuidedVoiceResponses: (responses) => set({ guidedVoiceResponses: responses }),
+  
+  updateGuidedVoiceResponse: (key, value) => set((state) => ({
+    guidedVoiceResponses: { ...state.guidedVoiceResponses, [key]: value },
+  })),
+  
+  setNarrativeGoalConfirmed: (confirmed) => set({ narrativeGoalConfirmed: confirmed }),
   
   setBusinessWebsite: (url) => set({ businessWebsite: url }),
   

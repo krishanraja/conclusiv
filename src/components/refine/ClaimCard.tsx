@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, X, Pencil, ChevronDown, ChevronUp, Loader2, ArrowRightLeft, ShieldCheck, Shield, ShieldAlert, Clock, AlertCircle } from "lucide-react";
+import { Check, X, Pencil, ChevronDown, ChevronUp, Loader2, ArrowRightLeft, ShieldCheck, Shield, ShieldAlert, ShieldQuestion, Clock, AlertCircle, RefreshCw, ThumbsUp, AlertTriangle, ThumbsDown, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,15 +17,95 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { normalizeClaim, verifyClaim } from "@/lib/api";
-import type { KeyClaim, ClaimVerification, ClaimFreshnessStatus } from "@/lib/types";
+import type { KeyClaim, ClaimVerification, ClaimFreshnessStatus, ClaimAlignment } from "@/lib/types";
 
-// Simplified auto-verify badge - color coded, no click needed
+// Narrative alignment badge - shows how claim relates to user's goal
+const AlignmentBadge = ({
+  alignment,
+  reason,
+}: {
+  alignment?: ClaimAlignment;
+  reason?: string;
+}) => {
+  if (!alignment || alignment === 'neutral') return null;
+
+  const config = {
+    supports: {
+      icon: ThumbsUp,
+      bgClass: "bg-green-500/15",
+      textClass: "text-green-500",
+      label: "Supports",
+      description: "Supports your narrative goal",
+    },
+    potential_objection: {
+      icon: AlertTriangle,
+      bgClass: "bg-amber-500/15",
+      textClass: "text-amber-500",
+      label: "Objection",
+      description: "Potential audience concern - address proactively",
+    },
+    undermines: {
+      icon: ThumbsDown,
+      bgClass: "bg-red-500/15",
+      textClass: "text-red-500",
+      label: "Undermines",
+      description: "May conflict with your narrative goal",
+    },
+    neutral: {
+      icon: Minus,
+      bgClass: "bg-muted/50",
+      textClass: "text-muted-foreground",
+      label: "Neutral",
+      description: "Neither helps nor hurts your goal",
+    },
+  };
+
+  const alignmentConfig = config[alignment] || config.neutral;
+  const { icon: Icon, bgClass, textClass, label, description } = alignmentConfig;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          className={cn(
+            "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium cursor-pointer",
+            bgClass,
+            textClass
+          )}
+          type="button"
+        >
+          <Icon className="w-3 h-3" />
+          <span className="hidden sm:inline">{label}</span>
+        </motion.button>
+      </PopoverTrigger>
+      <PopoverContent side="top" className="w-64 p-3" align="start">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Icon className={cn("w-4 h-4", textClass)} />
+            <p className="text-sm font-medium">{label}</p>
+          </div>
+          <p className="text-xs text-muted-foreground">{description}</p>
+          {reason && (
+            <p className="text-xs pt-2 border-t border-border/50">{reason}</p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+// Verification badge - now includes unable_to_verify with retry
 const VerificationBadge = ({ 
   verification, 
   isLoading,
+  onRetry,
 }: { 
   verification?: ClaimVerification; 
   isLoading?: boolean;
+  onRetry?: () => void;
 }) => {
   if (isLoading) {
     return (
@@ -66,10 +146,18 @@ const VerificationBadge = ({
       label: "Unreliable",
       description: "Could not find supporting evidence",
     },
+    unable_to_verify: {
+      icon: ShieldQuestion,
+      bgClass: "bg-orange-500/15",
+      textClass: "text-orange-500",
+      label: "Needs Review",
+      description: "Automatic verification failed - please verify manually",
+    },
   };
 
-  const statusConfig = config[verification.status] || config.reliable;
+  const statusConfig = config[verification.status] || config.unable_to_verify;
   const { icon: Icon, bgClass, textClass, label, description } = statusConfig;
+  const isUnableToVerify = verification.status === "unable_to_verify";
 
   return (
     <Popover>
@@ -99,10 +187,23 @@ const VerificationBadge = ({
           {verification.summary && (
             <p className="text-xs pt-2 border-t border-border/50">{verification.summary}</p>
           )}
-          {verification.confidence !== undefined && (
+          {verification.confidence !== undefined && verification.confidence > 0 && (
             <p className="text-[10px] text-muted-foreground">
               Confidence: {verification.confidence}%
             </p>
+          )}
+          {/* Retry button for failed verifications */}
+          {isUnableToVerify && onRetry && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRetry();
+              }}
+              className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-orange-500/20 text-orange-500 text-xs font-medium hover:bg-orange-500/30 transition-colors"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Retry Verification
+            </button>
           )}
         </div>
       </PopoverContent>
@@ -226,28 +327,26 @@ export const ClaimCard = ({
     setIsVerifying(true);
     try {
       const result = await verifyClaim(claim.text, claim.title);
-      if (result.status) {
-        onUpdate({
-          verification: {
-            status: result.status,
-            confidence: result.confidence,
-            summary: result.summary,
-            checkedAt: Date.now(),
-            freshness: result.freshness,
-            freshnessReason: result.freshnessReason,
-            dataDate: result.dataDate,
-            sources: result.sources,
-          },
-        });
-      }
-    } catch (err) {
-      console.error('[ClaimCard] Verification failed:', err);
-      // Set as reliable by default on error
       onUpdate({
         verification: {
-          status: "reliable",
-          confidence: 50,
-          summary: "Could not verify - marked as reliable by default",
+          status: result.status,
+          confidence: result.confidence,
+          summary: result.summary,
+          checkedAt: Date.now(),
+          freshness: result.freshness,
+          freshnessReason: result.freshnessReason,
+          dataDate: result.dataDate,
+          sources: result.sources,
+        },
+      });
+    } catch (err) {
+      console.error('[ClaimCard] Verification failed:', err);
+      // Set as unable_to_verify - never mask failures
+      onUpdate({
+        verification: {
+          status: "unable_to_verify",
+          confidence: 0,
+          summary: "Verification failed. Please verify this claim manually.",
           checkedAt: Date.now(),
           freshness: "dated",
           freshnessReason: "Verification error",
@@ -256,6 +355,12 @@ export const ClaimCard = ({
     } finally {
       setIsVerifying(false);
     }
+  };
+  
+  // Retry verification (clears existing and re-runs)
+  const handleRetryVerification = () => {
+    onUpdate({ verification: undefined });
+    runVerification();
   };
 
   // Auto-verify claim if enabled and not already verified
@@ -438,8 +543,17 @@ export const ClaimCard = ({
               Edited
             </span>
           )}
+          {/* Narrative alignment badge - shows relationship to goal */}
+          <AlignmentBadge 
+            alignment={claim.alignment} 
+            reason={claim.alignmentReason} 
+          />
           {/* Verification + Freshness badges - auto displayed */}
-          <VerificationBadge verification={claim.verification} isLoading={isVerifying} />
+          <VerificationBadge 
+            verification={claim.verification} 
+            isLoading={isVerifying} 
+            onRetry={handleRetryVerification}
+          />
           <FreshnessBadge 
             freshness={claim.verification?.freshness} 
             reason={claim.verification?.freshnessReason} 
