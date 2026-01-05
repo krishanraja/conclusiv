@@ -324,6 +324,47 @@
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-inset-left: env(safe-area-inset-left, 0px);
   --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  
+  /* Mobile compact mode spacing tokens */
+  --mobile-hero-pt: 1.5rem;      /* 24px -> 16px in compact */
+  --mobile-hero-pb: 1.5rem;      /* 24px -> 12px in compact */
+  --mobile-logo-mb: 1.5rem;      /* 24px -> 12px in compact */
+  --mobile-subtitle-mt: 1rem;    /* 16px -> 8px in compact */
+  --mobile-action-pb: 0.75rem;   /* 12px -> 8px in compact */
+  --mobile-example-pb: 1rem;     /* 16px -> 8px in compact */
+  --mobile-guidance-pb: 0.5rem;  /* 8px -> 4px in compact */
+  --mobile-textarea-min: 18vh;   /* 20vh -> 15vh in compact */
+  --mobile-textarea-max: 32vh;   /* 35vh -> 28vh in compact */
+}
+
+/* Compact viewport mode (< 700px height) */
+@media (max-height: 699px) {
+  :root {
+    --mobile-hero-pt: 1rem;
+    --mobile-hero-pb: 0.75rem;
+    --mobile-logo-mb: 0.75rem;
+    --mobile-subtitle-mt: 0.5rem;
+    --mobile-action-pb: 0.5rem;
+    --mobile-example-pb: 0.5rem;
+    --mobile-guidance-pb: 0.25rem;
+    --mobile-textarea-min: 15vh;
+    --mobile-textarea-max: 28vh;
+  }
+}
+
+/* Spacious viewport mode (>= 850px height) */
+@media (min-height: 850px) {
+  :root {
+    --mobile-hero-pt: 2rem;
+    --mobile-hero-pb: 1.5rem;
+    --mobile-logo-mb: 1.5rem;
+    --mobile-subtitle-mt: 1rem;
+    --mobile-action-pb: 0.75rem;
+    --mobile-example-pb: 1rem;
+    --mobile-guidance-pb: 0.5rem;
+    --mobile-textarea-min: 22vh;
+    --mobile-textarea-max: 38vh;
+  }
 }
 
 .safe-area-top {

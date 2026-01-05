@@ -23,6 +23,7 @@ import { ResearchAssistant } from "./ResearchAssistant";
 import { SeeExampleButton } from "./SeeExampleButton";
 import { SetupSheet, useSetupSheet } from "./SetupSheet";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
+import { useViewportTier } from "@/hooks/use-mobile";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 const MIN_CHARS = 50;
@@ -48,6 +49,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
   } = useNarrativeStore();
   
   const { isPro, isFirstBuild } = useSubscription();
+  const viewportTier = useViewportTier();
   
   // Auto-open setup sheet for first-time users
   const { shouldAutoOpen, hasChecked, markSetupComplete } = useSetupSheet();
@@ -78,6 +80,9 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
   const hasContent = charCount > 0;
   const isTooShort = charCount > 0 && charCount < MIN_CHARS;
   const showLargeDocWarning = !isPro && !isFirstBuild && charCount > FREE_MAX_CHARS;
+
+  // Adaptive spacing based on viewport tier and content state
+  const isCompact = viewportTier === 'compact' || (!hasContent && viewportTier !== 'spacious');
 
   // Auto-open setup sheet on first visit
   useEffect(() => {
@@ -113,7 +118,6 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
       if (result.text) {
         setRawText(result.text);
         setUploadedFileName(file.name);
-        // Success indicated by UI state change - no toast needed
       }
     } catch (err) {
       toast({
@@ -129,12 +133,10 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
   const handleResearchComplete = (content: string) => {
     setRawText(content);
     setShowResearchAssistant(false);
-    // Success indicated by content appearing in textarea - no toast needed
   };
 
   const handleSetupComplete = () => {
     markSetupComplete();
-    // Show post-setup guidance if no content loaded yet
     if (!hasContent) {
       setShowPostSetupGuidance(true);
     }
@@ -156,7 +158,7 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
   }, [hasContent, showPostSetupGuidance]);
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-8rem)] overflow-hidden">
+    <div className="flex flex-col h-[calc(100dvh-4rem)] overflow-hidden">
       {/* Setup Sheet - Auto-opens on first visit */}
       <SetupSheet
         isOpen={showSetupSheet}
@@ -184,12 +186,20 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         className="hidden"
       />
 
-      {/* Hero Section with Logo */}
-      <div className="flex-shrink-0 px-6 pt-6 pb-6 text-center">
+      {/* Hero Section with Logo - Compact adaptive spacing */}
+      <div 
+        className={cn(
+          "flex-shrink-0 px-5 text-center",
+          isCompact ? "pt-4 pb-3" : "pt-5 pb-4"
+        )}
+      >
         <motion.img 
           src={conclusivLogo}
           alt="conclusiv" 
-          className="h-5 w-auto mx-auto mb-6"
+          className={cn(
+            "w-auto mx-auto",
+            isCompact ? "h-4 mb-3" : "h-5 mb-4"
+          )}
           style={{ aspectRatio: 'auto' }}
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -197,82 +207,27 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
           fetchPriority="high"
           decoding="async"
         />
-        <h1 className="text-2xl font-bold text-foreground leading-tight">
+        <h1 className={cn(
+          "font-bold text-foreground leading-tight",
+          isCompact ? "text-xl" : "text-2xl"
+        )}>
           Turn your business case into a{" "}
           <span className="gradient-text">demo</span>
           {" "}in 2 minutes.
         </h1>
-        <p className="text-sm text-muted-foreground mt-4 leading-relaxed">
+        <p className={cn(
+          "text-muted-foreground leading-relaxed",
+          isCompact ? "text-xs mt-2" : "text-sm mt-3"
+        )}>
           Upload, generate or paste your business plan.
         </p>
       </div>
 
-      {/* Voice-First Hero Button */}
-      {isVoiceSupported && (
-        <div className="flex-shrink-0 flex justify-center pb-4">
-          <motion.button
-            onClick={toggleRecording}
-            className={cn(
-              "relative w-20 h-20 rounded-full flex items-center justify-center transition-all",
-              isRecording 
-                ? "bg-red-500/20 text-red-400 border-2 border-red-400/50" 
-                : "bg-gradient-to-br from-primary/20 to-primary/5 text-primary border-2 border-primary/30 hover:border-primary/50"
-            )}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            {/* Pulse rings when recording */}
-            <AnimatePresence>
-              {isRecording && (
-                <>
-                  <motion.div
-                    className="absolute inset-0 rounded-full border-2 border-red-400/50"
-                    initial={{ scale: 1, opacity: 0.5 }}
-                    animate={{ scale: 1.5, opacity: 0 }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  />
-                  <motion.div
-                    className="absolute inset-0 rounded-full border-2 border-red-400/30"
-                    initial={{ scale: 1, opacity: 0.3 }}
-                    animate={{ scale: 2, opacity: 0 }}
-                    transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
-                  />
-                </>
-              )}
-            </AnimatePresence>
-            
-            {isRecording ? (
-              <MicOff className="w-8 h-8" />
-            ) : (
-              <Mic className="w-8 h-8" />
-            )}
-          </motion.button>
-        </div>
-      )}
-      
-      {/* Voice status indicator */}
-      <AnimatePresence>
-        {isRecording && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="flex-shrink-0 text-center pb-3"
-          >
-            <p className="text-sm text-red-400 font-medium flex items-center justify-center gap-2">
-              <motion.span 
-                animate={{ opacity: [1, 0.4, 1] }}
-                transition={{ duration: 1, repeat: Infinity }}
-                className="w-2 h-2 rounded-full bg-red-400"
-              />
-              Listening... Speak now
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Primary Action Buttons - Upload, Generate & Voice */}
-      <div className="flex-shrink-0 flex items-center justify-center gap-2 px-4 pb-3">
+      {/* Primary Action Buttons - Upload & Generate */}
+      <div className={cn(
+        "flex-shrink-0 flex items-center justify-center gap-2 px-4",
+        isCompact ? "pb-2" : "pb-3"
+      )}>
         <div className={cn(
           "flex-1 rounded-lg transition-all duration-300",
           businessContext && !hasContent && "shimmer-border"
@@ -281,7 +236,10 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
             disabled={isParsingDocument || isRecording}
-            className="w-full h-11 text-sm font-medium border-0 bg-card/50"
+            className={cn(
+              "w-full text-sm font-medium border-0 bg-card/50",
+              isCompact ? "h-10" : "h-11"
+            )}
           >
             <Upload className="w-4 h-4 mr-2" />
             Upload
@@ -295,7 +253,10 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
             variant="outline"
             onClick={() => setShowResearchAssistant(true)}
             disabled={isRecording}
-            className="w-full h-11 text-sm font-medium border-0 bg-card/50"
+            className={cn(
+              "w-full text-sm font-medium border-0 bg-card/50",
+              isCompact ? "h-10" : "h-11"
+            )}
           >
             <Sparkles className="w-4 h-4 mr-2" />
             Generate
@@ -303,8 +264,11 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         </div>
       </div>
 
-      {/* Example as subtle text link - clearly secondary */}
-      <div className="flex-shrink-0 text-center pb-4">
+      {/* Example as subtle text link */}
+      <div className={cn(
+        "flex-shrink-0 text-center",
+        isCompact ? "pb-2" : "pb-3"
+      )}>
         <SeeExampleButton variant="ghost" className="text-xs text-muted-foreground hover:text-primary h-auto py-1 px-2" />
       </div>
 
@@ -315,7 +279,10 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="flex-shrink-0 flex flex-wrap items-center justify-center gap-2 px-4 pb-3"
+            className={cn(
+              "flex-shrink-0 flex flex-wrap items-center justify-center gap-2 px-4",
+              isCompact ? "pb-2" : "pb-3"
+            )}
           >
             {isParsingDocument && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 rounded-full text-xs text-primary">
@@ -344,8 +311,35 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         )}
       </AnimatePresence>
 
-      {/* Main Textarea - Shimmer only when no setup is done */}
-      <div className="flex-1 px-4 pb-2 min-h-[20vh] max-h-[35vh]">
+      {/* Recording status indicator - shows above textarea when recording */}
+      <AnimatePresence>
+        {isRecording && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex-shrink-0 text-center px-4 pb-2"
+          >
+            <p className="text-sm text-red-400 font-medium flex items-center justify-center gap-2">
+              <motion.span 
+                animate={{ opacity: [1, 0.4, 1] }}
+                transition={{ duration: 1, repeat: Infinity }}
+                className="w-2 h-2 rounded-full bg-red-400"
+              />
+              Listening... Tap mic to stop
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Textarea with inline voice button */}
+      <div 
+        className="flex-1 px-4 pb-2"
+        style={{
+          minHeight: isCompact ? '15vh' : '18vh',
+          maxHeight: hasContent ? (isCompact ? '35vh' : '40vh') : (isCompact ? '28vh' : '32vh')
+        }}
+      >
         <div className={cn(
           "h-full relative rounded-xl transition-all duration-300",
           !hasContent && !businessContext && "shimmer-border"
@@ -356,13 +350,54 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
               setRawText(e.target.value);
               if (uploadedFileName) setUploadedFileName(null);
             }}
-            placeholder="Paste your research here..."
-            className="h-full w-full bg-card/50 border-0 resize-none text-sm rounded-xl focus:ring-2 focus:ring-primary/50 p-4"
+            placeholder={isVoiceSupported ? "Paste or speak your research..." : "Paste your research here..."}
+            className={cn(
+              "h-full w-full bg-card/50 border-0 resize-none text-sm rounded-xl focus:ring-2 focus:ring-primary/50 p-4",
+              isVoiceSupported && "pr-14" // Extra padding for mic button
+            )}
             disabled={isParsingDocument}
           />
           
-          {/* Char count overlay */}
-          <div className="absolute bottom-3 right-3 text-xs text-muted-foreground/60">
+          {/* Inline voice button - positioned inside textarea */}
+          {isVoiceSupported && (
+            <motion.button
+              type="button"
+              onClick={toggleRecording}
+              disabled={isParsingDocument}
+              className={cn(
+                "absolute right-3 bottom-3 w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                isRecording 
+                  ? "bg-red-500/20 text-red-400 border border-red-400/50" 
+                  : "bg-primary/10 text-primary/70 hover:text-primary hover:bg-primary/20 border border-primary/20"
+              )}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {/* Subtle pulse ring when recording */}
+              <AnimatePresence>
+                {isRecording && (
+                  <motion.div
+                    className="absolute inset-0 rounded-full border border-red-400/50"
+                    initial={{ scale: 1, opacity: 0.5 }}
+                    animate={{ scale: 1.4, opacity: 0 }}
+                    transition={{ duration: 1, repeat: Infinity }}
+                  />
+                )}
+              </AnimatePresence>
+              
+              {isRecording ? (
+                <MicOff className="w-5 h-5" />
+              ) : (
+                <Mic className="w-5 h-5" />
+              )}
+            </motion.button>
+          )}
+          
+          {/* Char count overlay - positioned to not overlap with mic */}
+          <div className={cn(
+            "absolute bottom-3 text-xs text-muted-foreground/60",
+            isVoiceSupported ? "right-16" : "right-3"
+          )}>
             {charCount > 0 && (
               <span className={isTooShort ? "text-amber-500" : ""}>
                 {charCount.toLocaleString()}
@@ -376,7 +411,10 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
       </div>
 
       {/* Contextual guidance - Dynamic based on state */}
-      <div className="flex-shrink-0 px-4 pb-2 min-h-[24px]">
+      <div className={cn(
+        "flex-shrink-0 px-4",
+        isCompact ? "pb-1 min-h-[20px]" : "pb-2 min-h-[24px]"
+      )}>
         <AnimatePresence mode="wait">
           {showPostSetupGuidance && !hasContent ? (
             <motion.div
@@ -406,9 +444,12 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
         </AnimatePresence>
       </div>
 
-      {/* Bottom Bar - Simplified */}
-      <div className="flex-shrink-0 bg-background/95 backdrop-blur-sm border-t border-border/30 px-4 py-3 pb-safe">
-        {/* Warnings */}
+      {/* Bottom Bar - Compact */}
+      <div className={cn(
+        "flex-shrink-0 bg-background/95 backdrop-blur-sm border-t border-border/30 px-4 pb-safe",
+        isCompact ? "py-2" : "py-3"
+      )}>
+        {/* Warnings - only show if space allows or if critical */}
         {(isTooShort || showLargeDocWarning) && (
           <div className="flex items-center justify-center gap-2 text-xs mb-2">
             {isTooShort && (
@@ -432,7 +473,10 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
             variant="outline" 
             size="icon"
             onClick={() => setShowSetupSheet(true)}
-            className="flex-shrink-0 h-12 w-12 relative border-primary/20 hover:border-primary/40"
+            className={cn(
+              "flex-shrink-0 relative border-primary/20 hover:border-primary/40",
+              isCompact ? "h-11 w-11" : "h-12 w-12"
+            )}
           >
             <Settings className="w-5 h-5" />
             {/* Subtle pulsing badge if no context */}
@@ -449,7 +493,10 @@ export const MobileInputFlow = ({ onContinue, canBuild }: MobileInputFlowProps) 
             size="lg"
             onClick={onContinue}
             disabled={!rawText.trim() || isTooShort || isParsingDocument}
-            className="flex-1 h-12 shadow-lg shadow-primary/20"
+            className={cn(
+              "flex-1 shadow-lg shadow-primary/20",
+              isCompact ? "h-11" : "h-12"
+            )}
           >
             <Sparkles className="w-4 h-4 mr-2" />
             Continue
