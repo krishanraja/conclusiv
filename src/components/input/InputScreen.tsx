@@ -121,6 +121,39 @@ export const InputScreen = () => {
       setShowPostSetupGuidance(false);
     }
   }, [hasContent, showPostSetupGuidance]);
+
+  // Handle continue - must be defined before useEffect that references it
+  const handleContinue = useCallback(async () => {
+    const trimmedText = rawText.trim();
+    
+    if (!trimmedText) {
+      toast({
+        title: "Nothing to analyze",
+        description: "Please paste your research first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (trimmedText.length < MIN_CHARS) {
+      toast({
+        title: "Input too short",
+        description: `Please provide at least ${MIN_CHARS} characters for meaningful analysis`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check build limit
+    if (!requireFeature('build_limit')) {
+      return;
+    }
+
+    // Increment build count
+    await incrementBuildCount();
+    
+    setCurrentStep("refine");
+  }, [rawText, toast, requireFeature, incrementBuildCount, setCurrentStep]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -273,38 +306,6 @@ export const InputScreen = () => {
       handleFileSelect(files[0]);
     }
   };
-
-  const handleContinue = useCallback(async () => {
-    const trimmedText = rawText.trim();
-    
-    if (!trimmedText) {
-      toast({
-        title: "Nothing to analyze",
-        description: "Please paste your research first",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (trimmedText.length < MIN_CHARS) {
-      toast({
-        title: "Input too short",
-        description: `Please provide at least ${MIN_CHARS} characters for meaningful analysis`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check build limit
-    if (!requireFeature('build_limit')) {
-      return;
-    }
-
-    // Increment build count
-    await incrementBuildCount();
-    
-    setCurrentStep("refine");
-  }, [rawText, toast, requireFeature, incrementBuildCount, setCurrentStep]);
 
   const isLongInput = charCount > 15000;
   const isVeryLongInput = charCount > MAX_CHARS_WARNING;
