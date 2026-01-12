@@ -17,27 +17,38 @@ conclusiv uses a dark, cinematic aesthetic with shimmer accents. The design prio
 
 ```css
 /* Background layers */
---background: 222 47% 5%;      /* Deep dark blue */
---card: 222 47% 8%;            /* Elevated surfaces */
---popover: 222 47% 8%;         /* Floating elements */
+--background: 0 0% 2%;         /* Deep dark black */
+--card: 0 0% 4%;               /* Elevated surfaces */
+--popover: 0 0% 4%;            /* Floating elements */
 
 /* Text colors */
---foreground: 0 0% 95%;        /* Primary text */
---muted-foreground: 215 20% 55%; /* Secondary text */
+--foreground: 0 0% 98%;        /* Primary text */
+--muted-foreground: 0 0% 72%;  /* Secondary text */
 
-/* Brand colors */
---primary: 199 89% 48%;        /* Cyan accent */
---primary-foreground: 222 47% 5%;
+/* Brand colors - Green/Teal gradient */
+--primary: 78 100% 83%;         /* Light yellowish-green (#E2FFC4) */
+--primary-foreground: 0 0% 2%;  /* Dark text on light primary */
 
-/* Shimmer gradient */
---shimmer-start: 199 89% 58%;  /* Light cyan */
---shimmer-end: 262 83% 58%;    /* Purple */
+/* Shimmer gradient - matches logo gradient */
+--shimmer-start: 78 100% 83%;  /* Light yellowish-green - start of gradient */
+--shimmer-end: 157 35% 28%;     /* Dark teal-green - end of gradient */
+
+/* Accent color */
+--accent: 157 35% 28%;          /* Dark teal-green - matches shimmer-end */
 
 /* Semantic colors */
 --destructive: 0 72% 51%;      /* Error red */
 --success: 142 76% 36%;        /* Success green */
 --warning: 45 93% 47%;         /* Warning amber */
 ```
+
+### Brand Color Details
+
+The conclusiv brand uses a **green-to-teal gradient** that matches the logo:
+- **Primary/Shimmer Start**: Light yellowish-green (HSL: 78 100% 83%, Hex: ~#E2FFC4)
+- **Shimmer End/Accent**: Dark teal-green (HSL: 157 35% 28%, Hex: ~#35745C)
+
+This gradient creates the signature conclusiv aesthetic seen in the logo and throughout the interface.
 
 ### Color Usage
 

@@ -182,13 +182,14 @@ export const getTextColor = (bgColor: string | RGB): RGB => {
 
 /**
  * Conclusiv brand colors
+ * Based on the actual logo gradient: light yellowish-green to dark teal-green
  */
 export const CONCLUSIV_COLORS = {
-  primary: { r: 12, g: 200, b: 255 }, // Cyan: #0CC8FF (199 89% 48%)
-  secondary: { r: 139, g: 92, b: 246 }, // Purple: #8B5CF6
-  accent: { r: 139, g: 92, b: 246 },
-  background: { r: 13, g: 13, b: 13 }, // Dark: #0D0D0D
-  text: { r: 242, g: 242, b: 242 }, // Light: #F2F2F2
+  primary: { r: 226, g: 255, b: 196 }, // Light yellowish-green: #E2FFC4 (HSL: 78 100% 83%)
+  secondary: { r: 53, g: 116, b: 92 }, // Dark teal-green: #35745C (HSL: 157 35% 28%)
+  accent: { r: 53, g: 116, b: 92 }, // Dark teal-green - matches shimmer-end
+  background: { r: 5, g: 5, b: 5 }, // Deep dark: #050505 (HSL: 0 0% 2%)
+  text: { r: 250, g: 250, b: 250 }, // Light: #FAFAFA (HSL: 0 0% 98%)
 } as const;
 
 /**

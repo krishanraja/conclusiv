@@ -74,13 +74,13 @@ pro: {
 
 ### Colors (HSL)
 ```css
---background: 222 47% 5%;        /* Deep dark blue */
---card: 222 47% 8%;              /* Elevated surfaces */
---foreground: 0 0% 95%;          /* Primary text */
---muted-foreground: 215 20% 55%; /* Secondary text */
---primary: 199 89% 48%;          /* Cyan accent */
---shimmer-start: 199 89% 58%;    /* Light cyan */
---shimmer-end: 262 83% 58%;      /* Purple */
+--background: 0 0% 2%;           /* Deep dark black */
+--card: 0 0% 4%;                 /* Elevated surfaces */
+--foreground: 0 0% 98%;          /* Primary text */
+--muted-foreground: 0 0% 72%;   /* Secondary text */
+--primary: 78 100% 83%;          /* Light yellowish-green - matches logo gradient start */
+--shimmer-start: 78 100% 83%;   /* Light yellowish-green */
+--shimmer-end: 157 35% 28%;     /* Dark teal-green - matches logo gradient end */
 ```
 
 ### Usage

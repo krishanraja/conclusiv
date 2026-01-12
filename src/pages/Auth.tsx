@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Loader2, Mail, Lock, User } from 'lucide-react';
 import conclusivLogo from '@/assets/conclusiv-logo.png';
+import { Chrome } from 'lucide-react';
 
 const emailSchema = z.string().trim().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -18,7 +19,7 @@ type AuthMode = 'signin' | 'signup' | 'forgot';
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, signIn, signUp, resetPassword } = useAuth();
+  const { user, signIn, signUp, resetPassword, signInWithGoogle } = useAuth();
   const { toast } = useToast();
 
   const [mode, setMode] = useState<AuthMode>('signin');
@@ -266,6 +267,44 @@ export default function Auth() {
             )}
           </Button>
         </form>
+
+        {/* Divider */}
+        {mode !== 'forgot' && (
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+            </div>
+          </div>
+        )}
+
+        {/* Google Sign In */}
+        {mode !== 'forgot' && (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={async () => {
+              setIsLoading(true);
+              const { error } = await signInWithGoogle();
+              if (error) {
+                toast({
+                  title: 'Sign in failed',
+                  description: error.message,
+                  variant: 'destructive',
+                });
+                setIsLoading(false);
+              }
+              // Note: On success, user will be redirected by OAuth flow
+            }}
+            disabled={isLoading}
+          >
+            <Chrome className="w-4 h-4 mr-2" />
+            {mode === 'signin' ? 'Sign in with Google' : 'Sign up with Google'}
+          </Button>
+        )}
 
         {/* Mode switchers */}
         <div className="text-center text-sm space-y-2">
