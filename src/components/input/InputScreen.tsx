@@ -457,11 +457,13 @@ export const InputScreen = () => {
               type="button"
               onClick={toggleRecording}
               disabled={isParsingDocument || isParsingGoogleDoc}
-              className={`flex items-center gap-3 px-4 py-4 rounded-xl border transition-all group bg-card/50 backdrop-blur-sm text-left disabled:opacity-50 ${
+              className={`flex items-center gap-3 px-4 py-4 rounded-xl border transition-all group bg-card/50 backdrop-blur-sm text-left disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 ${
                 isRecording 
                   ? 'border-red-400/50 bg-red-500/10' 
                   : 'border-primary/50 hover:border-primary bg-primary/5'
               }`}
+              aria-label={isRecording ? "Stop recording" : "Start voice recording"}
+              aria-pressed={isRecording}
             >
               <div className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors relative ${
                 isRecording ? 'bg-red-500/20' : 'bg-primary/20 group-hover:bg-primary/30'
@@ -495,8 +497,9 @@ export const InputScreen = () => {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isParsingDocument || isParsingGoogleDoc || isRecording}
-            className="flex items-center gap-3 px-4 py-4 rounded-xl border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group bg-card/50 backdrop-blur-sm text-left disabled:opacity-50"
+            className="flex items-center gap-3 px-4 py-4 rounded-xl border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group bg-card/50 backdrop-blur-sm text-left disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2"
             data-onboarding="document-upload"
+            aria-label="Upload document (PDF, Word, or PowerPoint)"
           >
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
               <Upload className="w-5 h-5 text-primary" />
@@ -512,11 +515,13 @@ export const InputScreen = () => {
             type="button"
             onClick={() => setShowGoogleDocInput(!showGoogleDocInput)}
             disabled={isParsingDocument || isParsingGoogleDoc || isRecording}
-            className={`flex items-center gap-3 px-4 py-4 rounded-xl border transition-all group bg-card/50 backdrop-blur-sm text-left disabled:opacity-50 ${
+            className={`flex items-center gap-3 px-4 py-4 rounded-xl border transition-all group bg-card/50 backdrop-blur-sm text-left disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 ${
               showGoogleDocInput 
                 ? 'border-primary/50 bg-primary/5' 
                 : 'border-border/50 hover:border-primary/30 hover:bg-primary/5'
             }`}
+            aria-label="Load Google Doc from public link"
+            aria-expanded={showGoogleDocInput}
           >
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
               <Link className="w-5 h-5 text-primary" />
@@ -532,8 +537,9 @@ export const InputScreen = () => {
             type="button"
             onClick={() => setShowResearchAssistant(true)}
             disabled={isParsingDocument || isParsingGoogleDoc || isRecording}
-            className="flex items-center gap-3 px-4 py-4 rounded-xl border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group bg-card/50 backdrop-blur-sm text-left disabled:opacity-50"
+            className="flex items-center gap-3 px-4 py-4 rounded-xl border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group bg-card/50 backdrop-blur-sm text-left disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2"
             data-onboarding="research-assistant"
+            aria-label="Generate content with AI assistant"
           >
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors relative">
               <Search className="w-5 h-5 text-primary" />
@@ -722,8 +728,9 @@ export const InputScreen = () => {
           <button
             type="button"
             onClick={() => setShowSetupSheet(true)}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group bg-card/50 backdrop-blur-sm"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group bg-card/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2"
             data-onboarding="business-context"
+            aria-label="Personalize your presentation with logo, brand colors, and story type"
           >
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors relative">
               <Settings2 className="w-5 h-5 text-primary" />
@@ -761,14 +768,14 @@ export const InputScreen = () => {
             Continue
           </Button>
           {/* Keyboard shortcuts hint */}
-          <p className="text-[10px] text-muted-foreground/50 hidden md:block">
+          <p className="text-[10px] text-muted-foreground/50 hidden md:block" aria-label="Keyboard shortcuts">
             <kbd className="px-1 py-0.5 rounded bg-muted/30 text-muted-foreground/70 font-mono">⌘</kbd>
-            <span className="mx-0.5">+</span>
+            <span className="mx-0.5" aria-hidden="true">+</span>
             <kbd className="px-1 py-0.5 rounded bg-muted/30 text-muted-foreground/70 font-mono">Enter</kbd>
             <span className="mx-1.5">to continue</span>
-            <span className="text-muted-foreground/30 mx-1">|</span>
+            <span className="text-muted-foreground/30 mx-1" aria-hidden="true">|</span>
             <kbd className="px-1 py-0.5 rounded bg-muted/30 text-muted-foreground/70 font-mono">⌘</kbd>
-            <span className="mx-0.5">+</span>
+            <span className="mx-0.5" aria-hidden="true">+</span>
             <kbd className="px-1 py-0.5 rounded bg-muted/30 text-muted-foreground/70 font-mono">U</kbd>
             <span className="mx-1.5">to upload</span>
           </p>

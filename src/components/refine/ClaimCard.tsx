@@ -571,6 +571,7 @@ export const ClaimCard = ({
               isApproved && "bg-green-600 hover:bg-green-700 border-green-600"
             )}
             title="Approve claim"
+            aria-label="Approve claim"
           >
             <Check className="w-3.5 h-3.5" />
           </Button>
@@ -583,6 +584,7 @@ export const ClaimCard = ({
               isRejected && "bg-red-600 hover:bg-red-700 border-red-600"
             )}
             title="Reject claim"
+            aria-label="Reject claim"
           >
             <X className="w-3.5 h-3.5" />
           </Button>
@@ -592,6 +594,7 @@ export const ClaimCard = ({
             onClick={handleStartEdit}
             className="h-7 px-2"
             title="Edit claim"
+            aria-label="Edit claim"
           >
             <Pencil className="w-3.5 h-3.5" />
           </Button>
@@ -605,6 +608,7 @@ export const ClaimCard = ({
                   size="sm"
                   className="h-7 px-2 border-primary/30 text-primary hover:bg-primary/10"
                   title={`${claim.alternatives.length} alternative${claim.alternatives.length > 1 ? 's' : ''} available`}
+                  aria-label={`Swap with ${claim.alternatives.length} alternative${claim.alternatives.length > 1 ? 's' : ''}`}
                 >
                   <ArrowRightLeft className="w-3.5 h-3.5" />
                 </Button>

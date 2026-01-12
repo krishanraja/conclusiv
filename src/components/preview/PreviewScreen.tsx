@@ -610,6 +610,7 @@ export const PreviewScreen = () => {
               className="text-muted-foreground"
               onClick={handleGenerateAlternatives}
               disabled={!narrative || isGeneratingAlternatives}
+              aria-label={alternatives.length > 0 ? `Re-Narrate (${alternatives.length} alternatives available)` : "Generate alternative narratives"}
             >
               <Sparkles className="w-4 h-4 mr-1" />
               {alternatives.length > 0 ? `Re-Narrate (${alternatives.length})` : "Re-Narrate"}
@@ -644,10 +645,11 @@ export const PreviewScreen = () => {
               className="text-muted-foreground"
               onClick={handleShare}
               disabled={isSharing}
+              aria-label={isSharing ? "Creating shareable link" : "Share narrative"}
             >
               <Share2 className="w-4 h-4 mr-1" />
               {isSharing ? "Creating..." : "Share"}
-              {!isPro && <Lock className="w-3 h-3 ml-1 opacity-50" />}
+              {!isPro && <Lock className="w-3 h-3 ml-1 opacity-50" aria-label="Pro feature" />}
             </Button>
           </div>
         </div>
@@ -665,11 +667,13 @@ export const PreviewScreen = () => {
                 <button
                   onClick={() => setViewMode("present")}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors",
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2",
                     viewMode === "present"
                       ? "bg-shimmer-start/20 text-shimmer-start"
                       : "text-muted-foreground hover:text-foreground"
                   )}
+                  aria-label="Present view mode"
+                  aria-pressed={viewMode === "present"}
                 >
                   <Play className="w-3 h-3" />
                   Present
@@ -677,11 +681,13 @@ export const PreviewScreen = () => {
                 <button
                   onClick={() => setViewMode("reader")}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors",
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2",
                     viewMode === "reader"
                       ? "bg-shimmer-start/20 text-shimmer-start"
                       : "text-muted-foreground hover:text-foreground"
                   )}
+                  aria-label="Reader view mode"
+                  aria-pressed={viewMode === "reader"}
                 >
                   <BookOpen className="w-3 h-3" />
                   Read
@@ -689,11 +695,13 @@ export const PreviewScreen = () => {
                 <button
                   onClick={() => setViewMode("external")}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors",
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2",
                     viewMode === "external"
                       ? "bg-shimmer-start/20 text-shimmer-start"
                       : "text-muted-foreground hover:text-foreground"
                   )}
+                  aria-label="External view mode"
+                  aria-pressed={viewMode === "external"}
                 >
                   <ExternalLink className="w-3 h-3" />
                   External
