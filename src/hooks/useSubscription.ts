@@ -25,7 +25,8 @@ export const FEATURE_LIMITS = {
     buildsPerWeek: 1,
     maxSections: 4,
     templates: ['linear-storyboard'] as const,
-    canExport: false,
+    canExport: true, // PDF only, with watermark
+    canExportPPTX: false,
     canChangeIcons: false,
     canChangeThemes: false,
     canReorderSections: false,
@@ -37,7 +38,8 @@ export const FEATURE_LIMITS = {
     buildsPerWeek: Infinity,
     maxSections: Infinity,
     templates: ['linear-storyboard', 'zoom-reveal', 'flyover-map', 'contrast-split', 'priority-ladder'] as const,
-    canExport: true,
+    canExport: true, // PDF & PPTX, no watermark
+    canExportPPTX: true,
     canChangeIcons: true,
     canChangeThemes: true,
     canReorderSections: true,
