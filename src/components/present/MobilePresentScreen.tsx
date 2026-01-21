@@ -8,6 +8,8 @@ import { useBrandLogo } from "@/hooks/useBrandLogo";
 import { useBrandFonts } from "@/hooks/useBrandFonts";
 import { useHaptics } from "@/hooks/useHaptics";
 import { getTemplateConfig, getMobileConfig } from "@/lib/animationTemplates";
+import { useWindowSize } from "@/hooks/useWindowSize";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import conclusivIcon from "@/assets/conclusiv-icon.png";
 
 interface MobilePresentScreenProps {
@@ -15,57 +17,85 @@ interface MobilePresentScreenProps {
   onStartOver?: () => void;
 }
 
-// Innovative mobile-specific transitions
-const mobileTransitionVariants = {
-  // Card stack effect - cards fly in from bottom
-  cardStack: {
-    initial: { opacity: 0, y: 100, scale: 0.85, rotateX: -15 },
-    animate: { opacity: 1, y: 0, scale: 1, rotateX: 0 },
-    exit: { opacity: 0, y: -50, scale: 0.9, rotateX: 10 },
-    transition: { type: "spring", stiffness: 400, damping: 35 },
-  },
-  // Parallax slide - content slides with depth layers
-  parallaxSlide: {
-    initial: (direction: number) => ({ 
-      opacity: 0, 
-      x: direction * 150,
-      scale: 0.92,
-    }),
-    animate: { opacity: 1, x: 0, scale: 1 },
-    exit: (direction: number) => ({ 
-      opacity: 0, 
-      x: direction * -100,
-      scale: 0.95,
-    }),
-    transition: { type: "spring", stiffness: 300, damping: 30 },
-  },
-  // Morph reveal - content morphs in with blur
-  morphReveal: {
-    initial: { opacity: 0, scale: 1.1, filter: "blur(20px)" },
-    animate: { opacity: 1, scale: 1, filter: "blur(0px)" },
-    exit: { opacity: 0, scale: 0.95, filter: "blur(10px)" },
-    transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] },
-  },
-  // Flip card - 3D flip effect
-  flipCard: {
-    initial: { opacity: 0, rotateY: 90, scale: 0.8 },
-    animate: { opacity: 1, rotateY: 0, scale: 1 },
-    exit: { opacity: 0, rotateY: -90, scale: 0.8 },
-    transition: { type: "spring", stiffness: 200, damping: 25 },
-  },
-  // Elastic bounce - bouncy entrance
-  elasticBounce: {
-    initial: { opacity: 0, y: 80, scale: 0.7 },
-    animate: { opacity: 1, y: 0, scale: 1 },
-    exit: { opacity: 0, y: -40, scale: 0.9 },
-    transition: { type: "spring", stiffness: 500, damping: 25 },
-  },
+/**
+ * Generate viewport-aware mobile transition variants
+ * Scales animation distances based on screen size to prevent elements from racing off-screen
+ * @param viewportWidth - Current viewport width for scaling
+ * @param reducedMotion - Whether to use simplified animations
+ */
+const getMobileTransitionVariants = (viewportWidth: number, reducedMotion: boolean) => {
+  // For reduced motion, return simple fade variants only
+  if (reducedMotion) {
+    const fadeVariant = {
+      initial: { opacity: 0 },
+      animate: { opacity: 1 },
+      exit: { opacity: 0 },
+      transition: { duration: 0.2 },
+    };
+    return {
+      cardStack: fadeVariant,
+      parallaxSlide: fadeVariant,
+      morphReveal: fadeVariant,
+      flipCard: fadeVariant,
+      elasticBounce: fadeVariant,
+    };
+  }
+
+  // Scale factor based on viewport (320px mobile = 0.67, 375px = 0.78, 768px tablet = 1.6)
+  // Clamp between 0.6 and 1.0 to keep animations visible but not too aggressive
+  const scale = Math.min(1.0, Math.max(0.6, viewportWidth / 480));
+
+  return {
+    // Card stack effect - cards fly in from bottom
+    cardStack: {
+      initial: { opacity: 0, y: 100 * scale, scale: 0.85, rotateX: -15 },
+      animate: { opacity: 1, y: 0, scale: 1, rotateX: 0 },
+      exit: { opacity: 0, y: -50 * scale, scale: 0.9, rotateX: 10 },
+      transition: { type: "spring", stiffness: 400, damping: 35 },
+    },
+    // Parallax slide - content slides with depth layers
+    parallaxSlide: {
+      initial: (direction: number) => ({
+        opacity: 0,
+        x: direction * 120 * scale, // Scaled down from 150
+        scale: 0.92,
+      }),
+      animate: { opacity: 1, x: 0, scale: 1 },
+      exit: (direction: number) => ({
+        opacity: 0,
+        x: direction * -80 * scale, // Scaled down from 100
+        scale: 0.95,
+      }),
+      transition: { type: "spring", stiffness: 300, damping: 30 },
+    },
+    // Morph reveal - content morphs in with blur
+    morphReveal: {
+      initial: { opacity: 0, scale: 1.1, filter: "blur(20px)" },
+      animate: { opacity: 1, scale: 1, filter: "blur(0px)" },
+      exit: { opacity: 0, scale: 0.95, filter: "blur(10px)" },
+      transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] },
+    },
+    // Flip card - 3D flip effect (scale-independent)
+    flipCard: {
+      initial: { opacity: 0, rotateY: 90, scale: 0.8 },
+      animate: { opacity: 1, rotateY: 0, scale: 1 },
+      exit: { opacity: 0, rotateY: -90, scale: 0.8 },
+      transition: { type: "spring", stiffness: 200, damping: 25 },
+    },
+    // Elastic bounce - bouncy entrance
+    elasticBounce: {
+      initial: { opacity: 0, y: 80 * scale, scale: 0.7 },
+      animate: { opacity: 1, y: 0, scale: 1 },
+      exit: { opacity: 0, y: -40 * scale, scale: 0.9 },
+      transition: { type: "spring", stiffness: 500, damping: 25 },
+    },
+  };
 };
 
 // Get animation variant based on template and section index
-const getTransitionVariant = (templateName: string, sectionIndex: number) => {
-  const variants = Object.keys(mobileTransitionVariants);
-  
+const getTransitionVariant = (templateName: string, sectionIndex: number, variants: ReturnType<typeof getMobileTransitionVariants>) => {
+  const variantKeys = Object.keys(variants);
+
   // Map templates to preferred variants
   const templateMap: Record<string, string> = {
     ZoomReveal: "morphReveal",
@@ -74,13 +104,13 @@ const getTransitionVariant = (templateName: string, sectionIndex: number) => {
     ContrastSplit: "flipCard",
     PriorityLadder: "elasticBounce",
   };
-  
+
   const preferred = templateMap[templateName];
-  if (preferred) return mobileTransitionVariants[preferred as keyof typeof mobileTransitionVariants];
-  
+  if (preferred) return variants[preferred as keyof typeof variants];
+
   // Fallback to cycling through variants
-  const variantKey = variants[sectionIndex % variants.length];
-  return mobileTransitionVariants[variantKey as keyof typeof mobileTransitionVariants];
+  const variantKey = variantKeys[sectionIndex % variantKeys.length];
+  return variants[variantKey as keyof typeof variants];
 };
 
 export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreenProps) => {
@@ -98,23 +128,32 @@ export const MobilePresentScreen = ({ onExit, onStartOver }: MobilePresentScreen
   const { logoUrl, showLogo } = useBrandLogo();
   useBrandFonts(); // Ensure brand fonts are loaded for presentation
   const haptics = useHaptics();
+  const { width: viewportWidth } = useWindowSize(); // Get reactive viewport width
+  const reducedMotion = useReducedMotion();
   const [showNotes, setShowNotes] = useState(false);
   const [showExitMenu, setShowExitMenu] = useState(false);
   const [showNarrativePanel, setShowNarrativePanel] = useState(false);
   const [showNotesPanel, setShowNotesPanel] = useState(false);
   const [direction, setDirection] = useState(0);
-  
+
   // Motion values for tilt/parallax effect
   const dragX = useMotionValue(0);
   const tiltRotation = useTransform(dragX, [-150, 0, 150], [-8, 0, 8]);
   const parallaxOffset = useTransform(dragX, [-150, 0, 150], [20, 0, -20]);
   const scaleOnDrag = useTransform(dragX, [-150, 0, 150], [0.95, 1, 0.95]);
-  
+
   // Template-specific config
   const mobileConfig = useMemo(() => getMobileConfig(selectedTemplate), [selectedTemplate]);
-  const transitionVariant = useMemo(() => 
-    getTransitionVariant(selectedTemplate, currentSectionIndex),
-    [selectedTemplate, currentSectionIndex]
+
+  // Generate viewport-aware transition variants
+  const mobileTransitionVariants = useMemo(
+    () => getMobileTransitionVariants(viewportWidth, reducedMotion),
+    [viewportWidth, reducedMotion]
+  );
+
+  const transitionVariant = useMemo(
+    () => getTransitionVariant(selectedTemplate, currentSectionIndex, mobileTransitionVariants),
+    [selectedTemplate, currentSectionIndex, mobileTransitionVariants]
   );
 
   const handleStartOver = () => {

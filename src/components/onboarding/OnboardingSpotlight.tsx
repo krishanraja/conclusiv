@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { OnboardingProgress } from "./OnboardingProgress";
+import { useWindowSize } from "@/hooks/useWindowSize";
 
 interface OnboardingSpotlightProps {
   targetSelector: string;
@@ -37,6 +38,7 @@ export const OnboardingSpotlight = ({
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const { width: viewportWidth, height: viewportHeight } = useWindowSize();
 
   useEffect(() => {
     if (!isActive) return;
@@ -63,29 +65,33 @@ export const OnboardingSpotlight = ({
           y = rect.top + rect.height / 2;
         }
 
-        // Keep tooltip in viewport
+        // Keep tooltip in viewport using reactive window dimensions
         const tooltipWidth = 280;
         const tooltipHeight = 150;
-        
-        x = Math.max(tooltipWidth / 2 + 16, Math.min(x, window.innerWidth - tooltipWidth / 2 - 16));
-        
-        if (position === "bottom" && y + tooltipHeight > window.innerHeight) {
+
+        // Clamp x position within viewport bounds
+        x = Math.max(tooltipWidth / 2 + 16, Math.min(x, viewportWidth - tooltipWidth / 2 - 16));
+
+        // Flip tooltip to top if it would overflow bottom
+        if (position === "bottom" && y + tooltipHeight > viewportHeight) {
           y = rect.top - padding - tooltipHeight;
         }
+
+        // Clamp y position to stay in viewport
+        y = Math.max(16, Math.min(y, viewportHeight - tooltipHeight - 16));
 
         setTooltipPosition({ x, y });
       }
     };
 
     updatePosition();
-    window.addEventListener("resize", updatePosition);
+    // Update position on scroll (capture phase for better performance)
     window.addEventListener("scroll", updatePosition, true);
 
     return () => {
-      window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [targetSelector, position, isActive]);
+  }, [targetSelector, position, isActive, viewportWidth, viewportHeight]);
 
   if (!isActive || !targetRect) return null;
 

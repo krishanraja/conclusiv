@@ -1,5 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles } from "lucide-react";
+import { useAnimationBounds } from "@/hooks/useWindowSize";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface KeyInsightMomentProps {
   insight: string;
@@ -8,6 +10,9 @@ interface KeyInsightMomentProps {
 }
 
 export const KeyInsightMoment = ({ insight, isVisible, onDismiss }: KeyInsightMomentProps) => {
+  // Get safe animation boundaries (with 15% padding for safety)
+  const bounds = useAnimationBounds(0.15);
+  const reducedMotion = useReducedMotion();
   return (
     <AnimatePresence>
       {isVisible && (
@@ -28,37 +33,47 @@ export const KeyInsightMoment = ({ insight, isVisible, onDismiss }: KeyInsightMo
           />
 
           {/* Particle burst */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {[...Array(20)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="absolute w-2 h-2 rounded-full bg-shimmer-start"
-                style={{
-                  left: "50%",
-                  top: "50%",
-                }}
-                initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
-                animate={{
-                  scale: [0, 1, 0.5],
-                  x: (Math.random() - 0.5) * 400,
-                  y: (Math.random() - 0.5) * 400,
-                  opacity: [1, 1, 0],
-                }}
-                transition={{
-                  duration: 1.5,
-                  delay: i * 0.03,
-                  ease: [0.16, 1, 0.3, 1],
-                }}
-              />
-            ))}
-          </div>
+          {!reducedMotion && (
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {[...Array(20)].map((_, i) => {
+                // Calculate safe particle trajectory within viewport bounds
+                const angle = (i / 20) * Math.PI * 2; // Evenly distribute particles in a circle
+                const distance = 80 + Math.random() * 120; // Vary distance between 80-200px
+                const boundedX = Math.max(bounds.minX, Math.min(bounds.maxX, Math.cos(angle) * distance));
+                const boundedY = Math.max(bounds.minY, Math.min(bounds.maxY, Math.sin(angle) * distance));
+
+                return (
+                  <motion.div
+                    key={i}
+                    className="absolute w-2 h-2 rounded-full bg-shimmer-start will-change-transform"
+                    style={{
+                      left: "50%",
+                      top: "50%",
+                    }}
+                    initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
+                    animate={{
+                      scale: [0, 1, 0.5],
+                      x: boundedX,
+                      y: boundedY,
+                      opacity: [1, 1, 0],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      delay: i * 0.03,
+                      ease: [0.16, 1, 0.3, 1],
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
 
           {/* Main insight card */}
           <motion.div
-            initial={{ scale: 0.8, y: 20 }}
-            animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.9, y: -20 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            initial={reducedMotion ? { opacity: 0 } : { scale: 0.8, y: 20 }}
+            animate={reducedMotion ? { opacity: 1 } : { scale: 1, y: 0 }}
+            exit={reducedMotion ? { opacity: 0 } : { scale: 0.9, y: -20 }}
+            transition={reducedMotion ? { duration: 0.2 } : { duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             className="relative max-w-2xl mx-8 p-12 rounded-2xl bg-card/80 border border-shimmer-start/30 shadow-2xl"
             style={{
               boxShadow: "0 0 60px hsl(var(--shimmer-start) / 0.2), 0 25px 50px -12px hsl(0 0% 0% / 0.5)"
