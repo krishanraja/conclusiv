@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, X, Pencil, ChevronDown, ChevronUp, Loader2, ArrowRightLeft, ShieldCheck, Shield, ShieldAlert, ShieldQuestion, Clock, AlertCircle, RefreshCw, ThumbsUp, AlertTriangle, ThumbsDown, Minus } from "lucide-react";
+import { Check, X, Pencil, ChevronDown, ChevronUp, Loader2, ArrowRightLeft, ShieldCheck, Shield, ShieldAlert, ShieldQuestion, Clock, AlertCircle, RefreshCw, ThumbsUp, AlertTriangle, ThumbsDown, Minus, ExternalLink, Database, Newspaper, Search, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -98,24 +98,28 @@ const AlignmentBadge = ({
 };
 
 // Verification badge - now includes unable_to_verify with retry
-const VerificationBadge = ({ 
-  verification, 
+const VerificationBadge = ({
+  verification,
   isLoading,
+  retryCount,
   onRetry,
-}: { 
-  verification?: ClaimVerification; 
+}: {
+  verification?: ClaimVerification;
   isLoading?: boolean;
+  retryCount?: number;
   onRetry?: () => void;
 }) => {
   if (isLoading) {
     return (
-      <motion.span 
+      <motion.span
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted/50 text-muted-foreground"
       >
         <Loader2 className="w-3 h-3 animate-spin" />
-        <span className="hidden sm:inline">Verifying</span>
+        <span className="hidden sm:inline">
+          {retryCount && retryCount > 0 ? `Retry ${retryCount}...` : 'Verifying'}
+        </span>
       </motion.span>
     );
   }
@@ -177,33 +181,93 @@ const VerificationBadge = ({
           <span className="hidden sm:inline">{label}</span>
         </motion.button>
       </PopoverTrigger>
-      <PopoverContent side="top" className="w-72 p-3" align="start">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
+      <PopoverContent side="top" className="w-80 p-0" align="start">
+        <div className="space-y-0">
+          {/* Header */}
+          <div className="flex items-center gap-2 p-3 border-b border-border/50">
             <Icon className={cn("w-4 h-4", textClass)} />
-            <p className="text-sm font-medium">{label}</p>
+            <p className="text-sm font-semibold">{label}</p>
           </div>
-          <p className="text-xs text-muted-foreground">{description}</p>
-          {verification.summary && (
-            <p className="text-xs pt-2 border-t border-border/50">{verification.summary}</p>
-          )}
+
+          {/* Confidence Score */}
           {verification.confidence !== undefined && verification.confidence > 0 && (
-            <p className="text-[10px] text-muted-foreground">
-              Confidence: {verification.confidence}%
-            </p>
+            <div className="px-3 py-2 bg-muted/30">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-muted-foreground font-medium">CONFIDENCE</span>
+                <span className="text-xs font-semibold">{verification.confidence}%</span>
+              </div>
+              <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={cn("h-full transition-all", textClass.replace('text-', 'bg-'))}
+                  style={{ width: `${verification.confidence}%` }}
+                />
+              </div>
+            </div>
           )}
+
+          {/* Summary */}
+          <div className="p-3 space-y-2">
+            <p className="text-xs text-muted-foreground">{description}</p>
+            {verification.summary && (
+              <p className="text-xs pt-2 border-t border-border/50 leading-relaxed">{verification.summary}</p>
+            )}
+          </div>
+
+          {/* Data Sources */}
+          {verification.sources && verification.sources.length > 0 && (
+            <div className="px-3 pb-3 space-y-1.5">
+              <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground mb-2">
+                <Database className="w-3 h-3" />
+                <span>DATA SOURCES ({verification.sources.length})</span>
+              </div>
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {verification.sources.map((source, idx) => (
+                  <a
+                    key={idx}
+                    href={source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-start gap-1.5 p-1.5 rounded text-xs hover:bg-muted/50 transition-colors group"
+                  >
+                    <div className="pt-0.5">
+                      {source.url.includes('alphavantage') ? (
+                        <TrendingUp className="w-3 h-3 text-green-500" />
+                      ) : source.url.includes('news') ? (
+                        <Newspaper className="w-3 h-3 text-blue-500" />
+                      ) : (
+                        <Search className="w-3 h-3 text-amber-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs truncate group-hover:text-primary">{source.title}</p>
+                      {source.publishedAt && (
+                        <p className="text-[10px] text-muted-foreground">
+                          {new Date(source.publishedAt).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                    <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Retry button for failed verifications */}
           {isUnableToVerify && onRetry && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onRetry();
-              }}
-              className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-orange-500/20 text-orange-500 text-xs font-medium hover:bg-orange-500/30 transition-colors"
-            >
-              <RefreshCw className="w-3 h-3" />
-              Retry Verification
-            </button>
+            <div className="p-3 border-t border-border/50">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRetry();
+                }}
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-md bg-orange-500/20 text-orange-500 text-xs font-medium hover:bg-orange-500/30 transition-colors"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Retry Verification
+              </button>
+            </div>
           )}
         </div>
       </PopoverContent>
@@ -315,15 +379,16 @@ export const ClaimCard = ({
   const [editText, setEditText] = useState(claim.text);
   const [isNormalizing, setIsNormalizing] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  
+  const [retryCount, setRetryCount] = useState(0);
+
   const isApproved = claim.approved === true;
   const isRejected = claim.approved === false;
   const isEdited = claim.edited;
 
-  // Auto-verify claim - runs automatically, no user interaction needed
-  const runVerification = async () => {
+  // Auto-verify claim with retry logic - runs automatically, no user interaction needed
+  const runVerification = async (attempt = 0) => {
     if (isVerifying) return;
-    
+
     setIsVerifying(true);
     try {
       const result = await verifyClaim(claim.text, claim.title);
@@ -339,14 +404,28 @@ export const ClaimCard = ({
           sources: result.sources,
         },
       });
+      setRetryCount(0); // Reset retry count on success
     } catch (err) {
-      console.error('[ClaimCard] Verification failed:', err);
-      // Set as unable_to_verify - never mask failures
+      console.error('[ClaimCard] Verification failed (attempt ' + (attempt + 1) + '):', err);
+
+      // Retry logic: up to 2 retries with exponential backoff
+      const maxRetries = 2;
+      if (attempt < maxRetries) {
+        const backoffDelay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+        console.log(`[ClaimCard] Retrying in ${backoffDelay}ms...`);
+        setIsVerifying(false);
+        setTimeout(() => runVerification(attempt + 1), backoffDelay);
+        setRetryCount(attempt + 1);
+        return;
+      }
+
+      // Final failure after retries
+      setRetryCount(0);
       onUpdate({
         verification: {
           status: "unable_to_verify",
           confidence: 0,
-          summary: "Verification failed. Please verify this claim manually.",
+          summary: "Verification failed after multiple attempts. Please verify manually or try again later.",
           checkedAt: Date.now(),
           freshness: "dated",
           freshnessReason: "Verification error",
@@ -549,9 +628,10 @@ export const ClaimCard = ({
             reason={claim.alignmentReason} 
           />
           {/* Verification + Freshness badges - auto displayed */}
-          <VerificationBadge 
-            verification={claim.verification} 
-            isLoading={isVerifying} 
+          <VerificationBadge
+            verification={claim.verification}
+            isLoading={isVerifying}
+            retryCount={retryCount}
             onRetry={handleRetryVerification}
           />
           <FreshnessBadge 
