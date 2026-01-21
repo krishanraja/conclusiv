@@ -486,7 +486,7 @@ export const QuickAdjustments = () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 25 }}
-              className="pt-3 sticky bottom-0 bg-gradient-to-t from-background via-background to-transparent pb-2 -mx-1 px-1"
+              className="pt-4 mt-2 sticky bottom-0 z-feedback bg-gradient-to-t from-background/100 via-background/95 to-background/0 pb-2"
             >
               {/* Visual emphasis border */}
               <div className="rounded-lg border-2 border-shimmer-start/50 p-3 bg-shimmer-start/5">
