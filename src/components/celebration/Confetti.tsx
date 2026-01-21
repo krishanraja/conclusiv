@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useWindowSize, useAnimationBounds } from "@/hooks/useWindowSize";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface ConfettiPiece {
   id: number;
@@ -26,6 +28,8 @@ const COLORS = [
 ];
 
 export const Confetti = ({ isActive, duration = 3000, particleCount = 50 }: ConfettiProps) => {
+  const { height } = useWindowSize(); // Reactive window height
+  const reducedMotion = useReducedMotion();
   const [pieces, setPieces] = useState<ConfettiPiece[]>([]);
   const [show, setShow] = useState(false);
 
@@ -55,6 +59,9 @@ export const Confetti = ({ isActive, duration = 3000, particleCount = 50 }: Conf
     }
   }, [isActive, duration, particleCount]);
 
+  // Skip confetti entirely for reduced motion preference
+  if (reducedMotion) return null;
+
   return (
     <AnimatePresence>
       {show && (
@@ -62,7 +69,7 @@ export const Confetti = ({ isActive, duration = 3000, particleCount = 50 }: Conf
           {pieces.map((piece) => (
             <motion.div
               key={piece.id}
-              className="absolute"
+              className="absolute will-change-transform"
               style={{
                 left: `${piece.x}%`,
                 top: -20,
@@ -73,7 +80,7 @@ export const Confetti = ({ isActive, duration = 3000, particleCount = 50 }: Conf
               }}
               initial={{ y: -20, rotate: 0, opacity: 1 }}
               animate={{
-                y: window.innerHeight + 100,
+                y: height + 100, // Use reactive height instead of window.innerHeight
                 rotate: piece.rotation,
                 opacity: [1, 1, 0],
               }}
@@ -93,6 +100,11 @@ export const Confetti = ({ isActive, duration = 3000, particleCount = 50 }: Conf
 // Mini celebration for smaller achievements
 export const MiniCelebration = ({ isActive }: { isActive: boolean }) => {
   const [show, setShow] = useState(false);
+  const { width } = useWindowSize();
+  const reducedMotion = useReducedMotion();
+
+  // Scale burst radius based on screen size (60px on desktop, scales down on mobile)
+  const burstRadius = Math.min(60, width * 0.15);
 
   useEffect(() => {
     if (isActive) {
@@ -106,35 +118,38 @@ export const MiniCelebration = ({ isActive }: { isActive: boolean }) => {
     <AnimatePresence>
       {show && (
         <motion.div
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={reducedMotion ? { duration: 0.2 } : { type: "spring", stiffness: 400, damping: 15 }}
           className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[200] pointer-events-none"
         >
-          {[...Array(8)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-3 h-3 rounded-full bg-shimmer-start"
-              style={{
-                left: "50%",
-                top: "50%",
-              }}
-              initial={{ scale: 0, x: 0, y: 0 }}
-              animate={{
-                scale: [0, 1, 0],
-                x: Math.cos((i * Math.PI * 2) / 8) * 60,
-                y: Math.sin((i * Math.PI * 2) / 8) * 60,
-              }}
-              transition={{
-                duration: 0.6,
-                delay: i * 0.03,
-              }}
-            />
-          ))}
+          {!reducedMotion && [...Array(8)].map((_, i) => {
+            const angle = (i * Math.PI * 2) / 8;
+            return (
+              <motion.div
+                key={i}
+                className="absolute w-3 h-3 rounded-full bg-shimmer-start will-change-transform"
+                style={{
+                  left: "50%",
+                  top: "50%",
+                }}
+                initial={{ scale: 0, x: 0, y: 0 }}
+                animate={{
+                  scale: [0, 1, 0],
+                  x: Math.cos(angle) * burstRadius,
+                  y: Math.sin(angle) * burstRadius,
+                }}
+                transition={{
+                  duration: 0.6,
+                  delay: i * 0.03,
+                }}
+              />
+            );
+          })}
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: [0, 1.2, 1] }}
+            initial={reducedMotion ? {} : { scale: 0 }}
+            animate={reducedMotion ? {} : { scale: [0, 1.2, 1] }}
             className="text-4xl"
           >
             ✨

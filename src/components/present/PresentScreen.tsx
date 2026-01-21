@@ -15,19 +15,22 @@ import { TitleSequence } from "@/components/cinematic/TitleSequence";
 import { useBrandLogo } from "@/hooks/useBrandLogo";
 import { useBrandFonts } from "@/hooks/useBrandFonts";
 import { MobilePresentScreen } from "./MobilePresentScreen";
-import { 
-  getTemplateConfig, 
-  generateNodePositions as generateTemplateNodePositions, 
+import {
+  getTemplateConfig,
+  generateNodePositions as generateTemplateNodePositions,
   getContentEnterAnimation,
   getMobileConfig,
-  type TemplateAnimationConfig 
+  type TemplateAnimationConfig
 } from "@/lib/animationTemplates";
 import conclusivLogo from "@/assets/conclusiv-logo.png";
 
 // Canvas size for infinite canvas
 const CANVAS_SIZE = 6000;
 
-// Generate floating particles for the background - reduced count on mobile
+/**
+ * Generate floating particles with boundary-safe drift
+ * Particles near canvas edges get reduced drift to prevent going off-screen
+ */
 const generateParticles = (count: number) => {
   const particles: Array<{
     x: number;
@@ -38,19 +41,36 @@ const generateParticles = (count: number) => {
     delay: number;
     drift: number;
   }> = [];
-  
+
+  // Safe zone: particles within 500px of canvas edge get reduced drift
+  const EDGE_MARGIN = 500;
+  const MAX_DRIFT = 150;
+  const MIN_DRIFT = 50;
+
   for (let i = 0; i < count; i++) {
+    const x = Math.random() * CANVAS_SIZE;
+    const y = Math.random() * CANVAS_SIZE;
+
+    // Calculate distance from nearest edge
+    const distFromEdgeX = Math.min(x, CANVAS_SIZE - x);
+    const distFromEdgeY = Math.min(y, CANVAS_SIZE - y);
+    const distFromEdge = Math.min(distFromEdgeX, distFromEdgeY);
+
+    // Reduce drift for particles near edges (linear scale from edge to safe zone)
+    const driftScale = Math.min(1, distFromEdge / EDGE_MARGIN);
+    const drift = MIN_DRIFT + (MAX_DRIFT - MIN_DRIFT) * driftScale * Math.random();
+
     particles.push({
-      x: Math.random() * CANVAS_SIZE,
-      y: Math.random() * CANVAS_SIZE,
+      x,
+      y,
       size: 2 + Math.random() * 6,
       opacity: 0.1 + Math.random() * 0.3,
       duration: 15 + Math.random() * 25,
       delay: Math.random() * -20,
-      drift: 50 + Math.random() * 150,
+      drift,
     });
   }
-  
+
   return particles;
 };
 
