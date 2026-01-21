@@ -1,19 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  User, 
-  LogOut, 
-  Sparkles, 
-  CreditCard, 
-  Loader2, 
-  Trash2, 
-  ExternalLink, 
+import {
+  User,
+  LogOut,
+  Sparkles,
+  CreditCard,
+  Loader2,
+  Trash2,
+  ExternalLink,
   Copy,
   Check,
   ArrowLeft,
   Calendar,
-  FileText
+  FileText,
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -49,6 +50,7 @@ export default function Profile() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isUpgrading, setIsUpgrading] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
   
   // Track mounted state to prevent state updates after unmount
   const isMountedRef = useRef(true);
@@ -198,38 +200,62 @@ export default function Profile() {
 
   const handleUpgrade = async () => {
     setIsUpgrading(true);
+    setBillingError(null);
+
+    // Safety timeout - reset loading state after 10 seconds if redirect hasn't happened
+    const timeoutId = setTimeout(() => {
+      setIsUpgrading(false);
+      setBillingError('Request timed out. Please try again.');
+    }, 10000);
+
     try {
       const { data, error } = await supabase.functions.invoke('create-checkout');
       if (error) throw error;
+
       if (data?.url) {
+        // Success - redirecting to checkout
         window.location.href = data.url;
+        // Note: Loading state stays true during redirect
+      } else {
+        // No URL returned - this is an error condition
+        clearTimeout(timeoutId);
+        throw new Error('No checkout URL received');
       }
     } catch (err) {
+      clearTimeout(timeoutId);
       console.error('Failed to create checkout:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to start checkout process',
-        variant: 'destructive',
-      });
+      setBillingError('Failed to start checkout. Please try again.');
       setIsUpgrading(false);
     }
   };
 
   const handleManageBilling = async () => {
     setIsUpgrading(true);
+    setBillingError(null);
+
+    // Safety timeout - reset loading state after 10 seconds if redirect hasn't happened
+    const timeoutId = setTimeout(() => {
+      setIsUpgrading(false);
+      setBillingError('Request timed out. Please try again.');
+    }, 10000);
+
     try {
       const { data, error } = await supabase.functions.invoke('customer-portal');
       if (error) throw error;
+
       if (data?.url) {
+        // Success - redirecting to billing portal
         window.location.href = data.url;
+        // Note: Loading state stays true during redirect
+      } else {
+        // No URL returned - this is an error condition
+        clearTimeout(timeoutId);
+        throw new Error('No billing portal URL received');
       }
     } catch (err) {
+      clearTimeout(timeoutId);
       console.error('Failed to open billing portal:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to open billing portal',
-        variant: 'destructive',
-      });
+      setBillingError('Failed to open billing portal. Please try again.');
       setIsUpgrading(false);
     }
   };
@@ -511,20 +537,31 @@ export default function Profile() {
           {isPro && (
             <div className="glass-strong rounded-xl p-6">
               <h2 className="text-lg font-semibold text-foreground mb-4">Billing</h2>
+
+              {billingError && (
+                <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <div className="flex items-center gap-2 text-sm text-destructive">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{billingError}</span>
+                  </div>
+                </div>
+              )}
+
               <Button
                 onClick={handleManageBilling}
                 disabled={isUpgrading}
                 variant="outline"
                 className="w-full sm:w-auto"
+                aria-label={isUpgrading ? "Opening billing portal..." : "Manage billing"}
               >
                 {isUpgrading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Loading...
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" aria-hidden="true" />
+                    Opening...
                   </>
                 ) : (
                   <>
-                    <CreditCard className="w-4 h-4 mr-2" />
+                    <CreditCard className="w-4 h-4 mr-2" aria-hidden="true" />
                     Manage Billing
                   </>
                 )}

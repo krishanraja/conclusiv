@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, LogOut, CreditCard, Sparkles, Loader2, X, Settings } from 'lucide-react';
+import { User, LogOut, CreditCard, Sparkles, Loader2, X, Settings, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -17,6 +17,7 @@ export const AccountMenu = () => {
   const haptics = useHaptics();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Lock body scroll when menu is open on mobile
   useEffect(() => {
@@ -57,6 +58,7 @@ export const AccountMenu = () => {
   const handleClose = () => {
     haptics.selection();
     setIsOpen(false);
+    setError(null);
   };
 
   const handleProfileClick = () => {
@@ -84,33 +86,65 @@ export const AccountMenu = () => {
 
   const handleManageBilling = async () => {
     setIsLoading(true);
+    setError(null);
     haptics.light();
+
+    // Safety timeout - reset loading state after 10 seconds if redirect hasn't happened
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false);
+      setError('Request timed out. Please try again.');
+    }, 10000);
+
     try {
       const { data, error } = await supabase.functions.invoke('customer-portal');
       if (error) throw error;
+
       if (data?.url) {
+        // Success - redirecting to billing portal
         window.location.href = data.url;
+        // Note: Loading state stays true during redirect
+      } else {
+        // No URL returned - this is an error condition
+        clearTimeout(timeoutId);
+        throw new Error('No billing portal URL received');
       }
     } catch (err) {
+      clearTimeout(timeoutId);
       console.error('Failed to open billing portal:', err);
+      setError('Failed to open billing portal. Please try again.');
       setIsLoading(false);
-      setIsOpen(false);
     }
   };
 
   const handleUpgrade = async () => {
     setIsLoading(true);
+    setError(null);
     haptics.light();
+
+    // Safety timeout - reset loading state after 10 seconds if redirect hasn't happened
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false);
+      setError('Request timed out. Please try again.');
+    }, 10000);
+
     try {
       const { data, error } = await supabase.functions.invoke('create-checkout');
       if (error) throw error;
+
       if (data?.url) {
+        // Success - redirecting to checkout
         window.location.href = data.url;
+        // Note: Loading state stays true during redirect
+      } else {
+        // No URL returned - this is an error condition
+        clearTimeout(timeoutId);
+        throw new Error('No checkout URL received');
       }
     } catch (err) {
+      clearTimeout(timeoutId);
       console.error('Failed to create checkout:', err);
+      setError('Failed to start checkout. Please try again.');
       setIsLoading(false);
-      setIsOpen(false);
     }
   };
 
@@ -232,6 +266,23 @@ export const AccountMenu = () => {
                   </div>
                 </motion.div>
 
+                {/* Error message */}
+                <AnimatePresence>
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mx-4 mb-2 p-3 rounded-xl bg-destructive/10 border border-destructive/20"
+                    >
+                      <div className="flex items-center gap-2 text-sm text-destructive">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span>{error}</span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Actions */}
                 <div className="px-4 pb-safe space-y-2">
                   <motion.button
@@ -250,18 +301,24 @@ export const AccountMenu = () => {
                     <motion.button
                       onClick={handleUpgrade}
                       disabled={isLoading}
-                      className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl bg-gradient-to-r from-primary/20 to-shimmer-end/20 text-primary font-medium text-base active:scale-[0.98] transition-transform"
+                      className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl bg-gradient-to-r from-primary/20 to-shimmer-end/20 text-primary font-medium text-base active:scale-[0.98] transition-transform disabled:opacity-60 disabled:cursor-not-allowed"
                       variants={menuItemVariants}
                       initial="hidden"
                       animate="visible"
                       custom={3}
+                      aria-label={isLoading ? "Opening checkout..." : "Upgrade to Pro"}
                     >
                       {isLoading ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
+                          <span>Opening...</span>
+                        </>
                       ) : (
-                        <Sparkles className="w-5 h-5" />
+                        <>
+                          <Sparkles className="w-5 h-5" aria-hidden="true" />
+                          <span>Upgrade to Pro</span>
+                        </>
                       )}
-                      Upgrade to Pro
                     </motion.button>
                   )}
 
@@ -269,18 +326,24 @@ export const AccountMenu = () => {
                     <motion.button
                       onClick={handleManageBilling}
                       disabled={isLoading}
-                      className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl bg-muted/50 text-foreground font-medium text-base active:scale-[0.98] active:bg-muted transition-all"
+                      className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl bg-muted/50 text-foreground font-medium text-base active:scale-[0.98] active:bg-muted transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                       variants={menuItemVariants}
                       initial="hidden"
                       animate="visible"
                       custom={3}
+                      aria-label={isLoading ? "Opening billing portal..." : "Manage billing"}
                     >
                       {isLoading ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
+                          <span>Opening...</span>
+                        </>
                       ) : (
-                        <CreditCard className="w-5 h-5" />
+                        <>
+                          <CreditCard className="w-5 h-5" aria-hidden="true" />
+                          <span>Manage Billing</span>
+                        </>
                       )}
-                      Manage Billing
                     </motion.button>
                   )}
 
@@ -332,6 +395,23 @@ export const AccountMenu = () => {
                   </div>
                 </div>
 
+                {/* Error message */}
+                <AnimatePresence>
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mx-2 mt-2 p-2.5 rounded-lg bg-destructive/10 border border-destructive/20"
+                    >
+                      <div className="flex items-center gap-2 text-xs text-destructive">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>{error}</span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Actions */}
                 <div className="p-2">
                   <button
@@ -346,14 +426,20 @@ export const AccountMenu = () => {
                     <button
                       onClick={handleUpgrade}
                       disabled={isLoading}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-left rounded-lg bg-primary/10 text-primary text-sm hover:bg-primary/20 transition-colors"
+                      className="w-full flex items-center gap-3 px-4 py-2 text-left rounded-lg bg-primary/10 text-primary text-sm hover:bg-primary/20 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      aria-label={isLoading ? "Opening checkout..." : "Upgrade to Pro"}
                     >
                       {isLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                          <span>Opening...</span>
+                        </>
                       ) : (
-                        <Sparkles className="w-4 h-4" />
+                        <>
+                          <Sparkles className="w-4 h-4" aria-hidden="true" />
+                          <span>Upgrade to Pro</span>
+                        </>
                       )}
-                      Upgrade to Pro
                     </button>
                   )}
 
@@ -361,14 +447,20 @@ export const AccountMenu = () => {
                     <button
                       onClick={handleManageBilling}
                       disabled={isLoading}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-left rounded-lg text-muted-foreground text-sm hover:text-foreground hover:bg-muted/50 transition-colors"
+                      className="w-full flex items-center gap-3 px-4 py-2 text-left rounded-lg text-muted-foreground text-sm hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      aria-label={isLoading ? "Opening billing portal..." : "Manage billing"}
                     >
                       {isLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                          <span>Opening...</span>
+                        </>
                       ) : (
-                        <CreditCard className="w-4 h-4" />
+                        <>
+                          <CreditCard className="w-4 h-4" aria-hidden="true" />
+                          <span>Manage billing</span>
+                        </>
                       )}
-                      Manage billing
                     </button>
                   )}
 
