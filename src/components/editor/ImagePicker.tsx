@@ -3,6 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Image, Search, X, Loader2, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import type { PexelsImage } from "@/lib/types";
@@ -111,129 +118,107 @@ export const ImagePicker = ({
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0, y: 8, height: 0 }}
-          animate={{ opacity: 1, y: 0, height: "auto" }}
-          exit={{ opacity: 0, y: 8, height: 0 }}
-          transition={{ duration: 0.2 }}
-          className="overflow-hidden"
-          onAnimationComplete={handleOpen}
-        >
-          <div className="mt-4 p-4 bg-card rounded-lg border border-border shadow-lg">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-semibold flex items-center gap-2">
-                  <Image className="w-4 h-4 text-primary" />
-                  Add Image to Section
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Search for images from Pexels
-                </p>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                className="h-8 w-8 p-0"
-                aria-label="Close image picker"
-              >
-                <X className="w-4 h-4" />
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto" onOpenAutoFocus={handleOpen}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Image className="w-4 h-4 text-primary" />
+            Add Image to Section
+          </DialogTitle>
+          <DialogDescription>
+            Search for images from Pexels
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Search bar */}
+          <form onSubmit={handleSearch} className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={`Search images for "${getSmartQuery()}"...`}
+                className="pl-9 h-10 text-sm bg-background"
+                aria-label="Image search query"
+              />
+            </div>
+            <Button type="submit" size="sm" variant="secondary" disabled={isLoading} className="h-10">
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Search"}
+            </Button>
+          </form>
+
+          {/* Current image */}
+          {currentImage && (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+              <img
+                src={currentImage}
+                alt="Current"
+                className="w-12 h-12 object-cover rounded"
+              />
+              <span className="text-xs text-muted-foreground flex-1">Current image</span>
+              <Button size="sm" variant="ghost" onClick={handleRemoveImage}>
+                Remove
               </Button>
             </div>
+          )}
 
-            {/* Search bar */}
-            <form onSubmit={handleSearch} className="flex gap-2 mb-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={`Search images for "${getSmartQuery()}"...`}
-                  className="pl-9 h-10 text-sm bg-background"
-                  aria-label="Image search query"
-                />
-              </div>
-              <Button type="submit" size="sm" variant="secondary" disabled={isLoading} className="h-10">
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Search"}
-              </Button>
-            </form>
-
-            {/* Current image */}
-            {currentImage && (
-              <div className="mb-3 flex items-center gap-2">
-                <img
-                  src={currentImage}
-                  alt="Current"
-                  className="w-12 h-12 object-cover rounded"
-                />
-                <span className="text-xs text-muted-foreground flex-1">Current image</span>
-                <Button size="sm" variant="ghost" onClick={handleRemoveImage}>
-                  Remove
-                </Button>
-              </div>
-            )}
-
-            {/* Image grid */}
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : images.length > 0 ? (
-              <div className="grid grid-cols-4 gap-2">
-                {images.map((image) => (
-                  <motion.button
-                    key={image.id}
-                    onClick={() => handleSelectImage(image)}
-                    className={cn(
-                      "relative aspect-video rounded overflow-hidden group",
-                      "ring-2 ring-transparent hover:ring-primary/50 transition-all"
-                    )}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <img
-                      src={image.thumbnailUrl}
-                      alt={image.alt}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="absolute bottom-1 left-1 right-1">
-                        <p className="text-[10px] text-white/80 truncate">
-                          {image.photographer}
-                        </p>
-                      </div>
+          {/* Image grid */}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : images.length > 0 ? (
+            <div className="grid grid-cols-4 gap-2">
+              {images.map((image) => (
+                <motion.button
+                  key={image.id}
+                  onClick={() => handleSelectImage(image)}
+                  className={cn(
+                    "relative aspect-video rounded overflow-hidden group",
+                    "ring-2 ring-transparent hover:ring-primary/50 transition-all"
+                  )}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <img
+                    src={image.thumbnailUrl}
+                    alt={image.alt}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute bottom-1 left-1 right-1">
+                      <p className="text-[10px] text-white/80 truncate">
+                        {image.photographer}
+                      </p>
                     </div>
-                  </motion.button>
-                ))}
-              </div>
-            ) : hasSearched ? (
-              <p className="text-center text-sm text-muted-foreground py-4">
-                No images found. Try a different search term.
-              </p>
-            ) : null}
-
-            {/* Pexels attribution */}
-            <div className="mt-3 flex items-center justify-center gap-1 text-[10px] text-muted-foreground">
-              <span>Photos by</span>
-              <a
-                href="https://www.pexels.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline hover:text-foreground inline-flex items-center gap-0.5"
-              >
-                Pexels
-                <ExternalLink className="w-2.5 h-2.5" />
-              </a>
+                  </div>
+                </motion.button>
+              ))}
             </div>
+          ) : hasSearched ? (
+            <p className="text-center text-sm text-muted-foreground py-8">
+              No images found. Try a different search term.
+            </p>
+          ) : null}
+
+          {/* Pexels attribution */}
+          <div className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground pt-2 border-t border-border/50">
+            <span>Photos by</span>
+            <a
+              href="https://www.pexels.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground inline-flex items-center gap-0.5"
+            >
+              Pexels
+              <ExternalLink className="w-2.5 h-2.5" />
+            </a>
           </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

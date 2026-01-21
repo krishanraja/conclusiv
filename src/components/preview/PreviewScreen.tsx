@@ -582,46 +582,109 @@ export const PreviewScreen = () => {
       </AnimatePresence>
 
       <div className="h-[calc(100vh-4rem)] flex flex-col">
-        {/* Header */}
-        <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-border/50">
+        {/* Consolidated Header - Single Row - Auto-hide in Present mode */}
+        <motion.div
+          initial={{ y: 0, opacity: 1 }}
+          animate={{
+            y: viewMode === "present" ? -60 : 0,
+            opacity: viewMode === "present" ? 0 : 1,
+          }}
+          whileHover={viewMode === "present" ? { y: 0, opacity: 1 } : {}}
+          transition={{ duration: 0.3 }}
+          className={cn(
+            "flex-shrink-0 flex items-center justify-between gap-4 px-4 py-2 border-b border-border/50",
+            viewMode === "present" && "absolute top-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-sm"
+          )}
+        >
+          {/* Left: Back button */}
           <button
             onClick={handleBack}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back</span>
+            <span className="hidden sm:inline">Back</span>
           </button>
 
-          {businessContext && (
-            <div className="text-xs text-muted-foreground">
-              For <span className="text-shimmer-start">{businessContext.companyName}</span>
-            </div>
-          )}
+          {/* Center: Context + View Mode Toggle */}
+          <div className="flex items-center gap-3 flex-1 justify-center">
+            {businessContext && (
+              <div className="text-xs text-muted-foreground whitespace-nowrap">
+                For <span className="text-shimmer-start">{businessContext.companyName}</span>
+              </div>
+            )}
 
-          <div className="flex items-center gap-2">
+            {/* Mode Toggle - Inline */}
+            <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-card border border-border/50">
+              <button
+                onClick={() => setViewMode("present")}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors",
+                  viewMode === "present"
+                    ? "bg-shimmer-start/20 text-shimmer-start"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+                aria-label="Present view mode"
+                aria-pressed={viewMode === "present"}
+              >
+                <Play className="w-3 h-3" />
+                <span className="hidden sm:inline">Present</span>
+              </button>
+              <button
+                onClick={() => setViewMode("reader")}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors",
+                  viewMode === "reader"
+                    ? "bg-shimmer-start/20 text-shimmer-start"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+                aria-label="Reader view mode"
+                aria-pressed={viewMode === "reader"}
+              >
+                <BookOpen className="w-3 h-3" />
+                <span className="hidden sm:inline">Read</span>
+              </button>
+              <button
+                onClick={() => setViewMode("external")}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors",
+                  viewMode === "external"
+                    ? "bg-shimmer-start/20 text-shimmer-start"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+                aria-label="External view mode"
+                aria-pressed={viewMode === "external"}
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span className="hidden sm:inline">External</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-1">
             {/* Power user features */}
             <NarrativeRemix onRemixComplete={() => celebration.triggerMini()} />
             <MakingOfTrigger onClick={() => setMakingOfOpen(true)} />
-            
+
             {/* Re-Narrate button */}
             <Button
               variant="ghost"
               size="sm"
-              className="text-muted-foreground"
+              className="text-muted-foreground h-8 px-2"
               onClick={handleGenerateAlternatives}
               disabled={!narrative || isGeneratingAlternatives}
               aria-label={alternatives.length > 0 ? `Re-Narrate (${alternatives.length} alternatives available)` : "Generate alternative narratives"}
             >
-              <Sparkles className="w-4 h-4 mr-1" />
-              {alternatives.length > 0 ? `Re-Narrate (${alternatives.length})` : "Re-Narrate"}
+              <Sparkles className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">{alternatives.length > 0 ? `Re-Narrate (${alternatives.length})` : "Re-Narrate"}</span>
             </Button>
 
             {/* Export dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-muted-foreground">
-                  <Download className="w-4 h-4 mr-1" />
-                  Export
+                <Button variant="ghost" size="sm" className="text-muted-foreground h-8 px-2">
+                  <Download className="w-4 h-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Export</span>
                   {!isPro && <Lock className="w-3 h-3 ml-1 opacity-50" />}
                 </Button>
               </DropdownMenuTrigger>
@@ -642,17 +705,17 @@ export const PreviewScreen = () => {
             <Button
               variant="ghost"
               size="sm"
-              className="text-muted-foreground"
+              className="text-muted-foreground h-8 px-2"
               onClick={handleShare}
               disabled={isSharing}
               aria-label={isSharing ? "Creating shareable link" : "Share narrative"}
             >
-              <Share2 className="w-4 h-4 mr-1" />
-              {isSharing ? "Creating..." : "Share"}
+              <Share2 className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">{isSharing ? "Creating..." : "Share"}</span>
               {!isPro && <Lock className="w-3 h-3 ml-1 opacity-50" aria-label="Pro feature" />}
             </Button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Main Content */}
         <div className="flex-1 flex overflow-hidden">
@@ -661,53 +724,6 @@ export const PreviewScreen = () => {
 
           {/* Preview Area - Full width on desktop */}
           <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-            {/* Mode Toggle */}
-            <div className="flex-shrink-0 flex justify-center py-4">
-              <div className="flex items-center gap-1 p-1 rounded-lg bg-card border border-border/50">
-                <button
-                  onClick={() => setViewMode("present")}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2",
-                    viewMode === "present"
-                      ? "bg-shimmer-start/20 text-shimmer-start"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                  aria-label="Present view mode"
-                  aria-pressed={viewMode === "present"}
-                >
-                  <Play className="w-3 h-3" />
-                  Present
-                </button>
-                <button
-                  onClick={() => setViewMode("reader")}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2",
-                    viewMode === "reader"
-                      ? "bg-shimmer-start/20 text-shimmer-start"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                  aria-label="Reader view mode"
-                  aria-pressed={viewMode === "reader"}
-                >
-                  <BookOpen className="w-3 h-3" />
-                  Read
-                </button>
-                <button
-                  onClick={() => setViewMode("external")}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2",
-                    viewMode === "external"
-                      ? "bg-shimmer-start/20 text-shimmer-start"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                  aria-label="External view mode"
-                  aria-pressed={viewMode === "external"}
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  External
-                </button>
-              </div>
-            </div>
 
             {/* Preview Window - Logo rendered outside overflow-hidden to prevent clipping */}
             <div className="flex-1 mx-4 mb-4 relative min-w-0">
@@ -746,13 +762,15 @@ export const PreviewScreen = () => {
           </motion.div>
         </div>
 
-        {/* Footer CTA */}
-        <div className="flex-shrink-0 flex justify-center p-4 border-t border-border/50">
-          <Button variant="shimmer" size="lg" onClick={handlePresent} disabled={!narrative}>
-            <Play className="w-4 h-4 mr-2" />
-            Present
-          </Button>
-        </div>
+        {/* Footer CTA - Only show when not in Present mode */}
+        {viewMode !== "present" && (
+          <div className="flex-shrink-0 flex justify-center p-4 border-t border-border/50">
+            <Button variant="shimmer" size="lg" onClick={handlePresent} disabled={!narrative}>
+              <Play className="w-4 h-4 mr-2" />
+              Present
+            </Button>
+          </div>
+        )}
       </div>
     </>
   );
