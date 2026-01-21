@@ -343,7 +343,7 @@ export const GoogleFontPicker = ({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -8, scale: 0.95 }}
       transition={{ duration: 0.15 }}
-      className="fixed z-[100] bg-card border border-border rounded-lg shadow-xl overflow-hidden"
+      className="fixed z-feedback bg-card border border-border rounded-lg shadow-xl overflow-hidden"
       style={{
         top: `${dropdownPosition.top}px`,
         left: `${dropdownPosition.left}px`,
