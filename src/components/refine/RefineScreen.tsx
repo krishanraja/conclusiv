@@ -431,6 +431,41 @@ export const RefineScreen = () => {
               </div>
             ) : keyClaims.length > 0 ? (
               <>
+                {/* Verification Progress */}
+                {(() => {
+                  const verifiedCount = keyClaims.filter(c => c.verification).length;
+                  const verifyingCount = keyClaims.filter(c => !c.verification).length;
+                  const progressPercent = (verifiedCount / keyClaims.length) * 100;
+                  const isVerifying = verifyingCount > 0;
+
+                  return isVerifying ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="mb-4 p-3 rounded-lg border border-primary/20 bg-primary/5"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                          <span className="text-sm font-medium">Verifying claims...</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {verifiedCount} of {keyClaims.length} verified
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                        <motion.div
+                          className="h-full bg-primary"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${progressPercent}%` }}
+                          transition={{ duration: 0.3 }}
+                        />
+                      </div>
+                    </motion.div>
+                  ) : null;
+                })()}
+
                 <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
                   <span>Review {keyClaims.length} key claims</span>
                   <div className="flex gap-4">

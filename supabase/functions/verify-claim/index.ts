@@ -1,9 +1,20 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Helper: Create SHA-256 hash for cache key
+async function hashClaim(claim: string): Promise<string> {
+  const normalized = claim.toLowerCase().trim().replace(/\s+/g, ' ');
+  const encoder = new TextEncoder();
+  const data = encoder.encode(normalized);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 // Types
 type ClaimType = "financial" | "news" | "general";
@@ -307,12 +318,14 @@ Return ONLY valid JSON, no markdown.`;
         const jsonStr = content.replace(/```json?\s*|\s*```/g, '').trim();
         const parsed = JSON.parse(jsonStr);
         return {
-          status: parsed.status || "reliable",
-          confidence: parsed.confidence || 50,
-          summary: parsed.summary || "Unable to fully verify this claim.",
+          status: parsed.status || "unable_to_verify",
+          confidence: parsed.confidence || 0,
+          summary: parsed.summary || "Verification completed with limited data sources.",
           dataDate: parsed.dataDate,
         };
       }
+      // If no content from fallback, throw error to be caught below
+      throw new Error("No content from Gemini fallback");
     }
 
     const data = await response.json();
@@ -333,10 +346,11 @@ Return ONLY valid JSON, no markdown.`;
     };
   } catch (err) {
     console.error("[verifyWithGrounding] Error:", err);
+    // Return unable_to_verify instead of masking as "reliable"
     return {
-      status: "reliable",
-      confidence: 50,
-      summary: "Unable to fully verify this claim due to a processing error.",
+      status: "unable_to_verify",
+      confidence: 0,
+      summary: "Verification failed due to a processing error. Please review manually or retry.",
     };
   }
 }
@@ -347,58 +361,105 @@ function calculateFreshness(dataDate: string | undefined, claimText: string): { 
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth();
 
-  // Try to parse the data date
-  if (!dataDate) {
-    // Check for date patterns in the claim itself
-    const yearMatch = claimText.match(/\b(20\d{2})\b/);
-    const quarterMatch = claimText.match(/Q([1-4])\s*(20\d{2})?/i);
-    const monthMatch = claimText.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s*(20\d{2})?/i);
-    const trailingMatch = claimText.match(/trailing\s*(\d+)\s*(months?|years?)/i);
+  // Parse explicit data date first (most reliable)
+  if (dataDate && dataDate !== "null" && dataDate !== "undefined") {
+    try {
+      const date = new Date(dataDate);
+      if (!isNaN(date.getTime())) {
+        const monthsAgo = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24 * 30);
 
-    if (trailingMatch) {
-      // "Trailing 12 months" type claims are typically current
+        if (monthsAgo <= 3) return { status: "fresh", reason: "Data is within last 3 months" };
+        if (monthsAgo <= 12) return { status: "dated", reason: `Data is ${Math.round(monthsAgo)} months old` };
+        return { status: "stale", reason: `Data is over ${Math.round(monthsAgo / 12)} year(s) old` };
+      }
+    } catch {
+      // Fall through to heuristic analysis
+    }
+  }
+
+  // Check for explicit date patterns in the claim text
+  const claimLower = claimText.toLowerCase();
+
+  // Rolling time period indicators (always fresh)
+  const rollingPatterns = [
+    /trailing\s*(\d+)\s*(months?|years?)/i,
+    /last\s*(\d+)\s*(months?|years?|quarters?)/i,
+    /past\s*(\d+)\s*(months?|years?|quarters?)/i,
+    /(ttm|ltm)/i, // Trailing Twelve Months, Last Twelve Months
+    /year[- ]to[- ]date/i,
+    /ytd/i,
+  ];
+
+  for (const pattern of rollingPatterns) {
+    if (pattern.test(claimLower)) {
       return { status: "fresh", reason: "Uses rolling time period" };
     }
-
-    if (quarterMatch) {
-      const quarter = parseInt(quarterMatch[1]);
-      const year = quarterMatch[2] ? parseInt(quarterMatch[2]) : currentYear;
-      const quarterEndMonth = quarter * 3 - 1;
-      const monthsAgo = (currentYear - year) * 12 + (currentMonth - quarterEndMonth);
-      
-      if (monthsAgo <= 3) return { status: "fresh", reason: `Q${quarter} ${year} data` };
-      if (monthsAgo <= 12) return { status: "dated", reason: `Q${quarter} ${year} is ${monthsAgo} months old` };
-      return { status: "stale", reason: `Q${quarter} ${year} is over a year old` };
-    }
-
-    if (yearMatch) {
-      const year = parseInt(yearMatch[1]);
-      const yearsAgo = currentYear - year;
-      
-      if (yearsAgo === 0) return { status: "fresh", reason: `${year} data` };
-      if (yearsAgo === 1) return { status: "dated", reason: `${year} data is from last year` };
-      return { status: "stale", reason: `${year} data is ${yearsAgo} years old` };
-    }
-
-    // No date found - mark as potentially dated
-    return { status: "dated", reason: "No date reference found in claim" };
   }
 
-  // Parse explicit data date
-  try {
-    const date = new Date(dataDate);
-    if (isNaN(date.getTime())) {
-      return { status: "dated", reason: "Could not parse data date" };
+  // Current state indicators (fresh unless proven otherwise)
+  const currentStatePatterns = [
+    /\b(current|currently|now|today|recent|latest|as of)\b/i,
+    /\b(is|are|has|have)\b/i, // Present tense suggests current state
+  ];
+
+  let hasCurrentIndicator = false;
+  for (const pattern of currentStatePatterns) {
+    if (pattern.test(claimLower)) {
+      hasCurrentIndicator = true;
+      break;
     }
-
-    const monthsAgo = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24 * 30);
-
-    if (monthsAgo <= 3) return { status: "fresh", reason: "Data is within last 3 months" };
-    if (monthsAgo <= 12) return { status: "dated", reason: `Data is ${Math.round(monthsAgo)} months old` };
-    return { status: "stale", reason: `Data is over ${Math.round(monthsAgo / 12)} year(s) old` };
-  } catch {
-    return { status: "dated", reason: "Could not determine data freshness" };
   }
+
+  // Quarter patterns
+  const quarterMatch = claimText.match(/Q([1-4])\s*(20\d{2})?/i);
+  if (quarterMatch) {
+    const quarter = parseInt(quarterMatch[1]);
+    const year = quarterMatch[2] ? parseInt(quarterMatch[2]) : currentYear;
+    const quarterEndMonth = quarter * 3 - 1;
+    const monthsAgo = (currentYear - year) * 12 + (currentMonth - quarterEndMonth);
+
+    if (monthsAgo <= 3) return { status: "fresh", reason: `Q${quarter} ${year} data` };
+    if (monthsAgo <= 12) return { status: "dated", reason: `Q${quarter} ${year} is ${monthsAgo} months old` };
+    return { status: "stale", reason: `Q${quarter} ${year} is over a year old` };
+  }
+
+  // Year patterns
+  const yearMatch = claimText.match(/\b(20\d{2})\b/);
+  if (yearMatch) {
+    const year = parseInt(yearMatch[1]);
+    const yearsAgo = currentYear - year;
+
+    if (yearsAgo === 0) return { status: "fresh", reason: `${year} data` };
+    if (yearsAgo === 1) return { status: "dated", reason: `${year} data is from last year` };
+    return { status: "stale", reason: `${year} data is ${yearsAgo} years old` };
+  }
+
+  // Month/date patterns
+  const monthNames = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+  for (let i = 0; i < monthNames.length; i++) {
+    const monthPattern = new RegExp(`\\b${monthNames[i]}\\s*(\\d{1,2})?,?\\s*(20\\d{2})?\\b`, 'i');
+    const monthMatch = claimText.match(monthPattern);
+    if (monthMatch) {
+      const year = monthMatch[2] ? parseInt(monthMatch[2]) : currentYear;
+      const monthsAgo = (currentYear - year) * 12 + (currentMonth - i);
+
+      if (monthsAgo <= 3) return { status: "fresh", reason: `${monthNames[i]} ${year} data` };
+      if (monthsAgo <= 12) return { status: "dated", reason: `${monthNames[i]} ${year} is ${monthsAgo} months old` };
+      return { status: "stale", reason: `${monthNames[i]} ${year} is over a year old` };
+    }
+  }
+
+  // No explicit date found - use context clues
+  // If claim has current-state indicators and no old dates, assume fresh
+  if (hasCurrentIndicator) {
+    return { status: "fresh", reason: "Claim appears to reference current state" };
+  }
+
+  // Default to fresh with caveat (better UX than assuming dated)
+  return {
+    status: "fresh",
+    reason: "No date reference found - assumed current unless stated otherwise"
+  };
 }
 
 // Main handler
@@ -418,6 +479,47 @@ serve(async (req) => {
     }
 
     console.log("[verify-claim] Starting multi-source verification:", claim.slice(0, 100));
+
+    // Initialize Supabase client for caching
+    const authHeader = req.headers.get("Authorization");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+    let supabase = null;
+    if (supabaseUrl && supabaseKey && authHeader) {
+      supabase = createClient(supabaseUrl, supabaseKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+    }
+
+    // Check cache first
+    if (supabase) {
+      const claimHash = await hashClaim(claim);
+      const { data: cached, error: cacheError } = await supabase
+        .from("verification_cache")
+        .select("*")
+        .eq("claim_hash", claimHash)
+        .gte("cached_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // 7 days
+        .single();
+
+      if (cached && !cacheError) {
+        console.log("[verify-claim] Cache hit for claim:", claim.slice(0, 50));
+
+        // Update hit count
+        await supabase
+          .from("verification_cache")
+          .update({ hits: cached.hits + 1 })
+          .eq("id", cached.id);
+
+        return new Response(
+          JSON.stringify({
+            ...cached.verification_result,
+            cached: true,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     // Get API keys
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
@@ -490,6 +592,27 @@ serve(async (req) => {
     };
 
     console.log("[verify-claim] Complete:", result.status, "confidence:", result.confidence, "freshness:", result.freshness);
+
+    // Cache the result for future use (only successful verifications)
+    if (supabase && result.status !== "unable_to_verify") {
+      try {
+        const claimHash = await hashClaim(claim);
+        await supabase.from("verification_cache").upsert(
+          {
+            claim_hash: claimHash,
+            claim_text: claim.slice(0, 500), // Store first 500 chars for debugging
+            verification_result: result,
+            cached_at: new Date().toISOString(),
+            hits: 0,
+          },
+          { onConflict: "claim_hash" }
+        );
+        console.log("[verify-claim] Result cached successfully");
+      } catch (cacheError) {
+        console.error("[verify-claim] Cache storage error (non-fatal):", cacheError);
+        // Continue without caching - don't fail the request
+      }
+    }
 
     return new Response(
       JSON.stringify(result),
