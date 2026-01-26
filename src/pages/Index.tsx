@@ -147,13 +147,11 @@ const Index = () => {
               </motion.main>
             </AnimatePresence>
             
-            {/* Footer only on desktop for input step */}
+            {/* Footer on input step - visible on all devices for SEO */}
             {currentStep === "input" && (
-              <div className="hidden md:block">
-                <SectionErrorBoundary name="Footer">
-                  <Footer />
-                </SectionErrorBoundary>
-              </div>
+              <SectionErrorBoundary name="Footer">
+                <Footer />
+              </SectionErrorBoundary>
             )}
             
             <FeedbackWidget currentStep={currentStep} />

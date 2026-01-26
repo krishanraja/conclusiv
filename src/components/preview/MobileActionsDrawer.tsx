@@ -6,8 +6,12 @@ import {
   FileText, 
   X, 
   ChevronUp,
-  Sparkles
+  Sparkles,
+  TrendingUp
 } from "lucide-react";
+
+// Fallback icon in case BarChart3 is undefined (defensive against bundler/tree-shaking issues)
+const ScoreIcon = BarChart3 || TrendingUp;
 import { cn } from "@/lib/utils";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { NarrativeQualityScore } from "@/components/intelligence/NarrativeQualityScore";
@@ -23,8 +27,8 @@ export const MobileActionsDrawer = () => {
 
   if (!narrative) return null;
 
-  const tabs: { id: DrawerTab; label: string; icon: typeof BarChart3 }[] = [
-    { id: "score", label: "Score", icon: BarChart3 },
+  const tabs: { id: DrawerTab; label: string; icon: typeof ScoreIcon }[] = [
+    { id: "score", label: "Score", icon: ScoreIcon },
     { id: "summary", label: "Summary", icon: FileText },
     { id: "adjustments", label: "Adjust", icon: Sliders },
   ];

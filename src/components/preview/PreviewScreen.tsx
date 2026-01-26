@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { motion } from "framer-motion";
-import { ArrowLeft, Play, BookOpen, Share2, Download, FileText, Presentation, Lock, Copy, Check, Sparkles, ExternalLink, Film, ChevronLeft, ChevronRight, BarChart3 } from "lucide-react";
+import { ArrowLeft, Play, BookOpen, Share2, Download, FileText, Presentation, Lock, Copy, Check, Sparkles, ExternalLink, Film, ChevronLeft, ChevronRight, BarChart3, TrendingUp } from "lucide-react";
+
+// Fallback icon in case BarChart3 is undefined (defensive against bundler/tree-shaking issues)
+const ScoreIcon = BarChart3 || TrendingUp;
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { useToast } from "@/hooks/use-toast";
 import { buildNarrative, extractTensions, generateAlternatives } from "@/lib/api";
@@ -724,7 +727,7 @@ export const PreviewScreen = () => {
             {isMobile && narrative && (
               <div className="mx-4 mb-4 p-4 rounded-xl bg-card/50 border border-border/50 space-y-4">
                 <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  <BarChart3 className="w-3.5 h-3.5" />
+                  <ScoreIcon className="w-3.5 h-3.5" />
                   Narrative Score
                 </div>
                 <NarrativeQualityScore />

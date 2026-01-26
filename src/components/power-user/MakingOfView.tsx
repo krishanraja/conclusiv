@@ -1,6 +1,9 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Film, X, ChevronRight, Lightbulb, Target, AlertTriangle, Layers, TrendingUp, FileText, Sparkles, BarChart3 } from "lucide-react";
+
+// Fallback icon in case BarChart3 is undefined (defensive against bundler/tree-shaking issues)
+const ScoreIcon = BarChart3 || TrendingUp;
 import { Button } from "@/components/ui/button";
 import { useNarrativeStore } from "@/store/narrativeStore";
 import { cn } from "@/lib/utils";
@@ -194,7 +197,7 @@ export const MakingOfView = ({ isOpen, onClose }: MakingOfViewProps) => {
               {/* NARRATIVE QUALITY SCORE - Merged from NarrativeQualityScore */}
               <div className="p-4 rounded-xl bg-gradient-to-br from-shimmer-start/10 via-transparent to-shimmer-end/10 border border-shimmer-start/20">
                 <div className="flex items-center gap-2 mb-4">
-                  <BarChart3 className="w-4 h-4 text-shimmer-start" />
+                  <ScoreIcon className="w-4 h-4 text-shimmer-start" />
                   <h3 className="text-sm font-medium">Narrative Score</h3>
                 </div>
                 
