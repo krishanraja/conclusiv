@@ -26,6 +26,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { SectionErrorBoundary } from '@/components/ui/ErrorBoundary';
 import type { NarrativeSchema } from '@/lib/types';
+import { safeLoadNarrative } from '@/lib/validation';
 
 interface Narrative {
   id: string;
@@ -42,7 +43,7 @@ export default function Profile() {
   const { isPro, isTrial, trialDaysRemaining, usage, limits } = useSubscription();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { setNarrative, setCurrentStep } = useNarrativeStore();
+  const { loadSavedNarrative } = useNarrativeStore();
 
   const [narratives, setNarratives] = useState<Narrative[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -149,8 +150,21 @@ export default function Profile() {
 
   const handleView = async (narrative: Narrative) => {
     try {
-      setNarrative(narrative.narrative_data);
-      setCurrentStep('preview');
+      // Validate narrative data before loading
+      const { narrative: validatedNarrative, error } = safeLoadNarrative(narrative.narrative_data);
+      
+      if (error || !validatedNarrative) {
+        console.error('[Profile] Narrative validation failed:', error);
+        toast({
+          title: 'Cannot load demo',
+          description: error || 'This demo appears to be corrupted. Please try creating a new one.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Use loadSavedNarrative to properly reset related state
+      loadSavedNarrative(validatedNarrative, narrative.title || undefined);
       navigate('/');
     } catch (err) {
       console.error('Error loading narrative:', err);

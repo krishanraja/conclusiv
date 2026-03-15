@@ -156,6 +156,10 @@ interface NarrativeState {
   getChangedSettings: () => Partial<QuickAdjustmentSettings>;
   getCurrentSettings: () => QuickAdjustmentSettings;
   
+  // ===== Load Saved Narrative =====
+  // Loads a saved narrative and resets related state to prevent inconsistencies
+  loadSavedNarrative: (narrative: NarrativeSchema, title?: string) => void;
+  
   // Reset
   reset: () => void;
 }
@@ -516,6 +520,36 @@ export const useNarrativeStore = create<NarrativeState>((set, get) => ({
     
     return changes;
   },
+  
+  // Load a saved narrative with proper state reset
+  // This prevents inconsistent state when loading a demo from Profile
+  loadSavedNarrative: (narrative, _title) => set({
+    // Set the narrative
+    narrative,
+    // Reset to preview step
+    currentStep: "preview",
+    currentSectionIndex: 0,
+    // Clear input-related state to prevent confusion
+    rawText: "",
+    highlights: [],
+    keyClaims: [],
+    voiceFeedback: "",
+    // Clear themes since they were from the original build
+    themes: [],
+    // Reset loading state
+    isLoading: false,
+    loadingMessage: "",
+    loadingStage: 0,
+    loadingProgress: 0,
+    // Clear tensions and alternatives (they were from original build)
+    tensions: [],
+    alternatives: [],
+    isGeneratingAlternatives: false,
+    // Keep template from the narrative
+    selectedTemplate: narrative.template as TemplateName,
+    // Reset view mode to present
+    viewMode: "present",
+  }),
   
   reset: () => set(initialState),
 }));

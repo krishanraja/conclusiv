@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { NarrativeSchema } from "@/lib/types";
 import { iconMap } from "@/lib/icons";
+import { safeLoadNarrative } from "@/lib/validation";
 import { useAnalyticsTracker } from "@/hooks/useAnalyticsTracker";
 import { CollaborativeComments } from "@/components/share/CollaborativeComments";
 
@@ -70,7 +71,17 @@ const Share = () => {
         setNarrativeId(data.id);
         setTitle(data.title || "Shared Narrative");
       } else {
-        setNarrative(data.narrative_data as unknown as NarrativeSchema);
+        // Validate narrative data before loading
+        const { narrative: validatedNarrative, error: validationError } = safeLoadNarrative(data.narrative_data);
+        
+        if (validationError || !validatedNarrative) {
+          console.error('[Share] Narrative validation failed:', validationError);
+          setError("This narrative appears to be corrupted and cannot be displayed");
+          setLoading(false);
+          return;
+        }
+        
+        setNarrative(validatedNarrative);
         setNarrativeId(data.id);
         setTitle(data.title || "Shared Narrative");
         setIsUnlocked(true);
@@ -98,7 +109,16 @@ const Share = () => {
       }
 
       if (data.valid && data.narrative) {
-        setNarrative(data.narrative as NarrativeSchema);
+        // Validate narrative data from password verification response
+        const { narrative: validatedNarrative, error: validationError } = safeLoadNarrative(data.narrative);
+        
+        if (validationError || !validatedNarrative) {
+          console.error('[Share] Narrative validation failed after password:', validationError);
+          setError("This narrative appears to be corrupted and cannot be displayed");
+          return;
+        }
+        
+        setNarrative(validatedNarrative);
         if (data.narrativeId) {
           setNarrativeId(data.narrativeId);
         }

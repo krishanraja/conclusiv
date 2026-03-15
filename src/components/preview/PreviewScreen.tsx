@@ -144,6 +144,7 @@ export const PreviewScreen = () => {
   const [makingOfOpen, setMakingOfOpen] = useState(false);
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [lastShareId, setLastShareId] = useState<string | null>(null);
+  const [isPasswordSaving, setIsPasswordSaving] = useState(false);
   
   // Update password in database when it changes (hashed for security)
   const handlePasswordSet = async (password: string | null) => {
@@ -151,6 +152,7 @@ export const PreviewScreen = () => {
     
     // Save to database if we have a share ID
     if (lastShareId && user) {
+      setIsPasswordSaving(true);
       try {
         // Hash the password before storing (null if removing)
         const hashedPassword = password ? await hashPassword(password) : null;
@@ -171,9 +173,50 @@ export const PreviewScreen = () => {
         }
       } catch (err) {
         console.error('[PreviewScreen] Error updating share password:', err);
+        toast({
+          title: "Password update failed",
+          description: "Could not save the password. Try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsPasswordSaving(false);
       }
+    } else if (!lastShareId) {
+      // Share hasn't been created yet - password will be applied after share is created
+      console.log('[PreviewScreen] Password set before share created - will apply after share');
     }
   };
+  
+  // Apply pending password after share is created
+  useEffect(() => {
+    const applyPendingPassword = async () => {
+      if (lastShareId && sharePassword && user && !isPasswordSaving) {
+        // Password was set before share was created, now apply it
+        setIsPasswordSaving(true);
+        try {
+          const hashedPassword = await hashPassword(sharePassword);
+          
+          const { error } = await supabase
+            .from("narratives")
+            .update({ share_password: hashedPassword })
+            .eq("share_id", lastShareId)
+            .eq("user_id", user.id);
+          
+          if (error) {
+            console.error('[PreviewScreen] Failed to apply pending password:', error);
+          } else {
+            console.log('[PreviewScreen] Applied pending password to share');
+          }
+        } catch (err) {
+          console.error('[PreviewScreen] Error applying pending password:', err);
+        } finally {
+          setIsPasswordSaving(false);
+        }
+      }
+    };
+    
+    applyPendingPassword();
+  }, [lastShareId, sharePassword, user, isPasswordSaving]);
 
   // Build narrative on mount if not already built
   useEffect(() => {
@@ -401,9 +444,30 @@ export const PreviewScreen = () => {
     setIsSharing(true);
     
     try {
-      // Generate unique share ID
-      const shareId = crypto.randomUUID().slice(0, 8);
       const title = businessContext?.companyName || 'Shared Narrative';
+      
+      // If we already have a share ID, update the existing narrative instead of creating a new one
+      if (lastShareId) {
+        const { error: updateError } = await supabase
+          .from("narratives")
+          .update({
+            narrative_data: JSON.parse(JSON.stringify(narrative)),
+            title,
+          })
+          .eq("share_id", lastShareId)
+          .eq("user_id", user.id);
+
+        if (updateError) throw updateError;
+
+        // Reuse existing share URL
+        const url = `${window.location.origin}/share/${lastShareId}`;
+        setShareUrl(url);
+        setShareDialogOpen(true);
+        return;
+      }
+
+      // Generate new share ID for first-time share
+      const shareId = crypto.randomUUID().slice(0, 8);
 
       // Save to database
       const { error: insertError } = await supabase
