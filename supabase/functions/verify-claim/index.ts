@@ -30,6 +30,267 @@ interface VerificationResult {
   freshnessReason: string;
   dataDate?: string;
   requiresManualReview?: boolean;
+  groundingUsed?: boolean;
+}
+
+interface NumericalComparison {
+  field: string;
+  claimedValue: number;
+  actualValue: number;
+  unit: string;
+  percentageDiff: number;
+  withinTolerance: boolean;
+}
+
+interface ConfidenceSignals {
+  llmConfidence: number;
+  llmStatus: VerificationStatus;
+  numericalMatches: NumericalComparison[];
+  newsArticleCount: number;
+  newsRelevanceScores: number[];
+  financialDataAvailable: boolean;
+  overviewDataAvailable: boolean;
+  groundingUsed: boolean;
+  claimType: ClaimType;
+}
+
+// Parse numeric values like "$1.2B", "15%", "$234.56", "1,200M"
+function parseNumericValue(text: string): { value: number; unit: string } | null {
+  const match = text.match(/\$?([\d,.]+)\s*(billion|million|trillion|B|M|T|K|%|percent)?/i);
+  if (!match) return null;
+  const raw = parseFloat(match[1].replace(/,/g, ''));
+  if (isNaN(raw)) return null;
+  const multiplierWord = (match[2] || '').toLowerCase();
+  const multipliers: Record<string, number> = {
+    'trillion': 1e12, 't': 1e12,
+    'billion': 1e9, 'b': 1e9,
+    'million': 1e6, 'm': 1e6,
+    'k': 1e3,
+    '%': 1, 'percent': 1,
+  };
+  const multiplier = multipliers[multiplierWord] || 1;
+  const isPercent = multiplierWord === '%' || multiplierWord === 'percent';
+  return { value: raw * (isPercent ? 1 : multiplier), unit: isPercent ? '%' : '$' };
+}
+
+// Compare claimed numerical values against authoritative API data
+function compareNumericalClaims(
+  classification: ClaimClassification,
+  financialData: any
+): NumericalComparison[] {
+  const comparisons: NumericalComparison[] = [];
+  if (!financialData?.data) return comparisons;
+
+  const { quote, overview } = financialData.data;
+  const currencies = classification.extractedEntities.currencies || [];
+  const percentages = classification.extractedEntities.percentages || [];
+
+  // Build a map of authoritative values
+  const authValues: { field: string; value: number; unit: string; tolerance: number }[] = [];
+  if (quote?.["05. price"]) {
+    authValues.push({ field: "stock price", value: parseFloat(quote["05. price"]), unit: "$", tolerance: 0.05 });
+  }
+  if (quote?.["10. change percent"]) {
+    const pct = parseFloat(quote["10. change percent"].replace('%', ''));
+    if (!isNaN(pct)) authValues.push({ field: "price change", value: pct, unit: "%", tolerance: 3 }); // 3pp absolute
+  }
+  if (overview?.MarketCapitalization) {
+    authValues.push({ field: "market cap", value: parseFloat(overview.MarketCapitalization), unit: "$", tolerance: 0.10 });
+  }
+  if (overview?.RevenueTTM) {
+    authValues.push({ field: "revenue", value: parseFloat(overview.RevenueTTM), unit: "$", tolerance: 0.10 });
+  }
+  if (overview?.EPS) {
+    authValues.push({ field: "EPS", value: parseFloat(overview.EPS), unit: "$", tolerance: 0.10 });
+  }
+  if (overview?.QuarterlyRevenueGrowthYOY) {
+    authValues.push({ field: "revenue growth", value: parseFloat(overview.QuarterlyRevenueGrowthYOY) * 100, unit: "%", tolerance: 3 });
+  }
+
+  // Compare claimed dollar values
+  for (const currStr of currencies) {
+    const claimed = parseNumericValue(currStr);
+    if (!claimed || claimed.unit !== '$') continue;
+    // Find the closest matching authoritative value
+    for (const auth of authValues) {
+      if (auth.unit !== '$') continue;
+      // Only compare if they're in the same order of magnitude (within 100x)
+      const ratio = claimed.value / auth.value;
+      if (ratio > 0.01 && ratio < 100) {
+        const pctDiff = Math.abs(claimed.value - auth.value) / auth.value;
+        comparisons.push({
+          field: auth.field,
+          claimedValue: claimed.value,
+          actualValue: auth.value,
+          unit: '$',
+          percentageDiff: pctDiff * 100,
+          withinTolerance: pctDiff <= auth.tolerance,
+        });
+      }
+    }
+  }
+
+  // Compare claimed percentages
+  for (const pctStr of percentages) {
+    const claimed = parseNumericValue(pctStr);
+    if (!claimed || claimed.unit !== '%') continue;
+    for (const auth of authValues) {
+      if (auth.unit !== '%') continue;
+      const absDiff = Math.abs(claimed.value - auth.value);
+      comparisons.push({
+        field: auth.field,
+        claimedValue: claimed.value,
+        actualValue: auth.value,
+        unit: '%',
+        percentageDiff: absDiff,
+        withinTolerance: absDiff <= auth.tolerance,
+      });
+    }
+  }
+
+  return comparisons;
+}
+
+// Score article relevance to the claim (0-100)
+function scoreArticleRelevance(
+  article: any,
+  claim: string,
+  entities: ClaimClassification['extractedEntities']
+): number {
+  let score = 0;
+  const titleLower = (article.title || '').toLowerCase();
+  const descLower = (article.description || '').toLowerCase();
+  const claimLower = claim.toLowerCase();
+  const companies = entities.companies || [];
+
+  // Title contains company name: +30
+  for (const co of companies) {
+    if (titleLower.includes(co.toLowerCase())) { score += 30; break; }
+  }
+  // Description contains company name: +15
+  for (const co of companies) {
+    if (descLower.includes(co.toLowerCase())) { score += 15; break; }
+  }
+  // Title contains a claimed value: +20
+  const allValues = [...(entities.currencies || []), ...(entities.percentages || [])];
+  for (const v of allValues) {
+    const numMatch = v.match(/[\d,.]+/);
+    if (numMatch && titleLower.includes(numMatch[0])) { score += 20; break; }
+  }
+  // Tier-1 financial source: +15
+  const tier1 = ['reuters', 'bloomberg', 'wall street journal', 'wsj', 'cnbc', 'financial times', 'ft.com', 'sec.gov', 'barrons'];
+  const sourceLower = (article.source || '').toLowerCase();
+  if (tier1.some(s => sourceLower.includes(s) || (article.url || '').toLowerCase().includes(s))) {
+    score += 15;
+  }
+  // Recency bonus: published within 7 days +20, within 30 days +10
+  if (article.publishedAt) {
+    const daysAgo = (Date.now() - new Date(article.publishedAt).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysAgo <= 7) score += 20;
+    else if (daysAgo <= 30) score += 10;
+  }
+
+  return Math.min(100, score);
+}
+
+// Compute calibrated confidence from multiple independent signals
+function computeCompositeConfidence(signals: ConfidenceSignals): {
+  confidence: number;
+  status: VerificationStatus;
+} {
+  let score = 0;
+
+  // 1. LLM confidence (25% weight)
+  score += (signals.llmConfidence / 100) * 25;
+
+  // 2. Numerical match quality (25% weight)
+  if (signals.numericalMatches.length > 0) {
+    const passRate = signals.numericalMatches.filter(m => m.withinTolerance).length / signals.numericalMatches.length;
+    score += passRate * 25;
+  } else if (signals.claimType === 'financial' && signals.financialDataAvailable) {
+    // Financial claim but no numerical values to compare — partial credit
+    score += 10;
+  } else if (signals.claimType !== 'financial') {
+    // Non-financial claims: skip this signal, redistribute weight
+    score += (signals.llmConfidence / 100) * 10; // Give LLM a bit more weight
+  }
+
+  // 3. News corroboration (20% weight)
+  const avgRelevance = signals.newsRelevanceScores.length > 0
+    ? signals.newsRelevanceScores.reduce((a, b) => a + b, 0) / signals.newsRelevanceScores.length
+    : 0;
+  const newsScore = Math.min(signals.newsArticleCount, 3) / 3;
+  score += newsScore * (avgRelevance / 100) * 20;
+
+  // 4. Financial data available (10% weight)
+  if (signals.overviewDataAvailable) score += 10;
+  else if (signals.financialDataAvailable) score += 5;
+
+  // 5. Google Search grounding (10% weight)
+  if (signals.groundingUsed) score += 10;
+
+  // 6. Source agreement (10% weight) — LLM aligns with numerical checks
+  if (signals.numericalMatches.length > 0) {
+    const allPass = signals.numericalMatches.every(m => m.withinTolerance);
+    const allFail = signals.numericalMatches.every(m => !m.withinTolerance);
+    if (allPass && (signals.llmStatus === 'verified' || signals.llmStatus === 'reliable')) {
+      score += 10;
+    } else if (allFail && signals.llmStatus === 'unreliable') {
+      score += 10;
+    } else if (!allPass && signals.llmStatus === 'verified') {
+      score -= 5; // Penalty: LLM says verified but numbers don't match
+    }
+  } else {
+    score += 5; // No numerical data to disagree on — neutral
+  }
+
+  const confidence = Math.max(0, Math.min(100, Math.round(score)));
+
+  // Triangulation-based status determination
+  let independentSignals = 0;
+  if (signals.numericalMatches.length > 0 && signals.numericalMatches.every(m => m.withinTolerance)) independentSignals++;
+  if (signals.newsArticleCount >= 2 && avgRelevance >= 40) independentSignals++;
+  if (signals.groundingUsed) independentSignals++;
+
+  let status: VerificationStatus;
+  const anyNumericalFail = signals.numericalMatches.some(m => !m.withinTolerance);
+
+  if (confidence >= 75 && independentSignals >= 2 && !anyNumericalFail) {
+    status = "verified";
+  } else if (confidence >= 45 && independentSignals >= 1) {
+    status = "reliable";
+  } else if (confidence >= 20) {
+    status = "unreliable";
+  } else {
+    status = "unable_to_verify";
+  }
+
+  return { confidence, status };
+}
+
+// Resolve company name to stock ticker via Gemini
+async function resolveTicker(companyName: string, apiKey: string): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: `What is the US stock ticker symbol for "${companyName}"? Return ONLY the ticker symbol (e.g. AAPL). If the company is not publicly traded on a US exchange, return PRIVATE. No explanation.` }] }],
+          generationConfig: { temperature: 0 },
+        }),
+        signal: AbortSignal.timeout(5000),
+      }
+    );
+    if (!response.ok) return null;
+    const data = await response.json();
+    const text = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim().toUpperCase();
+    if (text === 'PRIVATE' || text.length > 6 || !/^[A-Z]+$/.test(text)) return null;
+    return text;
+  } catch {
+    return null;
+  }
 }
 
 interface ClaimClassification {
