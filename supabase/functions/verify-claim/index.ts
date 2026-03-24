@@ -362,56 +362,70 @@ Return ONLY valid JSON, no markdown.`;
   }
 }
 
-// Verify financial claims via Alpha Vantage
+// Verify financial claims via Alpha Vantage (quote + time series + fundamentals)
 async function verifyFinancial(
   claim: string,
   classification: ClaimClassification,
-  apiKey: string
+  apiKey: string,
+  googleApiKey?: string
 ): Promise<{ verified: boolean; data: any; source?: string }> {
   const tickers = classification.extractedEntities.tickers || [];
   const companies = classification.extractedEntities.companies || [];
-  
-  // Map common company names to tickers
+
+  // Fast lookup for common companies, then fall back to dynamic resolution
   const companyToTicker: Record<string, string> = {
-    "doordash": "DASH",
-    "uber": "UBER",
-    "apple": "AAPL",
-    "google": "GOOGL",
-    "amazon": "AMZN",
-    "microsoft": "MSFT",
-    "meta": "META",
-    "netflix": "NFLX",
-    "tesla": "TSLA",
+    "doordash": "DASH", "uber": "UBER", "apple": "AAPL", "google": "GOOGL",
+    "alphabet": "GOOGL", "amazon": "AMZN", "microsoft": "MSFT", "meta": "META",
+    "facebook": "META", "netflix": "NFLX", "tesla": "TSLA", "nvidia": "NVDA",
+    "amd": "AMD", "intel": "INTC", "salesforce": "CRM", "shopify": "SHOP",
+    "spotify": "SPOT", "snap": "SNAP", "pinterest": "PINS", "palantir": "PLTR",
+    "coinbase": "COIN", "airbnb": "ABNB", "disney": "DIS", "paypal": "PYPL",
+    "square": "SQ", "block": "SQ", "crowdstrike": "CRWD", "snowflake": "SNOW",
+    "databricks": "PRIVATE", "stripe": "PRIVATE", "openai": "PRIVATE",
   };
 
-  // Try to find a ticker
+  // Try to find a ticker: extracted > hardcoded map > dynamic LLM resolution
   let ticker = tickers[0];
   if (!ticker && companies.length > 0) {
     const companyLower = companies[0].toLowerCase();
     ticker = companyToTicker[companyLower];
+    // Dynamic resolution for unknown companies
+    if (!ticker && googleApiKey) {
+      console.log("[verifyFinancial] Resolving ticker for:", companies[0]);
+      ticker = await resolveTicker(companies[0], googleApiKey) || undefined;
+    }
   }
 
-  if (!ticker) {
-    return { verified: false, data: null };
+  if (!ticker || ticker === 'PRIVATE') {
+    return { verified: false, data: { isPrivate: ticker === 'PRIVATE' } };
   }
 
   try {
-    // Get stock quote
-    const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${apiKey}`;
-    const quoteRes = await fetch(quoteUrl);
-    const quoteData = await quoteRes.json();
+    // Fetch quote, time series, and company overview in parallel
+    const [quoteRes, timeSeriesRes, overviewRes] = await Promise.all([
+      fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${apiKey}`),
+      fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${ticker}&outputsize=compact&apikey=${apiKey}`),
+      fetch(`https://www.alphavantage.co/query?function=OVERVIEW&symbol=${ticker}&apikey=${apiKey}`),
+    ]);
 
-    // Get time series for historical comparison
-    const timeSeriesUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${ticker}&outputsize=compact&apikey=${apiKey}`;
-    const timeSeriesRes = await fetch(timeSeriesUrl);
-    const timeSeriesData = await timeSeriesRes.json();
+    const [quoteData, timeSeriesData, overviewData] = await Promise.all([
+      quoteRes.json(), timeSeriesRes.json(), overviewRes.json(),
+    ]);
 
-    if (quoteData["Global Quote"] || timeSeriesData["Time Series (Daily)"]) {
+    // Detect rate limiting (Alpha Vantage returns a "Note" key)
+    const isRateLimited = quoteData["Note"] || timeSeriesData["Note"] || overviewData["Note"];
+    if (isRateLimited) {
+      console.warn("[verifyFinancial] Alpha Vantage rate limit hit for:", ticker);
+    }
+
+    const hasData = quoteData["Global Quote"] || timeSeriesData["Time Series (Daily)"] || overviewData["MarketCapitalization"];
+    if (hasData) {
       return {
         verified: true,
         data: {
-          quote: quoteData["Global Quote"],
-          timeSeries: timeSeriesData["Time Series (Daily)"],
+          quote: quoteData["Global Quote"] || null,
+          timeSeries: timeSeriesData["Time Series (Daily)"] || null,
+          overview: overviewData["MarketCapitalization"] ? overviewData : null,
           ticker,
         },
         source: `Alpha Vantage - ${ticker}`,
@@ -425,26 +439,39 @@ async function verifyFinancial(
   }
 }
 
-// Verify news claims via NewsAPI
+// Verify news claims via NewsAPI (90-day window, relevance-scored)
 async function verifyNews(
   claim: string,
   classification: ClaimClassification,
   apiKey: string
-): Promise<{ articles: any[]; relevant: boolean }> {
+): Promise<{ articles: any[]; relevant: boolean; relevanceScores: number[] }> {
   const companies = classification.extractedEntities.companies || [];
-  const searchTerms = companies.length > 0 ? companies.join(" OR ") : claim.split(" ").slice(0, 5).join(" ");
+  const stopwords = new Set(['the','a','an','is','are','was','were','has','have','had','in','on','at','to','for','of','and','or','but','with','by','from','that','this','it','its']);
+
+  // Build smarter search query: company name + meaningful claim keywords
+  let searchTerms: string;
+  if (companies.length > 0) {
+    const claimWords = claim.split(/\s+/)
+      .map(w => w.toLowerCase().replace(/[^a-z0-9%$]/g, ''))
+      .filter(w => w.length > 2 && !stopwords.has(w) && !companies.some(c => c.toLowerCase().includes(w)));
+    const keywords = claimWords.slice(0, 3);
+    searchTerms = companies.length === 1
+      ? `"${companies[0]}"${keywords.length > 0 ? ` AND (${keywords.join(' OR ')})` : ''}`
+      : companies.map(c => `"${c}"`).join(' OR ');
+  } else {
+    searchTerms = claim.split(/\s+/).filter(w => !stopwords.has(w.toLowerCase())).slice(0, 6).join(' ');
+  }
 
   try {
-    // Search everything endpoint for broader coverage
     const url = new URL("https://newsapi.org/v2/everything");
     url.searchParams.set("q", searchTerms);
     url.searchParams.set("sortBy", "relevancy");
-    url.searchParams.set("pageSize", "10");
+    url.searchParams.set("pageSize", "20");
     url.searchParams.set("language", "en");
-    
-    // Search last 30 days
+
+    // Search last 90 days instead of 30
     const fromDate = new Date();
-    fromDate.setDate(fromDate.getDate() - 30);
+    fromDate.setDate(fromDate.getDate() - 90);
     url.searchParams.set("from", fromDate.toISOString().split("T")[0]);
 
     const response = await fetch(url.toString(), {
@@ -453,25 +480,33 @@ async function verifyNews(
 
     if (!response.ok) {
       console.error("[verifyNews] NewsAPI error:", response.status);
-      return { articles: [], relevant: false };
+      return { articles: [], relevant: false, relevanceScores: [] };
     }
 
     const data = await response.json();
-    const articles = data.articles || [];
+    const rawArticles = (data.articles || []).map((a: any) => ({
+      title: a.title,
+      url: a.url,
+      publishedAt: a.publishedAt,
+      source: a.source?.name,
+      description: a.description,
+    }));
+
+    // Score and filter by relevance
+    const scored = rawArticles
+      .map((a: any) => ({ ...a, relevance: scoreArticleRelevance(a, claim, classification.extractedEntities) }))
+      .filter((a: any) => a.relevance >= 20)
+      .sort((a: any, b: any) => b.relevance - a.relevance)
+      .slice(0, 5);
 
     return {
-      articles: articles.slice(0, 5).map((a: any) => ({
-        title: a.title,
-        url: a.url,
-        publishedAt: a.publishedAt,
-        source: a.source?.name,
-        description: a.description,
-      })),
-      relevant: articles.length > 0,
+      articles: scored,
+      relevant: scored.length > 0,
+      relevanceScores: scored.map((a: any) => a.relevance),
     };
   } catch (err) {
     console.error("[verifyNews] Error:", err);
-    return { articles: [], relevant: false };
+    return { articles: [], relevant: false, relevanceScores: [] };
   }
 }
 
