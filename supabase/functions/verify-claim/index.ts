@@ -878,14 +878,15 @@ serve(async (req) => {
     const classification = await classifyClaim(claim, GOOGLE_AI_API_KEY);
     console.log("[verify-claim] Classification:", classification.type);
 
-    // Step 2: Route to appropriate verification sources
+    // Step 2: Fetch data sources in parallel where possible
     let financialData = null;
     let newsArticles: any[] = [];
+    let newsRelevanceScores: number[] = [];
 
     // Financial verification for financial claims
     if (classification.type === "financial" && ALPHA_API_KEY) {
       console.log("[verify-claim] Fetching financial data...");
-      financialData = await verifyFinancial(claim, classification, ALPHA_API_KEY);
+      financialData = await verifyFinancial(claim, classification, ALPHA_API_KEY, GOOGLE_AI_API_KEY);
     }
 
     // News verification for news or financial claims
@@ -893,29 +894,55 @@ serve(async (req) => {
       console.log("[verify-claim] Fetching news articles...");
       const newsResult = await verifyNews(claim, classification, NEWS_API_KEY);
       newsArticles = newsResult.articles;
+      newsRelevanceScores = newsResult.relevanceScores;
     }
 
-    // Step 3: Aggregate with Gemini grounding
+    // Step 3: Programmatic numerical comparison (before LLM call)
+    const numericalComparisons = compareNumericalClaims(classification, financialData);
+    if (numericalComparisons.length > 0) {
+      console.log("[verify-claim] Numerical comparisons:", numericalComparisons.map(c =>
+        `${c.field}: ${c.withinTolerance ? 'PASS' : 'FAIL'} (${c.percentageDiff.toFixed(1)}% diff)`
+      ));
+    }
+
+    // Step 4: LLM-based grounded verification (with numerical results injected)
     console.log("[verify-claim] Running grounded verification...");
-    const verification = await verifyWithGrounding(
+    const llmResult = await verifyWithGrounding(
       claim,
       context,
       financialData,
       newsArticles,
+      numericalComparisons,
       GOOGLE_AI_API_KEY
     );
 
-    // Step 4: Calculate freshness
-    const freshness = calculateFreshness(verification.dataDate, claim);
+    // Step 5: Compute calibrated confidence from multiple signals
+    const signals: ConfidenceSignals = {
+      llmConfidence: llmResult.confidence,
+      llmStatus: llmResult.status,
+      numericalMatches: numericalComparisons,
+      newsArticleCount: newsArticles.length,
+      newsRelevanceScores,
+      financialDataAvailable: !!financialData?.verified,
+      overviewDataAvailable: !!financialData?.data?.overview,
+      groundingUsed: llmResult.groundingUsed,
+      claimType: classification.type,
+    };
 
-    // Step 5: Build sources list
+    const composite = computeCompositeConfidence(signals);
+    console.log("[verify-claim] LLM verdict:", llmResult.status, llmResult.confidence, "→ Calibrated:", composite.status, composite.confidence);
+
+    // Step 6: Calculate freshness
+    const freshness = calculateFreshness(llmResult.dataDate, claim);
+
+    // Step 7: Build sources list
     const sources: { title: string; url: string; publishedAt?: string }[] = [];
-    
+
     if (financialData?.source) {
       sources.push({ title: financialData.source, url: "https://www.alphavantage.co" });
     }
-    
-    newsArticles.forEach(article => {
+
+    newsArticles.forEach((article: any) => {
       sources.push({
         title: article.title,
         url: article.url,
@@ -923,15 +950,16 @@ serve(async (req) => {
       });
     });
 
-    // Build final result
+    // Build final result using calibrated confidence and triangulated status
     const result: VerificationResult = {
-      status: verification.status,
-      confidence: verification.confidence,
+      status: composite.status,
+      confidence: composite.confidence,
       sources,
-      summary: verification.summary,
+      summary: llmResult.summary,
       freshness: freshness.status,
       freshnessReason: freshness.reason,
-      dataDate: verification.dataDate,
+      dataDate: llmResult.dataDate,
+      groundingUsed: llmResult.groundingUsed,
     };
 
     console.log("[verify-claim] Complete:", result.status, "confidence:", result.confidence, "freshness:", result.freshness);
