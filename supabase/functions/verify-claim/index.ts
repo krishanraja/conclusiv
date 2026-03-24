@@ -510,35 +510,80 @@ async function verifyNews(
   }
 }
 
-// Verify via Gemini with Google Search Grounding
+// Safe JSON parse with regex fallback
+function safeParseVerificationJSON(text: string): any {
+  try {
+    const cleaned = text.replace(/```json?\s*|\s*```/g, '').trim();
+    return JSON.parse(cleaned);
+  } catch {
+    // Regex extraction as last resort
+    const statusMatch = text.match(/"status"\s*:\s*"(verified|reliable|unreliable)"/);
+    const confidenceMatch = text.match(/"confidence"\s*:\s*(\d+)/);
+    const summaryMatch = text.match(/"summary"\s*:\s*"([^"]+)"/);
+    if (statusMatch) {
+      return {
+        status: statusMatch[1],
+        confidence: confidenceMatch ? parseInt(confidenceMatch[1]) : 0,
+        summary: summaryMatch?.[1] || "Partial parse - review manually",
+      };
+    }
+    return null; // Truly unparseable
+  }
+}
+
+// Verify via Gemini with Google Search Grounding (strict prompt, grounding penalty)
 async function verifyWithGrounding(
   claim: string,
   context: string | undefined,
   financialData: any,
   newsArticles: any[],
+  numericalComparisons: NumericalComparison[],
   apiKey: string
-): Promise<{ status: VerificationStatus; confidence: number; summary: string; dataDate?: string }> {
-  
+): Promise<{ status: VerificationStatus; confidence: number; summary: string; dataDate?: string; groundingUsed: boolean }> {
+
   // Build context with external data
   let externalContext = "";
-  
+
   if (financialData?.data?.quote) {
     const quote = financialData.data.quote;
-    externalContext += `\nFINANCIAL DATA (from Alpha Vantage):
+    externalContext += `\nFINANCIAL DATA (from Alpha Vantage - authoritative):
 - Symbol: ${quote["01. symbol"]}
 - Current Price: $${quote["05. price"]}
 - Change: ${quote["09. change"]} (${quote["10. change percent"]})
 - Latest Trading Day: ${quote["07. latest trading day"]}`;
   }
 
+  if (financialData?.data?.overview) {
+    const ov = financialData.data.overview;
+    externalContext += `\nFUNDAMENTALS (from Alpha Vantage OVERVIEW):
+- Market Cap: $${ov.MarketCapitalization}
+- Revenue (TTM): $${ov.RevenueTTM}
+- EPS: $${ov.EPS}
+- P/E Ratio: ${ov.PERatio}
+- 52-Week Range: $${ov["52WeekLow"]} - $${ov["52WeekHigh"]}
+- Quarterly Revenue Growth YoY: ${ov.QuarterlyRevenueGrowthYOY}
+- Quarterly Earnings Growth YoY: ${ov.QuarterlyEarningsGrowthYOY}
+- Profit Margin: ${ov.ProfitMargin}`;
+  }
+
   if (newsArticles.length > 0) {
     externalContext += `\n\nRECENT NEWS ARTICLES (from NewsAPI):`;
-    newsArticles.forEach((article, i) => {
-      externalContext += `\n${i + 1}. "${article.title}" - ${article.source} (${article.publishedAt?.split("T")[0] || "unknown date"})`;
+    newsArticles.forEach((article: any, i: number) => {
+      externalContext += `\n${i + 1}. "${article.title}" - ${article.source} (${article.publishedAt?.split("T")[0] || "unknown date"})${article.relevance ? ` [relevance: ${article.relevance}/100]` : ''}`;
     });
   }
 
-  const prompt = `You are a fact-checking assistant with access to real data. Verify this claim using the provided external data and your knowledge.
+  // Include programmatic numerical comparison results
+  let numericalSection = "";
+  if (numericalComparisons.length > 0) {
+    numericalSection = `\nPROGRAMMATIC DATA CHECKS (computed from authoritative API data — DO NOT override these results):
+${numericalComparisons.map(c => {
+  const fmt = c.unit === '%' ? `${c.claimedValue}% vs actual ${c.actualValue}%` : `$${c.claimedValue.toLocaleString()} vs actual $${c.actualValue.toLocaleString()}`;
+  return `- ${c.field}: ${fmt}, difference: ${c.percentageDiff.toFixed(1)}%, ${c.withinTolerance ? 'WITHIN tolerance ✓' : 'OUTSIDE tolerance ✗'}`;
+}).join('\n')}`;
+  }
+
+  const prompt = `You are a rigorous fact-checker. Verify the following claim against the provided evidence. Do NOT give the claim benefit of the doubt.
 
 CLAIM TO VERIFY:
 "${claim}"
@@ -546,31 +591,31 @@ CLAIM TO VERIFY:
 ${context ? `CONTEXT: ${context}` : ""}
 
 ${externalContext || "No external data available for this claim."}
+${numericalSection}
 
-Analyze the claim against the provided data and determine:
-1. VERIFIED: Strong evidence supports this claim (confidence 75-100)
-2. RELIABLE: Cannot fully verify but appears consistent with available data (confidence 50-74)
-3. UNRELIABLE: Evidence contradicts or cannot find support (confidence 0-49)
+STRICT RULES:
+1. VERIFIED: Multiple independent sources confirm the claim with specific, cited evidence. Numerical values match within tolerance.
+2. RELIABLE: At least one credible source partially supports the claim, but full corroboration is unavailable.
+3. UNRELIABLE: Evidence contradicts the claim, numerical values are significantly different from authoritative data, OR no supporting evidence can be found.
+4. You MUST cite specific evidence for your determination. Vague statements like "appears consistent" are not acceptable.
+5. If PROGRAMMATIC DATA CHECKS above show values OUTSIDE tolerance, you MUST NOT mark the claim as "verified."
+6. If evidence is insufficient to confirm, default to "unreliable" — never assume the claim is correct.
+7. Do NOT extrapolate or infer data that is not explicitly present in the provided sources.
 
-Also determine the DATA FRESHNESS:
-- Extract any dates mentioned in the claim
-- Compare against source data dates
-- Determine if the claim uses current or outdated information
-
-Return a JSON object:
+Return JSON:
 {
   "status": "verified" | "reliable" | "unreliable",
   "confidence": <number 0-100>,
-  "summary": "<2-3 sentence explanation of verification result>",
+  "summary": "<2-3 sentences citing specific evidence for your determination>",
   "dataDate": "<the date/timeframe the claim's data refers to, or null if unclear>",
-  "contradictions": ["list any contradictions found"],
-  "supportingEvidence": ["list supporting evidence found"]
+  "contradictions": ["specific contradictions with cited data"],
+  "supportingEvidence": ["specific supporting facts with source attribution"]
 }
 
-Be rigorous but fair. If external data supports the claim's general direction even if numbers differ slightly, mark as "reliable".
 Return ONLY valid JSON, no markdown.`;
 
   try {
+    // Primary attempt: with Google Search grounding
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
@@ -579,19 +624,16 @@ Return ONLY valid JSON, no markdown.`;
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
           generationConfig: { temperature: 0.2 },
-          // Enable Google Search grounding for real-time web data
-          tools: [{
-            googleSearch: {}
-          }],
+          tools: [{ googleSearch: {} }],
         }),
       }
     );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[verifyWithGrounding] Gemini error:", response.status, errorText);
-      
-      // Fallback without grounding if it fails
+      console.error("[verifyWithGrounding] Gemini grounding error:", response.status, errorText);
+
+      // Fallback without grounding — apply confidence penalty
       const fallbackResponse = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
         {
@@ -603,50 +645,55 @@ Return ONLY valid JSON, no markdown.`;
           }),
         }
       );
-      
+
       if (!fallbackResponse.ok) {
-        throw new Error("Gemini fallback failed");
+        throw new Error("Gemini fallback also failed");
       }
-      
+
       const fallbackData = await fallbackResponse.json();
       const content = fallbackData.candidates?.[0]?.content?.parts?.[0]?.text;
       if (content) {
-        const jsonStr = content.replace(/```json?\s*|\s*```/g, '').trim();
-        const parsed = JSON.parse(jsonStr);
+        const parsed = safeParseVerificationJSON(content);
+        if (!parsed) throw new Error("Unparseable Gemini response");
+        // Grounding penalty: cap confidence at 60, downgrade "verified" to "reliable"
+        const cappedConfidence = Math.min(parsed.confidence ?? 0, 60);
+        const cappedStatus = parsed.status === "verified" ? "reliable" : (parsed.status || "unable_to_verify");
         return {
-          status: parsed.status || "unable_to_verify",
-          confidence: parsed.confidence || 0,
-          summary: parsed.summary || "Verification completed with limited data sources.",
+          status: cappedStatus as VerificationStatus,
+          confidence: Math.max(0, cappedConfidence),
+          summary: (parsed.summary || "Verification with limited sources.") + " (Web search grounding was unavailable; confidence reduced.)",
           dataDate: parsed.dataDate,
+          groundingUsed: false,
         };
       }
-      // If no content from fallback, throw error to be caught below
       throw new Error("No content from Gemini fallback");
     }
 
+    // Grounded response succeeded
     const data = await response.json();
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!content) {
-      throw new Error("No content in Gemini response");
+      throw new Error("No content in Gemini grounded response");
     }
 
-    const jsonStr = content.replace(/```json?\s*|\s*```/g, '').trim();
-    const parsed = JSON.parse(jsonStr);
+    const parsed = safeParseVerificationJSON(content);
+    if (!parsed) throw new Error("Unparseable Gemini grounded response");
 
     return {
-      status: parsed.status || "reliable",
-      confidence: Math.max(0, Math.min(100, parsed.confidence || 50)),
+      status: parsed.status || "unable_to_verify",
+      confidence: Math.max(0, Math.min(100, parsed.confidence ?? 0)),
       summary: parsed.summary || "Verification completed.",
       dataDate: parsed.dataDate,
+      groundingUsed: true,
     };
   } catch (err) {
     console.error("[verifyWithGrounding] Error:", err);
-    // Return unable_to_verify instead of masking as "reliable"
     return {
       status: "unable_to_verify",
       confidence: 0,
       summary: "Verification failed due to a processing error. Please review manually or retry.",
+      groundingUsed: false,
     };
   }
 }
